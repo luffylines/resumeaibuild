@@ -946,3 +946,6 @@
   display:none!important;visibility:hidden!important;
  }
 }
+
+.admin-export-locked{display:inline-flex;align-items:center;gap:7px;border:1px solid #e2d7f1;background:#f8f4ff;color:#76569b;padding:9px 13px;min-height:38px;border-radius:9px;font-size:11px;font-weight:750}
+@media print{.admin-shell:has(.admin-preview-banner){display:none!important}}
