@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import {Check,CheckCircle2,Copy,KeyRound,LoaderCircle,RotateCcw,ShieldCheck,ShieldOff,Smartphone,X} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
@@ -27,6 +27,9 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
  const [unfinished,setUnfinished]=useState<Factor[]>([]);
  const [pending,setPending]=useState<Pending|null>(null);
  const [code,setCode]=useState('');
+ const lastAttemptRef=useRef('');
+ const verifyInFlightRef=useRef(false);
+ const successTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [loading,setLoading]=useState(false);
  const [initializing,setInitializing]=useState(true);
  const [message,setMessage]=useState('');
@@ -46,7 +49,7 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
  };
  useEffect(()=>{
   let live=true;
-  setInitializing(true);setPending(null);setCode('');setCodeState('idle');
+  setInitializing(true);setPending(null);setCode('');setCodeState('idle');lastAttemptRef.current='';
   if(!sb||!user){setInitializing(false);return;}
   void (async()=>{
    try{
@@ -60,7 +63,7 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
    }catch(e){if(live)setError(e instanceof Error?e.message:'Could not load your security settings.');}
    finally{if(live)setInitializing(false);}
   })();
-  return()=>{live=false;};
+  return()=>{live=false;if(successTimerRef.current)clearTimeout(successTimerRef.current);};
  },[sb,user?.id]);
 
  const clearUnverified=async(items:Factor[])=>{
@@ -72,7 +75,7 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
  };
  const begin=async()=>{
   if(!sb||!user||loading||mode!=='settings')return;
-  setLoading(true);setError('');setMessage('');setCodeState('idle');
+  setLoading(true);setError('');setMessage('');setCodeState('idle');lastAttemptRef.current='';
   try{
    const latest=await sb.auth.mfa.listFactors();
    if(latest.error)throw latest.error;
@@ -104,22 +107,23 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
   try{
    const result=await sb.auth.mfa.unenroll({factorId:pending.id});
    if(result.error)throw result.error;
-   setPending(null);setCode('');setCodeState('idle');
+   setPending(null);setCode('');setCodeState('idle');lastAttemptRef.current='';
    await refresh();
    setMessage('Unverified setup cancelled. Two-factor authentication was not enabled.');
   }catch(e){setError(e instanceof Error?e.message:'Could not cancel pending setup.');}
   finally{setLoading(false);}
  };
- const verify=async()=>{
-  if(!sb||loading)return;
+ const verify=async(attemptCode=code)=>{
+  if(!sb||loading||verifyInFlightRef.current)return;
+  verifyInFlightRef.current=true;
   const factorId=mode==='challenge'?factors[0]?.id:pending?.id;
-  if(!factorId){setError('No authenticator has been set up. Select Set Up 2FA first.');return;}
-  if(!/^\d{6}$/.test(code)){setCodeState('invalid');setError('Enter all six digits from the authenticator app.');return;}
+  if(!factorId){verifyInFlightRef.current=false;setError('No authenticator has been set up. Select Set Up 2FA first.');return;}
+  if(!/^\d{6}$/.test(attemptCode)){verifyInFlightRef.current=false;setCodeState('invalid');setError('Enter all six digits from the authenticator app.');return;}
   setLoading(true);setError('');setMessage('');setCodeState('idle');
   try{
    const challenge=await sb.auth.mfa.challenge({factorId});
    if(challenge.error)throw challenge.error;
-   const result=await sb.auth.mfa.verify({factorId,challengeId:challenge.data.id,code});
+   const result=await sb.auth.mfa.verify({factorId,challengeId:challenge.data.id,code:attemptCode});
    if(result.error)throw result.error;
    // Check the actual server status; do not mark a pending factor as active
    // just because a button was pressed or a QR was scanned.
@@ -127,13 +131,18 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
    if(mode==='settings'&&!actual?.verified.some(f=>f.id===factorId)){
     throw Error('The code was accepted, but Supabase has not yet confirmed the factor as verified. Refresh and try again.');
    }
-   setCodeState('verified');setPending(null);setCode('');
-   setMessage(mode==='settings'?'Two-factor authentication is now enabled and verified.':'Authenticator verified. You can continue to your account.');
-   onVerified?.();
+   setCodeState('verified');setPending(null);
+   setMessage(mode==='settings'?'Two-factor authentication is now enabled and verified.':'Authenticator verified. Opening your workspace…');
+   if(mode==='challenge'){
+    successTimerRef.current=setTimeout(()=>{onVerified?.();successTimerRef.current=null;},750);
+   }else{
+    setCode('');
+    onVerified?.();
+   }
   }catch(e){
    setCodeState('invalid');
    setError(e instanceof Error?e.message:'Incorrect or expired code. Wait for a fresh code in the authenticator app and try again.');
-  }finally{setLoading(false);}
+  }finally{verifyInFlightRef.current=false;setLoading(false);}
  };
  const disable=async(factorId:string)=>{
   if(!sb||!window.confirm('Remove this verified authenticator? Your account will be less protected.'))return;
@@ -147,6 +156,21 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
   }catch(e){setError(e instanceof Error?e.message:'You must verify the authenticator before removing an enabled factor.');}
   finally{setLoading(false);}
  };
+ // A completed TOTP entry is submitted once, automatically.
+ // Wrong codes turn red and cannot retrigger until the input changes.
+ useEffect(()=>{
+  if(!code||code.length!==6){
+   lastAttemptRef.current='';
+   return;
+  }
+  if(initializing||loading||codeState!=='idle')return;
+  if(mode==='settings'&&!pending)return;
+  if(mode==='challenge'&&!factors.length)return;
+  if(lastAttemptRef.current===code)return;
+  lastAttemptRef.current=code;
+  void verify(code);
+ },[code,mode,pending?.id,factors.length,loading,initializing,codeState]);
+
  const copyKey=async()=>{
   if(!pending)return;
   try{await navigator.clipboard.writeText(pending.secret);setMessage('Setup key copied. Paste it into your authenticator app.');}
@@ -174,9 +198,17 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
    <button className="outline-button" type="button" onClick={()=>void cancel()} disabled={loading}><X size={15}/> Cancel Setup</button>
   </div>}
   {((mode==='challenge'&&factors.length>0)||(mode==='settings'&&!!pending))&&<div className="mfa-verify">
-   <label htmlFor={'mfa-code-'+mode}>Six-digit authenticator code</label>
-   <input id={'mfa-code-'+mode} value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,'').slice(0,6));setCodeState('idle');setError('');}} inputMode="numeric" type="text" autoComplete="one-time-code" pattern="[0-9]{6}" placeholder="000000" maxLength={6} aria-invalid={codeState==='invalid'} className={'mfa-code-'+codeState}/>
-   <button className="purple-button" disabled={loading||code.length!==6} type="button" onClick={()=>void verify()}>{loading?<LoaderCircle size={16} className="spin"/>:codeState==='verified'?<Check size={16}/>:<ShieldCheck size={16}/>} {mode==='challenge'?'Verify and Continue':'Verify Code & Enable 2FA'}</button>
+   <div className="mfa-otp-heading"><label htmlFor={'mfa-code-'+mode}>Six-digit authenticator code</label><span>{codeState==='verified'?'Verified':codeState==='invalid'?'Invalid code':'Secure verification'}</span></div>
+   <div className={'mfa-otp-box mfa-otp-'+codeState}>
+    <input id={'mfa-code-'+mode} value={code} onChange={e=>{const next=e.target.value.replace(/\D/g,'').slice(0,6);setCode(next);setCodeState('idle');setError('');if(next.length<6)lastAttemptRef.current='';}} onPaste={e=>{
+      const raw=e.clipboardData.getData('text');const match=raw.match(/(?:^|\D)(\d{6})(?=\D|$)/)?.[1]||raw.replace(/\D/g,'').slice(0,6);
+      if(match){e.preventDefault();setCode(match);setCodeState('idle');setError('');if(match!==lastAttemptRef.current)lastAttemptRef.current='';}
+    }} inputMode="numeric" type="text" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
+      aria-label="Six-digit authenticator code" aria-invalid={codeState==='invalid'} aria-describedby="mfa-auto-hint"/>
+    <div className="mfa-otp-digits" aria-hidden="true">{Array.from({length:6},(_,i)=><span key={i} className={code[i]?'filled':''}>{code[i]||'·'}</span>)}</div>
+   </div>
+   <p className="mfa-auto-hint" id="mfa-auto-hint">{loading?'Checking your code with Supabase…':codeState==='invalid'?'Incorrect or expired code. Enter a fresh six-digit code.':codeState==='verified'?'Verified successfully.': 'The code verifies automatically after the sixth digit. You can also paste it.'}</p>
+   <button className="mfa-verify-button" disabled={loading||code.length!==6||codeState==='verified'} type="button" onClick={()=>void verify(code)}>{loading?<LoaderCircle size={18} className="spin"/>:codeState==='verified'?<CheckCircle2 size={18}/>:<ShieldCheck size={18}/>} {loading?'Verifying your code…':codeState==='verified'?'Verification successful':mode==='challenge'?'Verify & Continue':'Verify & Enable 2FA'}</button>
   </div>}
   {mode==='challenge'&&onSignOut&&<button className="outline-button" type="button" onClick={()=>void onSignOut()} disabled={loading}>Sign Out</button>}
   <p className="settings-footnote">Your 2FA is only active when Supabase verifies the six-digit authenticator code. Never share the QR code or manual setup key. You can configure a backup authenticator device after activation.</p>
