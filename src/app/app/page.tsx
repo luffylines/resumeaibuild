@@ -125,9 +125,18 @@ export default function Home(){
   if(!sb||!nextUser){setMfaState('guest');return;}
   setMfaState('checking');setMfaError('');
   try{
-   const {data,error}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-   if(error)throw error;
-   setMfaState(data.nextLevel==='aal2'&&data.currentLevel!=='aal2'?'required':'verified');
+   const [assurance,listed]=await Promise.all([
+    sb.auth.mfa.getAuthenticatorAssuranceLevel(),
+    sb.auth.mfa.listFactors()
+   ]);
+   if(assurance.error)throw assurance.error;
+   if(listed.error)throw listed.error;
+   // Never demand a 2FA login challenge for an enrollment that was started
+   // but never verified. AAL2 authentication is only required after a factor
+   // is VERIFIED by Supabase, not after QR generation or QR scanning.
+   const verified=(listed.data.all||listed.data.totp)
+    .some(f=>f.factor_type==='totp'&&f.status==='verified');
+   setMfaState(verified&&assurance.data.currentLevel!=='aal2'?'required':'verified');
   }catch(error){
    setMfaState('error');
    setMfaError(error instanceof Error?error.message:'Could not confirm two-factor security state.');
