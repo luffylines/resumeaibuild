@@ -3,8 +3,8 @@ import {serverSupabase} from '@/lib/supabase-server';
 import {geminiModel} from '@/lib/ai-model';
 export const runtime='nodejs';
 const guides:Record<string,string>={
- resume:'Return ONLY a valid JSON object with keys summary, targetRole and skills (comma-separated). Use only user-supplied facts. No Markdown. Never invent education, employers, expertise, experience or numbers.',
- summary:'Improve this resume summary for the target role. Output only a 55–85 word ATS-friendly summary. Never invent experience, metrics, skills, employers or qualifications.',
+ resume:'Return ONLY a valid JSON object with keys summary and skills (comma-separated). Make the resume suitable for multiple job applications, without assigning a target job title or inventing facts. No Markdown. Never invent education, employers, expertise, experience or numbers.',
+ summary:'Improve this transferable resume summary for a range of relevant applications. Output only a 55–85 word ATS-friendly summary. Never invent experience, metrics, skills, employers or qualifications.',
  coverletter:'Write a concise tailored cover letter based ONLY on the supplied resume and job description. Never invent credentials. Where information is unavailable, use generic professional wording.',
  interview:'You are an evidence-based interview coach evaluating ONE COMPLETED 10-question mock interview, never single answers. Evaluate all question/answer pairs against the selected resume and target role. Give: (1) Overall score out of 100 with transparent rubric (role relevance, clarity, concrete examples, communication, completeness); (2) Strengths grounded in answers; (3) Weaknesses and actionable improvements; (4) concise question-by-question feedback for answered questions and identify skipped questions; (5) 2 better example answers using ONLY facts the applicant actually provided. Use direct constructive language. Treat unsubstantiated claims cautiously. Do not invent credentials, employers, metrics or experiences. If all answers are empty, do not score.',
 };

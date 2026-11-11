@@ -15,7 +15,7 @@ export type JobApplication = {id:string;company:string;role:string;status:Applic
 export type SampleJob = {id:string;role:string;company:string;location:string;type:string;keywords:string[]};
 export const uid = () => crypto.randomUUID();
 export const emptyResume = ():Resume => ({id:uid(),title:'Untitled Resume',name:'',email:'',phone:'',location:'',portfolio:'',targetRole:'',summary:'',skills:'',experience:[{id:uid(),role:'',company:'',dates:'',details:''}],education:[{id:uid(),school:'',degree:'',dates:''}],certifications:[],references:[],languages:[],projects:[],awards:[],volunteer:[],customSections:[],additionalInfo:'',updatedAt:new Date().toISOString()});
-export const sampleResume:Resume = {id:'f36c6346-dab1-452e-9baa-88da256f9881',title:'Senior UX Designer',name:'Christian B. Aring',email:'demo@example.com',phone:'+63 900 000 0000',location:'Quezon City, Philippines',portfolio:'portfolio.example',targetRole:'Senior Product Designer',summary:'Product designer with 5+ years of experience designing accessible digital products, running user research, and collaborating with engineers to improve user experiences.',skills:'Figma, UX Research, Design Systems, UI Design, Prototyping, User Testing, Accessibility',experience:[{id:'e1',role:'Product Designer',company:'Northstar Studio',dates:'2022 – Present',details:'Led mobile and web redesign projects and worked closely with engineering teams to deliver clear, accessible user interfaces.'}],education:[{id:'ed1',school:'State University',degree:'B.S. Digital Design',dates:'2016 – 2020'}],
+export const sampleResume:Resume = {id:'f36c6346-dab1-452e-9baa-88da256f9881',title:'Senior UX Designer',name:'Christian B. Aring',email:'demo@example.com',phone:'+63 900 000 0000',location:'Quezon City, Philippines',portfolio:'portfolio.example',targetRole:'',summary:'Product designer with 5+ years of experience designing accessible digital products, running user research, and collaborating with engineers to improve user experiences.',skills:'Figma, UX Research, Design Systems, UI Design, Prototyping, User Testing, Accessibility',experience:[{id:'e1',role:'Product Designer',company:'Northstar Studio',dates:'2022 – Present',details:'Led mobile and web redesign projects and worked closely with engineering teams to deliver clear, accessible user interfaces.'}],education:[{id:'ed1',school:'State University',degree:'B.S. Digital Design',dates:'2016 – 2020'}],
 certifications:[{id:'demo-cert',title:'UX Design Certificate (Sample)',issuer:'Demo Design Institute',year:'2024',details:''}],
 languages:[{id:'demo-lang-en',name:'English',level:'Fluent'},{id:'demo-lang-fil',name:'Filipino',level:'Native'}],
 references:[{id:'demo-ref',name:'Sample Reference',role:'Design Supervisor',company:'Northstar Studio (Demo)',contact:'reference@example.test'}],
@@ -23,9 +23,9 @@ updatedAt:'2026-11-11T00:00:00.000Z'};
 
 export const sampleResumes:Resume[]=[
  sampleResume,
- {...sampleResume,id:'83270ace-d632-424b-a83e-9cfd70102a8b',title:'Frontend Developer',targetRole:'Frontend Developer',skills:'React, TypeScript, JavaScript, HTML, CSS, Git, Accessibility',summary:'Frontend developer with practical experience in web interfaces, reusable components, accessibility, and responsive layouts.',template:'professional'},
- {...sampleResume,id:'9151d65f-a38f-4d12-bd49-3f9222f574e4',title:'Product Designer',targetRole:'Product Designer',template:'minimal'},
- {...sampleResume,id:'da9aa012-1a0b-42a3-bbd5-aa441782cf99',title:'Marketing Specialist',targetRole:'Marketing Specialist',skills:'Communication, Analytics, Content Strategy, Campaign Management, Research',template:'modern'}
+ {...sampleResume,id:'83270ace-d632-424b-a83e-9cfd70102a8b',title:'Frontend Developer',targetRole:'',skills:'React, TypeScript, JavaScript, HTML, CSS, Git, Accessibility',summary:'Frontend developer with practical experience in web interfaces, reusable components, accessibility, and responsive layouts.',template:'professional'},
+ {...sampleResume,id:'9151d65f-a38f-4d12-bd49-3f9222f574e4',title:'Product Designer',targetRole:'',template:'minimal'},
+ {...sampleResume,id:'da9aa012-1a0b-42a3-bbd5-aa441782cf99',title:'Marketing Specialist',targetRole:'',skills:'Communication, Analytics, Content Strategy, Campaign Management, Research',template:'modern'}
 ];
 
 export const sampleJobs:SampleJob[] = [

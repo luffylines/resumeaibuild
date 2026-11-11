@@ -33,7 +33,7 @@ export default function ResumeDocument({resume:r,miniature=false}:Props){
  >
   <div className="rd-accent-bar" aria-hidden="true"/>
   <header className={'rd-header '+(hasPortraitTemplate?'rd-header-photo':'')}>
-   <div className="rd-header-text"><h2>{r.name||'YOUR NAME'}</h2><p className="rd-job-title">{r.targetRole||'Professional Title'}</p></div>
+   <div className="rd-header-text"><h2>{r.name||'YOUR NAME'}</h2></div>
    {template.id==='creative-sidebar'&&<div className="rd-header-mark" aria-hidden="true">{(r.name||'A').charAt(0).toUpperCase()}</div>}
    <p className="rd-contact">{contact.length?contact.map((s,i)=><span key={i}>{s}</span>):<span>Email  •  Phone  •  Location</span>}</p>{portrait}
   </header>

@@ -71,7 +71,6 @@ export async function exportResumePDF(resume:Resume){
  const name=normalizePdf(resume.name||'YOUR NAME');
  const nameSize=Math.min(25,Math.max(15,465/(bold.widthOfTextAtSize(name,24)||1)*24));
  draw(name,M,y,nameSize,true,headerText);y-=31;
- if(resume.targetRole){draw(resume.targetRole,M,y,12,true,isBand?rgb(.9,.91,1):accent);y-=24;}
  const contacts=[resume.email,resume.phone,resume.location,resume.portfolio].filter(Boolean).map(normalizePdf);
  let contactLines=breakText(contacts.join('  |  '),W-2*M-photoSide,t=>regular.widthOfTextAtSize(t,9));
  for(const l of contactLines){draw(l,M,y,9,false,isBand?rgb(1,1,1):muted);y-=14;}
@@ -108,7 +107,6 @@ export async function exportResumeDOCX(resume:Resume){
  paras.push(new Paragraph({alignment:AlignmentType.LEFT,spacing:{after:140},children:[
   new TextRun({text:resume.name||'YOUR NAME',bold:true,size:34,color:accent,font:'Aptos Display'})
  ]}));
- if(resume.targetRole)paras.push(new Paragraph({spacing:{after:110},children:[new TextRun({text:resume.targetRole,size:23,color:accent,bold:true})]}));
  const contact=[resume.email,resume.phone,resume.location,resume.portfolio].filter(Boolean).join('  |  ');
  if(contact)paras.push(new Paragraph({spacing:{after:235},children:[new TextRun({text:contact,size:17,color:'596276'})]}));
  if(resume.photo&&PHOTO_READY_TEMPLATES.has(template.id)){
