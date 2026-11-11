@@ -194,6 +194,24 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    if(bytes.length<1000)throw Error(label+' file unexpectedly small: '+bytes.length);
    const valid=label==='Download PNG'?bytes[0]===0x89&&bytes.subarray(1,4).toString()==='PNG':bytes.subarray(0,magic.length).toString()===magic;
    if(!valid)throw Error(label+' did not return a valid file header');
+   if(label==='Download PNG'){
+    const {PNG}=require('pngjs');
+    const image=PNG.sync.read(bytes);
+    if(image.width<1500||image.height<2200)throw Error('PNG was cropped or too small: '+image.width+'x'+image.height);
+    const colors=new Set(),ink=new Set();
+    let notWhite=0;
+    for(let y=12;y<image.height;y+=17){
+     for(let x=12;x<image.width;x+=17){
+      const i=(y*image.width+x)*4;
+      const r=image.data[i],g=image.data[i+1],b=image.data[i+2];
+      const color=(r<<16)|(g<<8)|b;colors.add(color);
+      if(r<180&&g<180&&b<180)ink.add(color);
+      if(r<240||g<240||b<240)notWhite++;
+     }
+    }
+    if(colors.size<40||ink.size<5||notWhite<80)throw Error('PNG looks blank: unique colors='+colors.size+', dark colors='+ink.size+', non-white samples='+notWhite);
+    console.log('PASS PNG visual content: '+image.width+'x'+image.height+', '+colors.size+' colors and '+notWhite+' non-white samples');
+   }
    console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
    if(label==='Download DOCX'){
     const {execFileSync}=require('node:child_process');
@@ -205,6 +223,19 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 
   }
 
+
+  // Check Canva handoff independently of Canva's external network response.
+  await photoContext.route('https://www.canva.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<html><body>Canva PDF Editor (test stub)</body></html>'}));
+  const canvaTabWait=photoContext.waitForEvent('page');
+  const canvaPdfWait=photoPage.waitForEvent('download');
+  await photoPage.getByRole('button',{name:'Edit in Canva'}).click();
+  const canvaTab=await canvaTabWait;
+  const canvaPdf=await canvaPdfWait;
+  if(!canvaPdf.suggestedFilename().endsWith('.pdf'))throw Error('Canva handoff did not download a PDF');
+  await canvaTab.waitForURL('https://www.canva.com/pdf-editor/',{timeout:15000});
+  await photoPage.getByText('Upload the downloaded PDF').first().waitFor({state:'visible'});
+  console.log('PASS Canva handoff: downloads PDF, opens Canva import page and explains manual upload');
+  await canvaTab.close();
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
   if(count!==20)throw Error('Expected 20 unique resume layout cards, found '+count);

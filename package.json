@@ -29,6 +29,7 @@
     "postcss": "8.5.0",
     "tailwindcss": "4.1.0",
     "typescript": "5.8.3",
-    "playwright": "1.55.1"
+    "playwright": "1.55.1",
+    "pngjs": "7.0.0"
   }
 }
