@@ -117,6 +117,21 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await speechPage.getByRole('button',{name:'Stop speaking'}).click();
   await speechPage.getByText('Microphone paused. Your transcript has been kept.').waitFor({state:'visible'});
   console.log('PASS discoverable voice controls, stop & retry, authenticated AI fallback notice');
+
+  // iPhone Safari emulation: mobile uses AI recorder instead of unsupported
+  // SpeechRecognition and offers optional native audio upload.
+  const phoneCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,
+    userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1'});
+  const phonePage=await phoneCtx.newPage();
+  await open(phonePage,'/app');
+  await phonePage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
+  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  await phonePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
+  await phonePage.getByRole('button',{name:'Upload Audio'}).waitFor({state:'visible'});
+  await phoneCtx.close();
+  console.log('PASS iPhone voice-first controls, native recording fallback and general interviews');
+
   console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
   await speechContext.close();
 
@@ -308,10 +323,10 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await open(draftPage,'/app');
   await draftPage.locator('.create-button').click();
   await draftPage.getByLabel('Full Name').fill('Resume Auto Save Test');
-  await draftPage.getByLabel('Target Job Title').fill('Systems Analyst');
+  await draftPage.getByLabel('Email Address').fill('autosave@example.com');
   await draftPage.waitForFunction(()=>{
    const value=JSON.parse(localStorage.getItem('resumebuilder:drafts:v1:demo')||'{}');
-   return Object.values(value.drafts||{}).some(d=>d.name==='Resume Auto Save Test'&&d.targetRole==='Systems Analyst');
+   return Object.values(value.drafts||{}).some(d=>d.name==='Resume Auto Save Test'&&d.email==='autosave@example.com');
   });
   await draftPage.locator('.side-nav').getByRole('button',{name:'ATS Checker'}).click();
   await draftPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
@@ -327,9 +342,11 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await draftPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
   await draftPage.getByLabel('Describe your background').waitFor({state:'visible'});
   await draftPage.locator('.wizard-stagebar').getByRole('button',{name:'Profile'}).click();
-  if(await draftPage.getByLabel('Target Job Title').inputValue()!=='Systems Analyst')throw Error('Resume draft lost after reload');
+  if(await draftPage.getByLabel('Email Address').inputValue()!=='autosave@example.com')throw Error('Resume draft lost after reload');
+  if(await draftPage.getByLabel('Target Job Title').count())throw Error('Target Job Title should not be required in Build Resume');
+  if(await draftPage.locator('.resume-document .rd-job-title').count())throw Error('Target job title must not be printed');
   await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
-  await draftPage.locator('.interview-role strong').getByText('Systems Analyst').waitFor({state:'visible'});
+  await draftPage.locator('.interview-role strong').getByText('General interview').waitFor({state:'visible'});
   await draftPage.getByLabel('Your Answer').fill('I designed an incident management workflow for our capstone group.');
   await draftPage.getByRole('button',{name:'Next Question'}).click();
   await draftPage.getByText('Current Question (2/10)').waitFor({state:'visible'});

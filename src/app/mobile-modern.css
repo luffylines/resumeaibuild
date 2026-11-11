@@ -519,3 +519,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .auth-resend:disabled{opacity:.58;cursor:not-allowed}
 .auth-resend:not(:disabled):hover{background:#f8f4ff}
 .auth-submit:disabled{opacity:.5;cursor:not-allowed}
+
+
+/* Mobile-first interview voice controls for iOS and Android */
+.interview-focus-field{display:flex;flex-direction:column;gap:7px;margin:12px 0;color:#6e5d82;font-size:11px;font-weight:700}
+.interview-focus-field input{min-height:43px;padding:11px 13px;border:1px solid #ded3f2;border-radius:10px;background:#fff;color:#302244;font-size:12px;max-width:100%;width:100%;font-weight:450}
+.interview-focus-field input:focus{outline:2px solid #815ae5;outline-offset:2px}
+.interview-focus-field input:disabled{opacity:.7}
+@media(max-width:680px){
+ .interview-transcription-tools .interview-voice-primary,.interview-transcription-tools .interview-cloud-button{min-height:52px;font-size:12px;line-height:1.35;padding:12px 8px}
+ .interview-stage-actions button{min-width:44px;min-height:44px}
+ .interview-transcription-tools .interview-voice-help{font-size:11px;line-height:1.6}
+ .interview-inline-message{font-size:12px;line-height:1.6}
+ .interview-coach-panel h2{overflow-wrap:anywhere}
+}
