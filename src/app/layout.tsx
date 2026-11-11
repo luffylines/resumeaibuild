@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './ui.css';
 export const metadata: Metadata = {
   title: 'ResumeBuilder — AI Resume Builder & Job Matching',
   description: 'Create your resume, check ATS readiness, discover matching roles, and practice interviews.'
