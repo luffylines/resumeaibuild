@@ -132,8 +132,15 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await phonePage.getByRole('button',{name:'Open navigation menu'}).click();
   await phonePage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
   await phonePage.getByRole('button',{name:'Start Personalized Interview'}).click();
-  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
-  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  // Chromium with an iPhone user-agent may expose live Web Speech.
+  // Real Safari versions may instead require the server-side recorder.
+  const phoneAI=phonePage.getByRole('button',{name:'Record answer with AI'}).last();
+  if(await phoneAI.isVisible().catch(()=>false)){
+   await phoneAI.click();
+  }else{
+   await phonePage.getByRole('button',{name:'Start microphone transcription'}).waitFor({state:'visible'});
+   await phonePage.getByRole('button',{name:'Record with AI backup'}).click();
+  }
   await phonePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
   await phonePage.getByRole('button',{name:'Upload Audio'}).waitFor({state:'visible'});
   await phoneCtx.close();
