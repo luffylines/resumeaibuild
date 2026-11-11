@@ -356,6 +356,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await draftPage.getByText('Current Question (2/10)').waitFor({state:'visible'});
   await draftPage.getByRole('button',{name:'Previous'}).click();
   if(!(await draftPage.getByLabel('Your Answer').inputValue()).includes('incident management'))throw Error('Previous interview answer was lost on navigation');
+  await draftPage.waitForFunction(()=>{
+   try{return JSON.parse(localStorage.getItem('resumebuilder:interview:v1:demo')||'{}').answer?.includes('incident management');}catch{return false;}
+  });
   await draftPage.reload({waitUntil:'networkidle'});
   await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
   await draftPage.getByText('Current Question (1/10)').waitFor({state:'visible'});
