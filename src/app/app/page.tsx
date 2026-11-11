@@ -93,7 +93,7 @@ export default function Home(){
     if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}else{const blank=emptyResume();setDraft(blank);setSelectedId(blank.id);}
    }else{
     const r=loadDemo('resumebuilder_resumes',[sampleResume]);const a=loadDemo('resumebuilder_apps',starters);
-    setResumes(r);setApplications(a);setJobsData(sampleJobs);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
+    setResumes(r);setApplications(a);const adminPreview=loadDemo<{jobs:(typeof sampleJobs[number]&{is_active:boolean})[]}|null>('resume_admin_preview',null);setJobsData(adminPreview?.jobs?adminPreview.jobs.filter(j=>j.is_active):sampleJobs);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
    }
   }catch(e){setError(e instanceof Error?e.message:'Unable to load saved data.');}
   finally{setReady(true);}
