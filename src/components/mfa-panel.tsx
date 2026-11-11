@@ -4,7 +4,7 @@ import type {User} from '@supabase/supabase-js';
 import {Check,CheckCircle2,Copy,KeyRound,LoaderCircle,RotateCcw,ShieldCheck,ShieldOff,Smartphone,X} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 
-import {classifyFactors} from '@/lib/mfa-factors';
+import {classifyFactors,removeUnverifiedFactors} from '@/lib/mfa-factors';
 import type {MfaFactor as Factor,MfaFactorList as FactorList} from '@/lib/mfa-factors';
 
 type Pending={id:string;qr:string;secret:string};
@@ -65,11 +65,10 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
 
  const clearUnverified=async(items:Factor[])=>{
   if(!sb)return;
-  for(const factor of items){
-   if(factor.status!=='unverified')continue; // critical safety guard
-   const removed=await sb.auth.mfa.unenroll({factorId:factor.id});
+  await removeUnverifiedFactors(items,async factorId=>{
+   const removed=await sb.auth.mfa.unenroll({factorId});
    if(removed.error)throw removed.error;
-  }
+  });
  };
  const begin=async()=>{
   if(!sb||!user||loading||mode!=='settings')return;
