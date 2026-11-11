@@ -1,10 +1,13 @@
 name: Validate ResumeBuilder
+
 on:
   push:
     branches: [main]
   pull_request:
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,3 +23,23 @@ jobs:
         run: npm run typecheck
       - name: Next.js production build
         run: npm run build
+      - name: Smoke test website routes (demo mode)
+        shell: bash
+        run: |
+          npm start > /tmp/resume-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:3000/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          for route in / /guide /signup /login /forgot-password /auth/reset /app /admin; do
+            code=$(curl --silent --show-error --output /tmp/resumebuilder-page.html --write-out "%{http_code}" "http://127.0.0.1:3000$route")
+            echo "$route → HTTP $code"
+            if [ "$code" != "200" ]; then
+              cat /tmp/resume-next.log
+              exit 1
+            fi
+          done
