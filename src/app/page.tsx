@@ -83,10 +83,10 @@ export default function Home(){
  const init=useCallback(async(u:User|null)=>{
   try{
    if(sb&&u){
-    const [rr,aa]=await Promise.all([sb.from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false}),sb.from('job_applications').select('content').eq('user_id',u.id).order('created_at',{ascending:false})]);
+    const [rr,aa]=await Promise.all([(sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false}),(sb as any).from('job_applications').select('content').eq('user_id',u.id).order('created_at',{ascending:false})]);
     if(rr.error)throw rr.error;if(aa.error)throw aa.error;
-    const r=(rr.data||[]).map(x=>x.content as Resume);
-    setResumes(r);setApplications((aa.data||[]).map(x=>x.content as JobApplication));
+    const r=(rr.data||[]).map((x:{content:Resume})=>x.content);
+    setResumes(r);setApplications((aa.data||[]).map((x:{content:JobApplication})=>x.content));
     if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}else{const blank=emptyResume();setDraft(blank);setSelectedId(blank.id);}
    }else{
     const r=loadDemo('resumebuilder_resumes',[sampleResume]);const a=loadDemo('resumebuilder_apps',starters);
@@ -106,20 +106,20 @@ export default function Home(){
  const flash=(text:string)=>{setNotice(text);setError('');};
  async function saveResume(r:Resume){
   setError('');const item={...r,updatedAt:new Date().toISOString()};
-  if(sb&&user){const {error:e}=await sb.from('resumes').upsert({id:item.id,user_id:user.id,title:item.title,content:item,updated_at:item.updatedAt});if(e){setError(e.message);return;}}
+  if(sb&&user){const {error:e}=await (sb as any).from('resumes').upsert({id:item.id,user_id:user.id,title:item.title,content:item,updated_at:item.updatedAt});if(e){setError(e.message);return;}}
   setResumes(prev=>[item,...prev.filter(x=>x.id!==item.id)]);setDraft(item);setSelectedId(item.id);flash('Resume saved successfully.');
  }
  async function removeResume(id:string){
   if(!window.confirm('Delete this resume?'))return;
-  if(sb&&user){const {error:e}=await sb.from('resumes').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
+  if(sb&&user){const {error:e}=await (sb as any).from('resumes').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
   const remaining=resumes.filter(x=>x.id!==id);setResumes(remaining);if(selectedId===id){const other=remaining[0]||emptyResume();setSelectedId(other.id);setDraft(other);}flash('Resume deleted.');
  }
  async function saveApp(a:JobApplication){
-  if(sb&&user){const {error:e}=await sb.from('job_applications').upsert({id:a.id,user_id:user.id,content:a});if(e){setError(e.message);return;}}
+  if(sb&&user){const {error:e}=await (sb as any).from('job_applications').upsert({id:a.id,user_id:user.id,content:a});if(e){setError(e.message);return;}}
   setApplications(prev=>[a,...prev.filter(x=>x.id!==a.id)]);flash('Application updated.');
  }
  async function removeApp(id:string){
-  if(sb&&user){const {error:e}=await sb.from('job_applications').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
+  if(sb&&user){const {error:e}=await (sb as any).from('job_applications').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
   setApplications(prev=>prev.filter(x=>x.id!==id));flash('Application removed.');
  }
  function startNew(){const r=emptyResume();setDraft(r);setSelectedId(r.id);go('builder');}
