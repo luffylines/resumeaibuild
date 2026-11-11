@@ -5,7 +5,7 @@ import type {ReactNode} from 'react';
 import {UNIQUE_RESUME_TEMPLATES,TEMPLATE_CATEGORIES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,getResumeTemplate,canonicalTemplateId,designDisplayName,PHOTO_READY_TEMPLATES} from '@/lib/templates';
 import ResumeDocument from '@/components/resume-document';
 import ExtraSectionsEditor from '@/components/extra-sections-editor';
-import {exportResumeDOCX,exportResumePDF,exportResumePNG} from '@/lib/resume-export';
+import {exportResumeDOCX,exportResumePDF,exportResumePNG,exportResumePDFText,exportResumeDOCXEditable} from '@/lib/resume-export';
 import type {TemplateCategory} from '@/lib/templates';
 import type {Resume} from '@/lib/types';
 import {uid} from '@/lib/types';
@@ -33,7 +33,7 @@ export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,sto
  },[wizardKey,wizardLoadedKey,step,prompt]);
  const photoInput=useRef<HTMLInputElement>(null);
  const exportSheet=useRef<HTMLDivElement>(null);
- const [exporting,setExporting]=useState<'PDF'|'DOCX'|'PNG'|null>(null);
+ const [exporting,setExporting]=useState<'PDF'|'DOCX'|'PNG'|'EDITABLE-DOCX'|'TEXT-PDF'|null>(null);
  const [canvaBusy,setCanvaBusy]=useState(false);
  const [canvaReady,setCanvaReady]=useState(false);
  const [photoBusy,setPhotoBusy]=useState(false);
@@ -67,13 +67,18 @@ export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,sto
   <div className="wizard-photo-controls"><div className="wizard-photo-thumb">{draft.photo?<img alt="Your uploaded headshot" src={draft.photo}/>:<Camera size={26}/>}</div><div className="wizard-photo-buttons"><input ref={photoInput} hidden type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>void handlePhoto(e.target.files?.[0])}/><button type="button" className="outline-button" disabled={photoBusy} onClick={()=>photoInput.current?.click()}><ImageUp size={16}/>{photoBusy?'Processing…':draft.photo?'Replace Photo':'Upload Photo'}</button>{draft.photo&&<button type="button" className="wizard-photo-remove" onClick={()=>{change('photo',null);setMessage('Photo removed from this resume.');}}><XCircle size={16}/> Remove</button>}<small>JPG, PNG or WebP · Max 8MB · center-cropped automatically</small></div></div>
  </div>;
 
- const downloadFile=async(kind:'PDF'|'DOCX'|'PNG')=>{
+ const downloadFile=async(kind:'PDF'|'DOCX'|'PNG'|'EDITABLE-DOCX'|'TEXT-PDF')=>{
   setMessage('');setExporting(kind);
   try{
-   if(kind==='PDF')await exportResumePDF(draft);
-   if(kind==='DOCX')await exportResumeDOCX(draft);
-   if(kind==='PNG')await exportResumePNG(draft,exportSheet.current?.querySelector('.resume-document') as HTMLElement|null);
-   setMessage(kind+' exported. Your resume contains no website URLs, browser dates or page headers.');
+   const source=exportSheet.current?.querySelector('.resume-document') as HTMLElement|null;
+   if(kind==='PDF')await exportResumePDF(draft,source);
+   if(kind==='DOCX')await exportResumeDOCX(draft,source);
+   if(kind==='PNG')await exportResumePNG(draft,source);
+   if(kind==='TEXT-PDF')await exportResumePDFText(draft);
+   if(kind==='EDITABLE-DOCX')await exportResumeDOCXEditable(draft);
+   setMessage(kind==='PDF'||kind==='DOCX'||kind==='PNG'
+    ?kind+' exported using the selected template. Visual PDF/DOCX exports preserve appearance as images; use the editable alternatives to edit individual words.'
+    :'Editable document exported. Text is editable, but the simplified layout may differ from the preview.');
   }catch(e){setMessage(e instanceof Error?e.message:kind+' export failed.');}
   finally{setExporting(null);}
  };
@@ -89,7 +94,7 @@ export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,sto
   setCanvaBusy(true);
   setMessage('');
   try{
-   await exportResumePDF(draft);
+   await exportResumePDFText(draft);
    if(popup)popup.location.replace('https://www.canva.com/pdf-editor/');
    setCanvaReady(true);
    setMessage('Resume PDF downloaded. Canva is opening in a new tab. Upload the downloaded PDF to edit it in Canva. Automatic upload requires a Canva account connection.');
@@ -108,7 +113,12 @@ export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,sto
    <button type="button" disabled={!!exporting} onClick={()=>void downloadFile('DOCX')}><FileType size={19}/><span>{exporting==='DOCX'?'Preparing…':'Download DOCX'}</span></button>
    <button type="button" disabled={!!exporting} onClick={()=>void downloadFile('PNG')}><FileImage size={19}/><span>{exporting==='PNG'?'Preparing…':'Download PNG'}</span></button>
    <button type="button" disabled={!!exporting} onClick={()=>window.print()}><Printer size={19}/><span>Print</span></button>
- </div>;
+   <div style={{gridColumn:'1 / -1',display:'flex',gap:14,flexWrap:'wrap',justifyContent:'center'}}>
+    <button type="button" disabled={!!exporting} style={{height:'auto',minHeight:35,padding:'5px 10px'}} onClick={()=>void downloadFile('EDITABLE-DOCX')}>Editable DOCX (simple layout)</button>
+    <button type="button" disabled={!!exporting} style={{height:'auto',minHeight:35,padding:'5px 10px'}} onClick={()=>void downloadFile('TEXT-PDF')}>Text-based PDF (ATS)</button>
+   </div>
+   <p style={{gridColumn:'1 / -1',fontSize:12,color:'#596276',lineHeight:1.5,margin:0}}>PDF and DOCX above preserve the selected visual design, including columns, colors and photos, as non-editable artwork. Choose the text-based alternatives to edit/select individual words; their layout is simplified.</p>
+ </div>
  const exp=(id:string,k:'role'|'company'|'dates'|'details',v:string)=>change('experience',draft.experience.map(e=>e.id===id?{...e,[k]:v}:e));
  const edu=(id:string,k:'school'|'degree'|'dates',v:string)=>change('education',draft.education.map(e=>e.id===id?{...e,[k]:v}:e));
  async function generate(){setMessage('');const output=await runAI('resume',JSON.stringify({background:prompt,existing:draft}));if(!output)return;try{

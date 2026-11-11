@@ -88,10 +88,15 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await open(speechPage,'/app');
   if(!(await speechPage.locator('.dashboard-admin-link').count()))throw Error('Missing Admin Preview access on demo client dashboard');
   await speechPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
-  await speechPage.getByRole('button',{name:'Next Question'}).click();
+  await speechPage.getByRole('button',{name:'Start Personalized Interview'}).click();
   await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.length===1);
-  const spoken=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[0]);
-  if(!spoken.includes('challenging project'))throw Error('Next Question did not automatically speak the new question: '+spoken);
+  const welcome=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[0]);
+  if(!welcome.includes('Christian'))throw Error('Interview greeting did not use resume name: '+welcome);
+  if(!(await speechPage.getByText('Current Question (1/10)').count()))throw Error('Wrong interview question counter');
+  await speechPage.getByRole('button',{name:'Next Question'}).click();
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.length===2);
+  const spoken=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[1]);
+  if(!spoken.trim()||spoken.length<10)throw Error('Next Question was not read aloud: '+spoken);
   await speechPage.getByRole('button',{name:'Start microphone transcription'}).click();
   await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.emit('I led a team project using Laravel',false));
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='I led a team project using Laravel');
@@ -103,7 +108,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const locale=await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.lang);
   if(locale!=='fil-PH')throw Error('Speech language switch not applied');
   await speechPage.getByRole('button',{name:'Next Question'}).click();
-  await speechPage.waitForFunction(()=>window.__resumeSpeechMock.spoken.length===2);
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock.spoken.length===3);
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
   // Voice controls should be discoverable without searching for the small robot icon.
@@ -126,8 +131,16 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await open(phonePage,'/app');
   await phonePage.getByRole('button',{name:'Open navigation menu'}).click();
   await phonePage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
-  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
-  await phonePage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  await phonePage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  // Chromium with an iPhone user-agent may expose live Web Speech.
+  // Real Safari versions may instead require the server-side recorder.
+  const phoneAI=phonePage.getByRole('button',{name:'Record answer with AI'}).last();
+  if(await phoneAI.isVisible().catch(()=>false)){
+   await phoneAI.click();
+  }else{
+   await phonePage.getByRole('button',{name:'Start microphone transcription'}).waitFor({state:'visible'});
+   await phonePage.getByRole('button',{name:'Record with AI backup'}).click();
+  }
   await phonePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
   await phonePage.getByRole('button',{name:'Upload Audio'}).waitFor({state:'visible'});
   await phoneCtx.close();
@@ -252,14 +265,28 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
    if(label==='Download DOCX'){
     const {execFileSync}=require('node:child_process');
-    const xml=execFileSync('unzip',['-p',await d.path(),'word/document.xml'],{encoding:'utf8'});
-    for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
-     if(!xml.toLowerCase().includes(marker.toLowerCase()))throw Error('Missing user-added content in DOCX: '+marker);
-    }
+    const files=execFileSync('unzip',['-Z','-1',await d.path()],{encoding:'utf8'});
+    if(!files.includes('word/media/image'))throw Error('Design-accurate DOCX did not include rendered resume page artwork');
    }
 
   }
 
+
+  // The separate editable export must preserve all entered text. The visual
+  // DOCX above deliberately uses rasterized artwork to match the live preview.
+  const editableEvent=photoPage.waitForEvent('download',{timeout:30000});
+  await photoPage.getByRole('button',{name:'Editable DOCX (simple layout)'}).click();
+  const editable=await editableEvent;
+  const {execFileSync}=require('node:child_process');
+  const editableXml=execFileSync('unzip',['-p',await editable.path(),'word/document.xml'],{encoding:'utf8'});
+  for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
+   if(!editableXml.toLowerCase().includes(marker.toLowerCase()))throw Error('Editable DOCX missing user-added content: '+marker);
+  }
+  const atsEvent=photoPage.waitForEvent('download',{timeout:30000});
+  await photoPage.getByRole('button',{name:'Text-based PDF (ATS)'}).click();
+  const atsPdf=await atsEvent;
+  if(fs.readFileSync(await atsPdf.path()).subarray(0,4).toString()!=='%PDF')throw Error('Text-based PDF was not generated');
+  console.log('PASS visual DOCX artwork plus separately editable DOCX and text PDF');
 
   // Check Canva handoff independently of Canva's external network response.
   await photoContext.route('https://www.canva.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<html><body>Canva PDF Editor (test stub)</body></html>'}));
@@ -347,7 +374,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(await draftPage.getByLabel('Target Job Title').count())throw Error('Target Job Title should not be required in Build Resume');
   if(await draftPage.locator('.resume-document .rd-job-title').count())throw Error('Target job title must not be printed');
   await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
-  await draftPage.locator('.interview-role strong').getByText('General interview').waitFor({state:'visible'});
+  await draftPage.locator('.interview-role strong').getByText('Personalized to your resume').waitFor({state:'visible'});
+  await draftPage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  await draftPage.getByText('Current Question (1/10)').waitFor({state:'visible'});
   await draftPage.getByLabel('Your Answer').fill('I designed an incident management workflow for our capstone group.');
   await draftPage.getByRole('button',{name:'Next Question'}).click();
   await draftPage.getByText('Current Question (2/10)').waitFor({state:'visible'});
