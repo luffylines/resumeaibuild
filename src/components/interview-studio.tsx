@@ -35,8 +35,8 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  const currentResume=resumes.find(r=>r.id===resumeId)||resumes.find(r=>r.id===activeResumeId)||resumes[0];
  const role=(currentResume?.targetRole||targetRole||'').trim();
  const targetLabel=role&&role.toLowerCase()!=='general'?role:'Not set in resume';
- const answeredCount=answers.filter(x=>x.trim().length>0).length+(answers[index]?.trim()?0:answer.trim()?1:0);
  const [answer,setAnswer]=useState('');
+ const answeredCount=answers.filter(x=>x.trim().length>0).length+(answers[index]?.trim()?0:answer.trim()?1:0);
  const [feedback,setFeedback]=useState('');
  const [message,setMessage]=useState('');
  const [language,setLanguage]=useState('en-US');
