@@ -4,7 +4,7 @@ import {adminAccess} from '@/lib/admin-access';
 import {writeAudit} from '@/lib/audit';
 export const runtime='nodejs';
 
-const kinds=['activity','users','resumes','ats','jobs','usage'] as const;
+const kinds=['activity','users','resumes','ats','usage'] as const;
 type Kind=typeof kinds[number];
 const clean=(v:unknown):string=>{
  const s=typeof v==='object'&&v!==null?JSON.stringify(v):String(v??'');
@@ -40,7 +40,7 @@ export async function GET(req:NextRequest){
    const all=[];for(let p=1;p<=20;p++){const {data,error}=await db.auth.admin.listUsers({page:p,perPage:100});if(error)throw error;all.push(...data.users);if(data.users.length<100)break;}
    records=all.map(u=>({id:u.id,email:u.email,created_at:u.created_at,last_sign_in_at:u.last_sign_in_at}));
   } else {
-   const table:Record<Exclude<Kind,'users'>,string>={activity:'activity_logs',resumes:'resumes',ats:'ats_scans',jobs:'job_posts',usage:'ai_events'};
+   const table:Record<Exclude<Kind,'users'>,string>={activity:'activity_logs',resumes:'resumes',ats:'ats_scans',usage:'ai_events'};
    let q=db.from(table[kind]).select('*');
    if(since&&['activity','ats','usage'].includes(kind))q=q.gte('created_at',since);
    const {data,error}=await q.order('created_at',{ascending:false}).limit(2000);
@@ -56,7 +56,6 @@ export async function GET(req:NextRequest){
   if(kind==='users')addSheet(book,'Users',['User ID','Email','Registered','Last Sign In'],records.map(x=>[x.id,x.email,date(x.created_at),date(x.last_sign_in_at)]));
   if(kind==='resumes')addSheet(book,'Resumes',['ID','Title','Owner ID','Created','Updated'],records.map(x=>[x.id,x.title,x.user_id,date(x.created_at),date(x.updated_at)]));
   if(kind==='ats')addSheet(book,'ATS Reports',['Report ID','Owner ID','Score','Date'],records.map(x=>[x.id,x.user_id,x.score,date(x.created_at)]));
-  if(kind==='jobs')addSheet(book,'Job Posts',['ID','Role','Company','Location','Employment','Status','Created'],records.map(x=>[x.id,x.role,x.company,x.location,x.type,x.is_active?'Published':'Draft',date(x.created_at)]));
   if(kind==='usage')addSheet(book,'AI Usage',['Event ID','User ID','AI Task','Created'],records.map(x=>[x.id,x.user_id,x.task,date(x.created_at)]));
   await writeAudit(db,req,role.user,'admin_excel_export',{report:kind,period,rows:records.length});
   const bytes=await book.xlsx.writeBuffer();

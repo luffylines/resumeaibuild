@@ -1,6 +1,4 @@
 import {NextRequest,NextResponse} from 'next/server';
-import {createClient} from '@supabase/supabase-js';
-import {serverSupabase} from '@/lib/supabase-server';
 export const runtime='nodejs';
 import {adminAccess} from '@/lib/admin-access';
 import {writeAudit} from '@/lib/audit';
@@ -11,20 +9,18 @@ export async function GET(req:NextRequest){
  const since=period==='all'?null:new Date(Date.now()-Number(period)*86400000).toISOString();
  const guard=await adminAccess();if('error'in guard)return err(guard.status??500,guard.error??'Admin authorization failed.');
  const db=guard.admin;
- const [users,resumes,ats,jobs,applications,profiles,events,ai]=await Promise.all([
+ const [users,resumes,ats,profiles,events,ai]=await Promise.all([
   db.auth.admin.listUsers({page:1,perPage:200}),
   db.from('resumes').select('id,title,user_id,created_at,updated_at',{count:'exact'}).order('created_at',{ascending:false}).limit(30),
   (since?db.from('ats_scans').select('id,score,user_id,created_at',{count:'exact'}).gte('created_at',since):db.from('ats_scans').select('id,score,user_id,created_at',{count:'exact'})).order('created_at',{ascending:false}).limit(80),
-  db.from('job_posts').select('*').order('created_at',{ascending:false}).limit(200),
-  db.from('job_applications').select('id',{count:'exact',head:true}),
   db.from('profiles').select('user_id,full_name,plan,created_at').limit(200),
   (since?db.from('activity_logs').select('id,actor_id,action,details,created_at,ip_address,user_agent',{count:'exact'}).gte('created_at',since):db.from('activity_logs').select('id,actor_id,action,details,created_at,ip_address,user_agent',{count:'exact'})).order('created_at',{ascending:false}).limit(250),
   (since?db.from('ai_events').select('id,task,created_at',{count:'exact'}).gte('created_at',since):db.from('ai_events').select('id,task,created_at',{count:'exact'})).order('created_at',{ascending:false}).limit(120)
  ]);
- for(const item of [users,resumes,ats,jobs,applications,profiles,events,ai])if(item.error)return err(500,item.error.message);
+ for(const item of [users,resumes,ats,profiles,events,ai])if(item.error)return err(500,item.error.message);
  const meta=new Map((profiles.data||[]).map(p=>[p.user_id,p]));
  const people=(users.data?.users||[]).map(u=>({id:u.id,email:u.email||'',name:meta.get(u.id)?.full_name||u.user_metadata?.full_name||'',plan:meta.get(u.id)?.plan||'Free',created_at:u.created_at,last_sign_in_at:u.last_sign_in_at||null}));
- const data={users:people,userTotal:(users.data as any)?.total||people.length,resumes:resumes.data||[],resumeCount:resumes.count||0,ats:ats.data||[],atsCount:ats.count||0,jobs:jobs.data||[],applicationCount:applications.count||0,activities:(events.data||[]).map(e=>({...e,actor_email:(e.details as Record<string,unknown>|null)?.actor_email||null})),activityCount:events.count||0,period,aiEvents:ai.data||[],aiCount:ai.count||0,plans:{free:people.filter(p=>p.plan==='Free').length,pro:people.filter(p=>p.plan==='Pro').length,team:people.filter(p=>p.plan==='Team').length},limitedUsers:people.length===200};
+ const data={users:people,userTotal:(users.data as any)?.total||people.length,resumes:resumes.data||[],resumeCount:resumes.count||0,ats:ats.data||[],atsCount:ats.count||0,activities:(events.data||[]).map(e=>({...e,actor_email:(e.details as Record<string,unknown>|null)?.actor_email||null})),activityCount:events.count||0,period,aiEvents:ai.data||[],aiCount:ai.count||0,plans:{free:people.filter(p=>p.plan==='Free').length,pro:people.filter(p=>p.plan==='Pro').length,team:people.filter(p=>p.plan==='Team').length},limitedUsers:people.length===200};
  return NextResponse.json(data,{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(req:NextRequest){
@@ -33,23 +29,6 @@ export async function POST(req:NextRequest){
  let body:Record<string,unknown>;try{body=await req.json();}catch{return err(400,'Invalid JSON.');}
  if(!body||typeof body!=='object')return err(400,'Invalid request.');
  const db=guard.admin;
- if(body.action==='save-job'){
-  const role=String(body.role||'').trim(),company=String(body.company||'').trim(),location=String(body.location||'').trim(),type=String(body.type||'Full-time').trim();
-  if(!role||!company||role.length>150||company.length>150||location.length>150||type.length>50)return err(400,'Please provide valid job details.');
-  if(!['Full-time','Part-time','Contract','Internship'].includes(type))return err(400,'Invalid employment type.');
-  const keywords=Array.isArray(body.keywords)?body.keywords.filter((x):x is string=>typeof x==='string'&&x.length<60).slice(0,12):[];
-  const id=typeof body.id==='string'&&/^[0-9a-f-]{36}$/i.test(body.id)?body.id:crypto.randomUUID();
-  const {error}=await db.from('job_posts').upsert({id,role,company,location,type,keywords,is_active:body.is_active===true,updated_at:new Date().toISOString()});
-  if(error)return err(500,error.message);
-  await writeAudit(db,req,guard.user,'job_saved',{role,company,job_id:id,published:body.is_active===true});
-  return NextResponse.json({ok:true,id});
- }
- if(body.action==='delete-job'){
-  if(typeof body.id!=='string'||!/^[0-9a-f-]{36}$/i.test(body.id))return err(400,'Invalid job ID.');
-  const {error}=await db.from('job_posts').delete().eq('id',body.id);if(error)return err(500,error.message);
-  await writeAudit(db,req,guard.user,'job_deleted',{job_id:body.id});
-  return NextResponse.json({ok:true});
- }
  if(body.action==='set-plan'){
   if(typeof body.user_id!=='string'||!/^[0-9a-f-]{36}$/i.test(body.user_id)||!['Free','Pro','Team'].includes(String(body.plan)))return err(400,'Invalid plan update.');
   const {error}=await db.from('profiles').upsert({user_id:body.user_id,plan:body.plan},{onConflict:'user_id'});if(error)return err(500,error.message);
