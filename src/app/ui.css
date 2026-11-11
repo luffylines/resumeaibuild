@@ -641,3 +641,12 @@
 .guide-page .guide-disclaimer{display:flex;align-items:center;justify-content:center;gap:7px}
 @media(max-width:850px){.guide-two-grid{grid-template-columns:1fr}.guide-mini-form{width:245px}.guide-large-step{flex-wrap:wrap}.guide-mini-window{width:100%;flex:auto}}
 @media(max-width:520px){.guide-large-step,.guide-explain-card{flex-wrap:wrap}.guide-explain-card .guide-step-copy{flex:1}.guide-mini-form{width:100%}.guide-mini-window{max-width:100%;overflow-x:auto}.guide-mini-nav{min-width:350px}.guide-ready-card{min-height:240px}.guide-page .guide-disclaimer{align-items:flex-start}}
+
+/* Reference sidebar: same ordering, white background and purple active row */
+.resume-client-shell .side-nav{gap:3px}
+.resume-client-shell .side-nav button{padding:11px 12px;font-size:12px}
+.resume-client-shell .side-label.recent-label,.resume-client-shell .sidebar-docs,.resume-client-shell .sidebar-tip{display:none}
+.resume-client-shell .sidebar-bottom{margin-top:auto}
+.resume-client-shell .sidebar{padding-top:28px}
+.resume-client-shell .brand{margin-bottom:30px}
+.show-more-jobs{display:flex;margin:19px auto 0}
