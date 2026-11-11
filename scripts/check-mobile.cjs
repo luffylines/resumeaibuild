@@ -360,6 +360,40 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(naturalWidth<100)throw Error('Portrait preview illustration failed to load: '+naturalWidth);
   await photoPage.getByRole('button',{name:/With Photo 20/}).click();
   if(await photoPage.locator('.rt-template-card').count()!==20)throw Error('Photo-only gallery filter should show 20 photo-ready layouts');
+  // Every gallery sample must contain real-looking example sections independent
+  // of the signed-in user's saved resume, and the photo must never cover name
+  // or contact even when a long name wraps.
+  const collisions=await photoPage.evaluate(()=>{
+   const problems=[];
+   const overlap=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+   const cards=[...document.querySelectorAll('.rt-template-card')];
+   for(let index=0;index<cards.length;index++){
+    const card=cards[index];
+    const resume=card.querySelector('.resume-document');
+    const title=card.querySelector('.rd-header h2');
+    const header=card.querySelector('.rd-header');
+    const photo=card.querySelector('.rd-portrait');
+    if(!resume||!header||!title||!photo){problems.push(index+': missing markup');continue;}
+    if(!card.querySelector('.rd-key-experience')||!card.querySelector('.rd-key-education')||!card.querySelector('.rd-key-summary'))
+     problems.push(index+': incomplete sample sections');
+    // Stress wrapping without mutating stored resume information.
+    title.textContent='ALEXANDER CHRISTOPHER SANTOS DELA CRUZ';
+    const textBounds=title.getBoundingClientRect();
+    const portraitBounds=photo.getBoundingClientRect();
+    const contact=card.querySelector('.rd-contact');
+    if(overlap(textBounds,portraitBounds))problems.push(index+': portrait overlaps name');
+    if(contact&&overlap(contact.getBoundingClientRect(),portraitBounds))problems.push(index+': portrait overlaps contact');
+    const headerBounds=header.getBoundingClientRect();
+    if(portraitBounds.bottom>headerBounds.bottom+2)problems.push(index+': portrait extends below header');
+    if(portraitBounds.left<headerBounds.left-2||portraitBounds.right>headerBounds.right+2)
+     problems.push(index+': portrait outside header');
+    if(!title.textContent?.includes('ALEXANDER'))problems.push(index+': stress name not applied');
+   }
+   return problems;
+  });
+  if(collisions.length)throw Error('Portrait layout defects: '+collisions.join(' | '));
+  await photoPage.screenshot({path:path.join(shots,'gallery-photo-layouts.png'),fullPage:true});
+  console.log('PASS all 20 portrait layouts have populated sections and no avatar/name/contact/header collisions under a long sample name');
   await photoPage.getByRole('button',{name:/With Photo 20/}).click();
   if(await photoPage.locator('.rt-template-card').count()!==32)throw Error('All layouts should return after disabling photo-only filter');
   console.log('PASS all 32 unique layout cards, 20 photo-ready templates ordered first and rendered sample portrait');
