@@ -209,3 +209,13 @@ Settings → Integrations calls an authenticated server endpoint `GET /api/ai/st
 Settings → Subscription displays proposed **Free (₱0/month), Pro (₱200/month), Ultra (₱400/month)** plan cards. **Billing, purchase flow, server-side plan entitlements and recurring charges are not yet implemented**, so no user is billed or upgraded by these controls.
 
 **Deployment boundary:** these changes were prepared only as a GitHub feature-branch pull request. The Supabase and Vercel projects accessible to the assistant are different from those used by the actual ResumeBuilder site; do not migrate, modify, bill or redeploy the unrelated projects. Configure and validate the real Supabase/Vercel resources separately when their correct identifiers are available.
+
+
+## iPhone Brave / Safari microphone and mobile form zoom
+
+- Touch-first input controls use 16px+ fonts to avoid iOS automatic zoom on focus. Clickable controls use `touch-action:manipulation`, which avoids accidental double-tap zoom while **preserving deliberate pinch zoom** for accessibility.
+- Brave iPhone can advertise a speech-recognition interface without running a reliable dictation service. Brave iOS now defaults to the explicitly tapped `MediaRecorder` audio flow. A separate `Record on iPhone` native file capture option and `Upload Audio` remain available. Speech that cannot start within 4.5 seconds switches to the recorder rather than indefinitely showing a live microphone. **Recorded answers are only transcribed after Stop & Transcribe**; this is not equivalent to streaming live speech-to-text.
+- Recording/transcription requires a signed-in account, microphone permission on the iPhone and in Brave, a working transcription API provider and the private ResumeBuilder Supabase API/database configuration. These are separate from other connected Supabase/Vercel projects and were **not** modified.
+- Browser speech playback pins one clear English voice for greeting and all 10 interview questions, prioritizing suitable enhanced or native system voices if available. Voice quality and exact voices depend on iOS-installed speech voices; no provider TTS API or paid voice service was enabled.
+- iOS native keyboard dictation remains an alternative when in-browser recording fails: tap the answer text field and use the iPhone keyboard microphone to insert text directly.
+- New browser smoke cases verify text-input sizing, consistent selected TTS voice, and Brave iOS recorder UI. CI emulation cannot verify the OS microphone/privacy prompts; test on a physical iPhone before claiming real-device compatibility.
