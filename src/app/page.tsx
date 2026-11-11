@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import {ArrowRight,ArrowUpRight,BookOpenCheck,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,CirclePlay,ClipboardCheck,FileCheck2,FileText,Headphones,HelpCircle,Mail,MessageCircle,PenLine,ShieldCheck,Sparkles,UserPlus,WandSparkles,Zap} from 'lucide-react';
+import {ArrowRight,ArrowUpRight,BookOpenCheck,BriefcaseBusiness,Check,CheckCircle2,ChevronRight,CirclePlay,ClipboardCheck,FileCheck2,FileText,Headphones,Mic,HelpCircle,Mail,MessageCircle,PenLine,ShieldCheck,Sparkles,UserPlus,WandSparkles,Zap} from 'lucide-react';
 const features=[
- {icon:WandSparkles,title:'AI Resume Builder',description:'Create a professional resume with AI, step by step.'},
+ {icon:FileText,title:'AI Resume Builder',description:'Create a professional resume with AI, step by step.'},
  {icon:ShieldCheck,title:'ATS Checker',description:'Review your resume and get practical improvement tips.'},
  {icon:BriefcaseBusiness,title:'Job Matching',description:'Discover roles that align with your resume skills.'},
- {icon:Headphones,title:'Interview Practice',description:'Practice questions and get AI feedback.'},
+ {icon:Mic,title:'Interview Practice',description:'Practice questions and get AI feedback.'},
  {icon:Mail,title:'Cover Letter',description:'Generate a tailored letter using your resume.'}
 ];
 const steps=[
