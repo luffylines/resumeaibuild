@@ -151,9 +151,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.locator('.rt-wizard-template-grid button').last().waitFor({state:'visible'});
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
-  if(count!==28)throw Error('Expected 28 resume templates, found '+count);
+  if(count!==20)throw Error('Expected 20 unique resume layout cards, found '+count);
   await photoContext.close();
-  console.log('PASS photo upload/remove and 28 original resume template cards');
+  console.log('PASS photo upload/remove and 20 unique resume layout cards');
   console.log('PASS Admin Dashboard preview, navigation and job post editor');
 
   console.log('PASS: '+checked+' responsive viewport suites');

@@ -109,3 +109,12 @@ Templates are visible on the public homepage and in Dashboard → Templates. Upl
 8. Optional portraits are stored with the resume content as compressed data URLs. Resumes are RLS-protected when using real Supabase. Only upload photos you have permission to use; portraits are not required for ATS-friendly applications.
 
 This code has not been deployed to Vercel or connected to a new Supabase project. Live login, database logging, IP capture and Excel export require your own separate project and keys; the demo paths are only sample screens.
+
+
+## Template grouping and full-size exports (November 2026)
+
+Color-only variations are grouped so the gallery shows **20 distinct layout cards**, rather than 28 mostly duplicated cards. The older 28 template identifiers remain supported for saved-resume compatibility. Select an accent color and page background from each card or from Build Resume → Generate; choices persist with the resume. The printable design uses the same CSS styles as the preview.
+
+Under **Build Resume → Generate**, the four aligned export buttons are: **Download PDF** (selectable text, no browser URL/date/footer), **Download DOCX** (editable paragraphs/headings for Word and Canva import), **Download PNG** (high-resolution image of the resume), and **Print** (native browser dialog). Browser print headers and footers are controlled by the browser: choose A4 and turn OFF 'Headers and footers' if your print preview displays a localhost URL, date or page counter. The page CSS also requests zero printer margins, but some browsers/printers can override this. The PDF and DOCX files are generated from the resume data rather than a screenshot, to keep the text editable. Fonts and complex layout may reflow when importing DOCX or PDF into Canva; verify the design after importing.
+
+PNG is a flattened image, so Canva cannot edit its resume text. For Canva, upload the PDF (select text if Canva makes the elements editable) or DOCX, then adjust elements in Canva. No direct Canva API account connection is configured.
