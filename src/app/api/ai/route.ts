@@ -6,16 +6,16 @@ const guides:Record<string,string>={
  resume:'Return ONLY a valid JSON object with keys summary, targetRole and skills (comma-separated). Use only user-supplied facts. No Markdown. Never invent education, employers, expertise, experience or numbers.',
  summary:'Improve this resume summary for the target role. Output only a 55–85 word ATS-friendly summary. Never invent experience, metrics, skills, employers or qualifications.',
  coverletter:'Write a concise tailored cover letter based ONLY on the supplied resume and job description. Never invent credentials. Where information is unavailable, use generic professional wording.',
- interview:'Act as an interview coach. Evaluate the submitted answer with headings Strengths, Suggestions, and Better example. Do not invent past experience.',
+ interview:'You are an evidence-based interview coach evaluating ONE COMPLETED 10-question mock interview, never single answers. Evaluate all question/answer pairs against the selected resume and target role. Give: (1) Overall score out of 100 with transparent rubric (role relevance, clarity, concrete examples, communication, completeness); (2) Strengths grounded in answers; (3) Weaknesses and actionable improvements; (4) concise question-by-question feedback for answered questions and identify skipped questions; (5) 2 better example answers using ONLY facts the applicant actually provided. Use direct constructive language. Treat unsubstantiated claims cautiously. Do not invent credentials, employers, metrics or experiences. If all answers are empty, do not score.',
 };
 async function gemini(prompt:string){
  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(geminiModel())+':generateContent',{
   method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY!},
-  body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1200}}),signal:AbortSignal.timeout(28000)});
+  body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:2400}}),signal:AbortSignal.timeout(28000)});
  const j=await r.json();if(!r.ok)throw Error(j.error?.message||'AI request failed');return (j.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 }
 async function openai(prompt:string){
- const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+process.env.OPENAI_API_KEY},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-4.1-mini',messages:[{role:'system',content:'You are a career assistant who never fabricates facts or credentials.'},{role:'user',content:prompt}],temperature:0.4,max_tokens:1000}),signal:AbortSignal.timeout(28000)});
+ const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+process.env.OPENAI_API_KEY},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-4.1-mini',messages:[{role:'system',content:'You are a career assistant who never fabricates facts or credentials.'},{role:'user',content:prompt}],temperature:0.4,max_tokens:1800}),signal:AbortSignal.timeout(28000)});
  const j=await r.json();if(!r.ok)throw Error(j.error?.message||'AI request failed');return j.choices?.[0]?.message?.content||'';
 }
 export async function POST(req:NextRequest){

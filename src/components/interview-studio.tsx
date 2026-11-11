@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {ArrowRight,Check,CheckCircle2,Headphones,Lightbulb,LoaderCircle,Mic,MicOff,ShieldCheck,Sparkles,Video,VideoOff,Volume2,X,Languages,AudioLines,CloudUpload} from 'lucide-react';
+import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCircle2,Headphones,Lightbulb,LoaderCircle,Mic,MicOff,ShieldCheck,Sparkles,Video,VideoOff,Volume2,X,Languages,AudioLines,CloudUpload} from 'lucide-react';
+import type {Resume} from '@/lib/types';
 
 type SpeechItem={transcript:string};
 type SpeechResult=ArrayLike<SpeechItem>&{isFinal:boolean};
@@ -25,9 +26,16 @@ const QUESTIONS=[
  'Describe a time you received critical feedback.',
  'Where do you see your career in five years?'
 ];
-type Props={targetRole:string;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean};
-export default function InterviewStudio({targetRole,runAI,busy,signedIn}:Props){
+type Props={targetRole:string;resumes:Resume[];activeResumeId:string;onEditResume?:(resume:Resume)=>void;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean};
+export default function InterviewStudio({targetRole,resumes,activeResumeId,onEditResume,runAI,busy,signedIn}:Props){
  const [index,setIndex]=useState(0);
+ const [resumeId,setResumeId]=useState(activeResumeId);
+ const [answers,setAnswers]=useState<string[]>(()=>QUESTIONS.map(()=>''));
+ const [completed,setCompleted]=useState(false);
+ const currentResume=resumes.find(r=>r.id===resumeId)||resumes.find(r=>r.id===activeResumeId)||resumes[0];
+ const role=(currentResume?.targetRole||targetRole||'').trim();
+ const targetLabel=role&&role.toLowerCase()!=='general'?role:'Not set in resume';
+ const answeredCount=answers.filter(x=>x.trim().length>0).length+(answers[index]?.trim()?0:answer.trim()?1:0);
  const [answer,setAnswer]=useState('');
  const [feedback,setFeedback]=useState('');
  const [message,setMessage]=useState('');
@@ -262,30 +270,85 @@ export default function InterviewStudio({targetRole,runAI,busy,signedIn}:Props){
    setMessage(resumeMic?'Bot is reading the question. Your microphone will resume afterward.':'Bot is reading the question aloud.');
   }catch{finished();}
  }
- function next(){
-  cancelCloud();
-  const nextIndex=(index+1)%QUESTIONS.length;
-  const resume=listeningWanted.current;
-  stopMic(!resume);
-  setIndex(nextIndex);
-  setAnswerText('');
-  setFeedback('');
-  setMessage('');
-  // This call is directly inside the Next Question click handler so speech
-  // playback can pass browser user-gesture restrictions.
-  speakQuestion(nextIndex,resume);
- }
- function reset(){
+ function clearInterview(){
   cancelCloud();
   utteranceVersion.current++;
   stopMic();
-  stream.current?.getTracks().forEach(t=>t.stop());
-  stream.current=null;setCamera(false);
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   speakingRef.current=false;setSpeaking(false);
-  setAnswerText('');setFeedback('');
-  setMessage('Session reset. Use Read Question Aloud to start again.');
-  setIndex(0);
+  setIndex(0);setAnswers(QUESTIONS.map(()=>''));setAnswerText('');
+  setFeedback('');setMessage('');setCompleted(false);
+ }
+ async function evaluateSession(completedAnswers:string[]){
+  if(!role||role.toLowerCase()==='general'){
+   setMessage('Your selected resume has no target job title. Update the Target Job Title in Build Resume before requesting a role-specific evaluation.');
+   return;
+  }
+  if(!completedAnswers.some(x=>x.trim())){
+   setMessage('Answer at least one interview question before finishing. You can go back to add your responses.');
+   return;
+  }
+  setCompleted(true);setFeedback('');
+  setMessage('All answers saved. The AI is now evaluating the entire interview, not individual questions.');
+  const payload={
+   mode:'complete_interview',
+   role,
+   resume:{
+    title:currentResume?.title||'',
+    targetRole:role,
+    summary:(currentResume?.summary||'').slice(0,550),
+    skills:(currentResume?.skills||'').slice(0,400),
+    experience:(currentResume?.experience||[]).slice(0,3).map(e=>({role:e.role,company:e.company,details:e.details.slice(0,200)})),
+    education:(currentResume?.education||[]).slice(0,2).map(e=>({degree:e.degree,school:e.school}))
+   },
+   questions:QUESTIONS.map((question,i)=>({number:i+1,question,answer:completedAnswers[i]?.trim().slice(0,700)||'[Skipped]'}))
+  };
+  const result=await runAI('interview',JSON.stringify(payload));
+  if(result){setFeedback(result);setMessage('Full interview evaluation completed. Results are based on your saved answers.');}
+  else setMessage('AI evaluation was unavailable. Your answers are saved in this session; select Retry Evaluation to try again.');
+ }
+ function next(){
+  if(busy||cloudRecording||cloudBusy){setMessage('Finish recording and transcribing your current answer before continuing.');return;}
+  const saved=[...answers];
+  saved[index]=answerRef.current.trim();
+  setAnswers(saved);
+  if(index===QUESTIONS.length-1){
+   stopMic();cancelCloud();
+   utteranceVersion.current++;
+   if('speechSynthesis'in window)window.speechSynthesis.cancel();
+   speakingRef.current=false;setSpeaking(false);
+   void evaluateSession(saved);
+   return;
+  }
+  const nextIndex=index+1;
+  const resume=listeningWanted.current;
+  stopMic(!resume);
+  setIndex(nextIndex);
+  setAnswerText(saved[nextIndex]||'');
+  setFeedback('');
+  setMessage('Answer saved. Evaluation will run after all 10 questions.');
+  // Browser speech synthesis requires a direct click; keep the auto-read behavior.
+  speakQuestion(nextIndex,resume);
+ }
+ function previous(){
+  if(index===0||busy||cloudBusy||cloudRecording)return;
+  stopMic();
+  utteranceVersion.current++;
+  if('speechSynthesis'in window)window.speechSynthesis.cancel();
+  speakingRef.current=false;setSpeaking(false);
+  setAnswers(old=>old.map((v,i)=>i===index?answerRef.current.trim():v));
+  setIndex(index-1);setAnswerText(answers[index-1]||'');setMessage('Previous answer restored. You can edit it before continuing.');
+ }
+ function changeResume(id:string){
+  if(id===resumeId)return;
+  if((answers.some(a=>a.trim())||answerRef.current.trim())&&!window.confirm('Switching resumes will restart this interview. Continue?'))return;
+  clearInterview();setResumeId(id);
+ }
+ function reset(){
+  clearInterview();
+  stream.current?.getTracks().forEach(t=>t.stop());
+  stream.current=null;setCamera(false);
+  setMessage('Interview restarted. Answer each question, then finish to get one comprehensive AI evaluation.');
  }
  async function toggleCamera(){
   if(camera){stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;setCamera(false);return;}
@@ -294,27 +357,29 @@ export default function InterviewStudio({targetRole,runAI,busy,signedIn}:Props){
   catch{setMessage('Camera access denied or unavailable. You can keep practicing without camera.');}
   finally{setCameraLoading(false);}
  }
- async function review(){
-  setMessage('');
-  const result=await runAI('interview',JSON.stringify({role:targetRole||'General',question:QUESTIONS[index],answer:answerRef.current.trim()}));
-  if(result)setFeedback(result);
- }
  return <div className="interview-studio">
-  <div className="page-heading"><div><div className="eyebrow">PRACTICE WITH AI</div><h1>Interview Practice</h1><p>Practice interview questions and get personalized AI feedback.</p></div><span className="interview-session-label"><Headphones size={17}/> Interview Session</span></div>
+  <div className="page-heading"><div><div className="eyebrow">PRACTICE WITH AI</div><h1>Interview Practice</h1><p>Practice for a role from your saved resume. Complete all 10 questions, then receive one AI assessment.</p></div><span className="interview-session-label"><Headphones size={17}/> Interview Session</span></div>
   <div className="interview-studio-grid">
    <section className="interview-stage-panel"><div className="interview-stage-top"><span><span className="live-dot"/> AI Interviewer</span><span>{speaking?'Asking Question':microphone?'Listening':'Practice Mode'}</span></div>
     <div className="interview-visual">{camera?<video ref={video} autoPlay playsInline muted aria-label="Your private camera preview"/>:<div className={'interview-bot '+(speaking?'bot-talking':'')}><div className="bot-antenna"/><div className="bot-head"><div className="bot-screen"><span/><span/><i/></div></div><div className="bot-neck"/><div className="bot-torso"><span/></div><div className="bot-left-arm"/><div className="bot-right-arm"/></div>}</div>
     <div className="interview-stage-actions"><button className={microphone?'active':''} onClick={toggleMic} aria-label={microphone?'Stop microphone':'Start microphone transcription'} title={microphone?'Pause transcript':'Speak and transcribe your answer'}>{microphone?<MicOff size={19}/>:<Mic size={19}/>}</button><button className="hangup" onClick={reset} aria-label="Reset interview practice" title="Reset practice"><X size={21}/></button><button className={camera?'active':''} onClick={()=>void toggleCamera()} disabled={cameraLoading} aria-label={camera?'Turn off camera':'Turn on local camera preview'} title="Local camera preview only">{camera?<VideoOff size={19}/>:<Video size={19}/>}</button></div>
     <div className="interview-stage-caption"><ShieldCheck size={14}/> Browser dictation uses your browser's speech service. AI backup uploads audio only after you choose Record with AI.</div>
    </section>
-   <section className="interview-coach-panel"><span className="interview-count">Current Question ({index+1}/{QUESTIONS.length})</span><h2>{QUESTIONS[index]}</h2><div className="interview-role">Target role: <strong>{targetRole||'General'}</strong></div>
+   <section className="interview-coach-panel"><span className="interview-count">Current Question ({index+1}/{QUESTIONS.length})</span><h2>{QUESTIONS[index]}</h2><div className="interview-resume-selector"><label htmlFor="interview-resume-choice"><BookOpen size={15}/> Practice using resume</label>
+    <select id="interview-resume-choice" value={currentResume?.id||''} onChange={e=>changeResume(e.target.value)} disabled={busy||cloudBusy||cloudRecording}>
+     {resumes.map(r=><option key={r.id} value={r.id}>{r.title||'Untitled Resume'} — {r.targetRole?.trim()||'Target role missing'}</option>)}
+    </select></div>
+    <div className="interview-role">Target role: <strong>{targetLabel}</strong>{targetLabel==='Not set in resume'&&currentResume&&onEditResume&&<button type="button" className="interview-edit-role" onClick={()=>onEditResume(currentResume)}>Set job title in resume</button>}</div>
+    <div className="interview-progress-text"><CheckCircle2 size={14}/> {answeredCount}/{QUESTIONS.length} answered · AI evaluates after the final question</div>
     <button className="interview-read-aloud" onClick={()=>speakQuestion(index,listeningWanted.current)}><Volume2 size={17}/> {speaking?'Reading question…':'Read Question Aloud'}</button>
     <div className="interview-coach-tips"><h3><Lightbulb size={17}/> Tips</h3><p><Check size={15}/> Be concise and relevant.</p><p><Check size={15}/> Highlight your actual skills.</p><p><Check size={15}/> Mention notable achievements.</p></div>
-    <button className="interview-next" onClick={next}>Next Question <ArrowRight size={17}/></button>
+    <div className="interview-nav-actions">{index>0&&!completed&&<button className="interview-back" onClick={previous} disabled={busy||cloudRecording||cloudBusy}><ArrowLeft size={16}/> Previous</button>}
+    {!completed&&<button className="interview-next" onClick={next} disabled={busy||cloudRecording||cloudBusy}>{index===QUESTIONS.length-1?<><Sparkles size={17}/> Finish & Evaluate</>:<>Next Question <ArrowRight size={17}/></>}</button>}
+    {completed&&<button className="interview-next" onClick={reset}>Start New Interview <ArrowRight size={17}/></button>}</div>
    </section>
   </div>
   <section className="interview-answer-card panel">
-   <div className="interview-answer-title"><h2>Your Answer</h2><small>Type, or enable the microphone to see your words live.</small></div>
+   <div className="interview-answer-title"><h2>Your Answer</h2><small>{completed?'Interview complete — review your saved response below.':'Speak or type your answer. It will be saved when you press Next.'}</small></div>
    <div className="interview-language-row"><label htmlFor="interview-language"><Languages size={16}/> Speech language</label>
     <select id="interview-language" value={language} onChange={e=>{const nextLanguage=e.target.value;languageRef.current=nextLanguage;setLanguage(nextLanguage);if(listeningWanted.current){stopMic();setMessage('Language changed. Tap the microphone button to start again.');}}}><option value="en-US">English (US)</option><option value="fil-PH">Filipino / Tagalog</option><option value="en-PH">English (Philippines)</option></select>
     <span role="status" className={'interview-live-status '+(microphone?'active':'')}><AudioLines size={15}/>{cloudRecording?'Recording for AI…':cloudBusy?'Transcribing audio…':speaking?'Bot speaking':microphone?(interim?'Transcribing live…':'Listening…'):'Microphone off'}</span>
@@ -322,12 +387,18 @@ export default function InterviewStudio({targetRole,runAI,busy,signedIn}:Props){
    <div className="interview-transcription-tools">
     <button type="button" className={'interview-voice-primary '+(microphone?'active':'')} onClick={toggleMic} disabled={cloudRecording||cloudBusy} aria-label={microphone?'Stop speaking':'Start speaking'}>{microphone?<MicOff size={17}/>:<Mic size={17}/>} {microphone?'Stop Listening':'Start Speaking'}</button>
     <button type="button" className={'interview-cloud-button '+(cloudRecording?'active':'')} onClick={()=>void toggleCloud()} disabled={cloudBusy} aria-label={cloudRecording?'Stop and transcribe recording':'Record with AI backup'}><CloudUpload size={17}/>{cloudBusy?'Transcribing…':cloudRecording?'Stop & Transcribe':'Record with AI (backup)'}</button>
-    <span className="interview-voice-help">{signedIn?'AI backup uses your configured Gemini/OpenAI key and is limited to 15 recordings per day.':'AI backup requires sign-in; browser dictation needs no API key.'}</span>
+    <span className="interview-voice-help">{signedIn?'AI backup uses your configured Groq/Gemini key and is limited to 15 recordings per day.':'AI backup requires sign-in; browser dictation needs no API key.'}</span>
    </div>
-   <textarea aria-label="Your Answer" value={answer} onChange={e=>{if(listeningWanted.current){stopMic();setMessage('Microphone paused while editing your answer. Tap the mic to continue speaking.');}setAnswerText(e.target.value);}} rows={5} placeholder={microphone?'Listening to your voice…':'Tap the microphone above to speak, or type your answer here.'}/>
-   <div className="interview-answer-bottom"><button className="purple-button" disabled={busy||answer.trim().length<15} onClick={()=>void review()}>{busy?<LoaderCircle className="spin" size={17}/>:<Sparkles size={17}/>} {busy?'Reviewing...':'Get AI Feedback'}</button><span>{supported?'Speech accuracy depends on browser, language and microphone quality. Review the transcript.':'Speech recognition unavailable here. You can type your answer.'}</span></div>
+   <textarea aria-label="Your Answer" value={answer} disabled={completed} onChange={e=>{if(listeningWanted.current){stopMic();setMessage('Microphone paused while editing your answer. Tap the mic to continue speaking.');}setAnswerText(e.target.value);}} rows={5} placeholder={microphone?'Listening to your voice…':'Tap the microphone above to speak, or type your answer here.'}/>
+   <div className="interview-answer-bottom"><div className="interview-evaluation-note"><ShieldCheck size={16}/>{completed?'All questions completed. Your transcript remains available for review.':'No AI scoring yet. Your responses are collected until Finish & Evaluate on question 10.'}</div><span>{supported?'Speech recognition may make mistakes; review the transcript.':'You can type your answer if speech recognition is unavailable.'}</span></div>
    {message&&<p className="interview-inline-message" role="status">{message}</p>}
-   {feedback&&<div className="interview-feedback"><h3><CheckCircle2 size={18}/> Your AI Feedback</h3><div>{feedback}</div></div>}
+   {completed&&<div className="interview-results-panel"><h3><CheckCircle2 size={19}/> Interview Complete — {targetLabel}</h3><p>{answers.filter(x=>x.trim()).length} answered, {QUESTIONS.length-answers.filter(x=>x.trim()).length} skipped. The AI evaluates your actual responses against the selected resume and role.</p>
+    {busy&&<p className="interview-evaluating" role="status"><LoaderCircle className="spin" size={17}/> Evaluating your entire interview…</p>}
+    {feedback?<div className="interview-feedback"><h3><Sparkles size={18}/> Overall AI Evaluation</h3><div className="interview-feedback-body">{feedback}</div></div>:!busy&&<button className="purple-button" type="button" onClick={()=>void evaluateSession(answers)}><Sparkles size={17}/> Retry Evaluation</button>}
+    <details className="interview-review-answers"><summary>Review saved answers ({QUESTIONS.length} questions)</summary>
+     {QUESTIONS.map((q,i)=><section key={i}><strong>{i+1}. {q}</strong><p>{answers[i]?.trim()||'Skipped'}</p></section>)}
+    </details>
+   </div>}
   </section>
  </div>;
 }
