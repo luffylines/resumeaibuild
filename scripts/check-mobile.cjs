@@ -7,7 +7,10 @@ const shots=path.join(process.cwd(),'test-screenshots');
 fs.mkdirSync(shots,{recursive:true});
 const sizes=[{name:'android-small',width:360,height:780},{name:'iphone',width:390,height:844},{name:'tablet',width:768,height:1024},{name:'laptop',width:1024,height:768},{name:'desktop',width:1440,height:900}];
 async function open(page,route){const response=await page.goto(base+route,{waitUntil:'networkidle',timeout:30000});if(response.status()!==200)throw Error(route+' returned '+response.status());}
-async function checkOverflow(page,name,route){const m=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth,body:document.body.scrollWidth}));if(m.scroll-m.viewport>3)throw Error(name+' '+route+' overflows by '+(m.scroll-m.viewport)+' px (body '+m.body+')');}
+async function checkOverflow(page,name,route){const m=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth,body:document.body.scrollWidth}));if(m.scroll-m.viewport>3){
+ const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.right>document.documentElement.clientWidth+2&&r.width>0;}).map(el=>({tag:el.tagName,cls:typeof el.className==='string'?el.className.slice(0,75):'',text:el.textContent.trim().slice(0,30),right:Math.round(el.getBoundingClientRect().right)})).slice(0,15));
+ throw Error(name+' '+route+' overflows by '+(m.scroll-m.viewport)+' px (body '+m.body+'). Offenders: '+JSON.stringify(offenders));
+}}
 const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});let checked=0;

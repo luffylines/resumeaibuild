@@ -263,3 +263,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media (prefers-reduced-motion:reduce){
  .public-mobile-panel,.admin-sidebar,.sidebar,.resume-client-shell .client-stat,.public-primary,.public-feature-card{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+/* Avoid long shortcut labels pushing the 768px tablet grid horizontally. */
+@media screen and (min-width:701px) and (max-width:1100px){
+ .resume-client-shell .client-shortcuts button{min-width:0}
+ .resume-client-shell .client-shortcuts button>span:last-child{min-width:0;flex:1}
+ .resume-client-shell .client-shortcuts button strong,.resume-client-shell .client-shortcuts button small{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+}
