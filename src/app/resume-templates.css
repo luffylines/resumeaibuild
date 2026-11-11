@@ -135,3 +135,69 @@
  .resume-client-shell .resume-document.resume-paper.rd-style-classic .rd-section h3,
  .resume-client-shell .resume-document.resume-paper.rd-style-minimal .rd-section h3{color:#202025!important}
 }
+
+/* Photo-ready resume layouts. All sample portraits are CSS illustrations only. */
+.resume-document.rd-photo-layout .rd-header{min-height:105px;padding-right:140px;position:relative}
+.resume-document.rd-photo-layout.rd-layout-band .rd-header{padding-right:190px}
+.resume-document .rd-portrait{position:absolute;right:0;top:0;width:110px;height:110px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background:#e2e1e4;border:4px solid #fff;box-shadow:0 0 0 2px var(--rd-accent);z-index:2}
+.resume-document .rd-portrait img{width:100%;height:100%;object-fit:cover;display:block}
+.resume-document .rd-portrait-silhouette{width:100%;height:100%;position:relative;overflow:hidden;background:linear-gradient(140deg,#edf0f4,#c1c7cd)}
+.resume-document .rd-portrait-silhouette i{position:absolute;width:35%;height:35%;border-radius:50%;background:#8a929c;left:32%;top:20%}
+.resume-document .rd-portrait-silhouette span{position:absolute;width:74%;height:54%;border-radius:50% 50% 0 0;background:#9299a3;left:13%;top:61%}
+.resume-document:not(.resume-document--mini).rd-no-photo .rd-portrait{display:none}
+.resume-document.rd-no-photo:not(.resume-document--mini) .rd-header,.resume-document.rd-no-photo:not(.resume-document--mini).rd-layout-band .rd-header{padding-right:42px}
+.resume-document.rd-photo-layout.rd-layout-band .rd-portrait{right:42px;top:19px;box-shadow:0 0 0 3px #ffffffbb}
+.resume-document.rd-style-portrait-navy .rd-header{background:#213c63}
+.resume-document.rd-style-portrait-navy .rd-job-title{color:#d8e5fd}
+.resume-document.rd-style-portrait-navy .rd-section h3{letter-spacing:1.3px}
+.resume-document.rd-style-studio-beige{padding:40px;background:#fffdfb!important}
+.resume-document.rd-style-studio-beige .rd-body{margin-left:-40px;margin-right:-40px;margin-bottom:-40px}
+.resume-document.rd-style-studio-beige .rd-secondary{background:#c3b4ab;color:#2f2928;padding:22px}
+.resume-document.rd-style-studio-beige .rd-secondary .rd-section h3,.resume-document.rd-style-studio-beige .rd-secondary .rd-skills>span,.resume-document.rd-style-studio-beige .rd-secondary .rd-entry-title strong,.resume-document.rd-style-studio-beige .rd-secondary .rd-entry-company{color:#322826}
+.resume-document.rd-style-studio-beige .rd-secondary .rd-section h3{border-bottom-color:#9f8d83}
+.resume-document.rd-style-studio-beige .rd-primary{padding:10px 22px}
+.resume-document.rd-style-studio-beige .rd-header{margin:0 0 22px;border-color:#b7a59c}
+.resume-document.rd-style-studio-beige .rd-portrait{border-radius:7px;box-shadow:none;right:0}
+.resume-document.rd-style-executive-portrait .rd-header{background:#f2f2f2;border-bottom:3px solid #344150;padding-top:20px;padding-bottom:22px;padding-left:23px;margin:-20px -20px 26px}
+.resume-document.rd-style-executive-portrait .rd-header h2{letter-spacing:.8px;text-transform:uppercase}
+.resume-document.rd-style-executive-portrait .rd-portrait{right:20px;top:13px;border-radius:6px;box-shadow:none}
+.resume-document.rd-style-executive-portrait .rd-section h3{border-color:#777}
+.resume-document.rd-style-blue-profile .rd-body{margin-left:-42px;margin-right:-42px;margin-bottom:-43px}
+.resume-document.rd-style-blue-profile .rd-secondary{background:#174b6b}
+.resume-document.rd-style-blue-profile .rd-primary{padding:5px 24px}
+.resume-document.rd-style-blue-profile .rd-portrait{border-radius:50%;box-shadow:0 0 0 3px var(--rd-accent)}
+.resume-document.rd-style-modern-portrait .rd-secondary{background:#f3f6fa}
+.resume-document.rd-style-modern-portrait .rd-section h3{border-bottom-color:#aebccc}
+.resume-document.rd-style-modern-portrait .rd-portrait{border-radius:50% 50% 15% 15%;box-shadow:0 0 0 2px #cbd2dd}
+.resume-document.rd-style-editorial-beige{background:#fffaf3!important;font-family:Georgia,'Times New Roman',serif}
+.resume-document.rd-style-editorial-beige .rd-header{border-bottom-color:#bca38a}
+.resume-document.rd-style-editorial-beige .rd-header h2{font-family:Georgia,serif;text-transform:capitalize;font-weight:500;font-size:37px;letter-spacing:-.8px}
+.resume-document.rd-style-editorial-beige .rd-portrait{border-radius:5px;border:3px solid #fffaf3;box-shadow:0 0 0 1px #ad8f79}
+.resume-document.rd-style-editorial-beige .rd-section h3{letter-spacing:2px;font-family:Georgia,serif}
+.resume-document.rd-style-black-gold .rd-header{background:#292929}
+.resume-document.rd-style-black-gold .rd-header h2{letter-spacing:1px;text-transform:uppercase}
+.resume-document.rd-style-black-gold .rd-section h3{color:#8d754b;border-bottom-color:#c7b68e}
+.resume-document.rd-style-black-gold .rd-accent-bar{background:#b5955b}
+.resume-document.rd-style-black-gold .rd-portrait{box-shadow:0 0 0 2px #cab27d}
+.resume-document.rd-style-graduate-portrait .rd-header{background:linear-gradient(130deg,#eaf5f2,#fff);margin:-15px -15px 24px;padding:19px 148px 17px 20px;border-bottom:3px solid #65968e}
+.resume-document.rd-style-graduate-portrait .rd-portrait{right:20px;top:10px;border-color:#f7fbfa}
+.resume-document.rd-style-graduate-portrait .rd-header h2{font-size:30px;text-transform:uppercase}
+.resume-document--mini.rd-style-studio-beige .rd-body{margin:-2px -52px -52px}
+.resume-document--mini.rd-style-blue-profile .rd-body{margin-left:-52px;margin-right:-52px}
+.resume-document--mini.rd-style-portrait-navy .rd-portrait,.resume-document--mini.rd-style-black-gold .rd-portrait{right:52px}
+.resume-document--mini.rd-style-executive-portrait .rd-header{margin:-15px -15px 22px}
+.resume-document--mini.rd-style-graduate-portrait .rd-header{margin:-15px -15px 24px}
+@media print {
+ .resume-document .rd-portrait{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .resume-document.rd-photo-layout.rd-layout-band .rd-portrait{right:23px}
+ .resume-document.rd-no-photo .rd-portrait{display:none!important}
+ .resume-document.rd-no-photo .rd-header{padding-right:0!important}
+ .resume-document.rd-style-studio-beige .rd-body,.resume-document.rd-style-blue-profile .rd-body{margin-left:0!important;margin-right:0!important;margin-bottom:0!important}
+ .resume-document.rd-style-graduate-portrait .rd-header{margin:0 0 21px!important}
+}
+@media(max-width:540px){
+ .wizard-preview .resume-document.rd-photo-layout .rd-portrait{width:68px;height:68px;right:0;top:0}
+ .wizard-preview .resume-document.rd-photo-layout .rd-header{padding-right:82px}
+ .wizard-preview .resume-document.rd-photo-layout.rd-layout-band .rd-portrait{right:15px}
+ .wizard-preview .resume-document.rd-photo-layout.rd-layout-band .rd-header{padding-right:85px}
+}
