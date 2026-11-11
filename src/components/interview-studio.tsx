@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCircle2,Headphones,Lightbulb,LoaderCircle,Mic,MicOff,ShieldCheck,Sparkles,Video,VideoOff,Volume2,X,Languages,AudioLines,CloudUpload} from 'lucide-react';
 import type {Resume} from '@/lib/types';
+import {INTERVIEW_COUNT,buildInterviewQuestions,parseInterviewQuestions} from '@/lib/interview-questions';
 
 type SpeechItem={transcript:string};
 type SpeechResult=ArrayLike<SpeechItem>&{isFinal:boolean};
@@ -26,11 +27,15 @@ const QUESTIONS=[
  'Describe a time you received critical feedback.',
  'Where do you see your career in five years?'
 ];
-type Props={resumes:Resume[];activeResumeId:string;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean;userId:string};
-export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signedIn,userId}:Props){
+type Props={resumes:Resume[];activeResumeId:string;runAI:(task:'interview'|'interview_questions',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean;userId:string;userName:string};
+export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signedIn,userId,userName}:Props){
  const [index,setIndex]=useState(0);
  const [resumeId,setResumeId]=useState(activeResumeId);
  const [answers,setAnswers]=useState<string[]>(()=>QUESTIONS.map(()=>''));
+ const [questions,setQuestions]=useState<string[]>(()=>buildInterviewQuestions(resumes.find(r=>r.id===activeResumeId)||resumes[0]));
+ const [started,setStarted]=useState(false);
+ const [questionLoading,setQuestionLoading]=useState(false);
+ const generationRef=useRef(0);
  const [completed,setCompleted]=useState(false);
  const [practiceFocus,setPracticeFocus]=useState('');
  const sessionKey='resumebuilder:interview:v1:'+userId;
@@ -38,8 +43,10 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [sessionSavedAt,setSessionSavedAt]=useState<number|null>(null);
  const [sessionSaveFailed,setSessionSaveFailed]=useState(false);
  const currentResume=resumes.find(r=>r.id===resumeId)||resumes.find(r=>r.id===activeResumeId)||resumes[0];
- const role=practiceFocus.trim()||'General interview';
- const targetLabel=practiceFocus.trim()||'General interview — suitable for any job';
+ const role='General interview';
+ const targetLabel='Personalized to your resume';
+ const candidateName=(currentResume?.name?.trim()||userName.trim()||'there').split(/\s+/)[0];
+ const greeting=candidateName==='there'?'Hello! Welcome to your interview practice. I have reviewed your resume.':`Hello, ${candidateName}! Welcome to your interview practice. I have reviewed your resume.`;
  const [answer,setAnswer]=useState('');
  const answeredCount=answers.filter((x,i)=>i!==index&&!!x.trim()).length+(answer.trim()?1:0);
  const [feedback,setFeedback]=useState('');
@@ -64,15 +71,16 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const listeningWanted=useRef(false);
  const speakingRef=useRef(false);
  const answerRef=useRef('');
+ const liveAnswerRef=useRef('');
  const languageRef=useRef('en-US');
  const stream=useRef<MediaStream|null>(null);
  const video=useRef<HTMLVideoElement|null>(null);
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const utteranceVersion=useRef(0);
 
- type Session={v:1;resumeId:string;index:number;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
+ type Session={v:2;resumeId:string;index:number;questions:string[];started:boolean;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
- currentSessionRef.current={v:1,resumeId,index,answers,answer,completed,feedback,focus:practiceFocus,savedAt:Date.now()};
+ currentSessionRef.current={v:2,resumeId,index,questions,started,answers,answer,completed,feedback,focus:practiceFocus,savedAt:Date.now()};
  function flushSession(){
   if(sessionLoadedFor!==sessionKey||!currentSessionRef.current)return;
   try{
@@ -82,14 +90,17 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   }catch{setSessionSaveFailed(true);}
  }
  useEffect(()=>{
-  setIndex(0);setAnswers(QUESTIONS.map(()=>''));
+  setIndex(0);setQuestions(buildInterviewQuestions(resumes.find(r=>r.id===activeResumeId)||resumes[0]));setStarted(false);setAnswers(QUESTIONS.map(()=>''));
   setAnswerText('');setFeedback('');setCompleted(false);setResumeId(activeResumeId);setPracticeFocus('');
   setSessionSavedAt(null);setSessionSaveFailed(false);
   try{
    const raw=localStorage.getItem(sessionKey);
    if(raw){
     const data=JSON.parse(raw) as Partial<Session>;
-    if(data.v===1&&typeof data.resumeId==='string'){
+    if((data.v===1||data.v===2)&&typeof data.resumeId==='string'){
+     const storedQuestions=data.v===2&&Array.isArray(data.questions)&&data.questions.length===INTERVIEW_COUNT&&data.questions.every(q=>typeof q==='string'&&q.trim())?data.questions:QUESTIONS;
+     setQuestions(storedQuestions);
+     setStarted(data.v===1||data.started===true);
      // Restore session before the initial cloud resume query finishes.
      // If the original resume is unavailable, the selector falls back to a
      // current resume without discarding the applicant's prior answers.
@@ -114,7 +125,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  useEffect(()=>{
   if(sessionLoadedFor!==sessionKey)return;
   flushSession();
- },[sessionLoadedFor,sessionKey,resumeId,index,answers,answer,completed,feedback,practiceFocus]);
+ },[sessionLoadedFor,sessionKey,resumeId,index,questions,started,answers,answer,completed,feedback,practiceFocus]);
  useEffect(()=>{
   if(sessionLoadedFor!==sessionKey)return;
   const flush=()=>{if(currentSessionRef.current)try{localStorage.setItem(sessionKey,JSON.stringify(currentSessionRef.current));}catch{}};
@@ -126,18 +137,20 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
 
  useEffect(()=>{
   const browser=window as RecognitionBrowser;
-  setSupported(!!(browser.SpeechRecognition||browser.webkitSpeechRecognition));
-  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||
-   (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  setMobileVoice(mobile);
+  const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
+  setSupported(live);
+  // Attempt live speech recognition on mobile when the browser supports it.
+  // Otherwise fall back to explicit audio recording with server transcription.
+  setMobileVoice(!live);
  },[]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
  useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
- function setAnswerText(text:string){answerRef.current=text;setAnswer(text);}
+ function setAnswerText(text:string){answerRef.current=text;liveAnswerRef.current=text;setAnswer(text);}
  function stopMic(disable=true){
   if(disable)listeningWanted.current=false;
   if(restartTimer.current){clearTimeout(restartTimer.current);restartTimer.current=null;}
   const rec=recognitionRef.current;
+  if(rec&&liveAnswerRef.current)setAnswerText(liveAnswerRef.current);
   recognitionRef.current=null;
   if(rec){try{rec.stop();}catch{}}
   setMicrophone(false);
@@ -148,8 +161,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   if(recognitionRef.current)return;
   const browser=window as RecognitionBrowser;
   const Ctor=browser.SpeechRecognition||browser.webkitSpeechRecognition;
-  if(!Ctor){listeningWanted.current=false;setSupported(false);setMessage('Browser dictation is unavailable. Use Record Answer (AI) or Upload Audio on your phone.');return;}
+  if(!Ctor){listeningWanted.current=false;setSupported(false);setMobileVoice(true);setMessage('Live speech recognition is unavailable. Use Record Answer (AI) or Upload Audio instead.');return;}
   const base=answerRef.current.trim();
+  let finalTranscript=base;
   try{
    const rec=new Ctor();
    rec.lang=languageRef.current;
@@ -170,7 +184,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
      else interimParts.push(text);
     }
     const combined=[base,...finalParts,...interimParts].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+    finalTranscript=[base,...finalParts].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
     answerRef.current=combined;
+    liveAnswerRef.current=finalTranscript;
     setAnswer(combined);
     setInterim(interimParts.length>0);
    };
@@ -178,6 +194,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
     if(recognitionRef.current!==rec)return;
     if(e.error==='no-speech'){setMessage('No speech detected yet. Keep speaking near your microphone.');return;}
     listeningWanted.current=false;
+    setAnswerText(finalTranscript);
     recognitionRef.current=null;
     setMicrophone(false);
     setInterim(false);
@@ -197,6 +214,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    rec.onend=()=>{
     if(recognitionRef.current!==rec)return;
     recognitionRef.current=null;
+    setAnswerText(finalTranscript);
     setMicrophone(false);
     setInterim(false);
     // Chrome may end a recognition session after silence. Resume only when the
