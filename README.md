@@ -196,3 +196,26 @@ When **both** `GEMINI_API_KEY` and `OPENAI_API_KEY` are configured, text prompts
 Audio transcription selects a primary configured provider (Groq first, then Gemini, then OpenAI). If using Gemini, it may switch among **Gemini models only** when overloaded; recorded audio is not automatically copied to another vendor. Audio is uploaded only after the user explicitly chooses recording/upload. Existing authentication and rolling transcription quota checks still apply.
 
 Use `node scripts/check-ai-fallback.cjs` to run the deterministic overload/fallback tests locally without real API credentials.
+
+
+## Account Settings: avatar, authenticator security, provider status, plan previews
+
+Settings → Account now supports a user avatar (JPEG/PNG/WebP), displaying it in the sidebar and topbar, and a Sign Out button. The old Export my data button is removed from that page. Avatar uploads are resized to 256 × 256 and stored **only in the signed-in user's browser**; other devices will continue to show the Google account picture (if available), the resume photo, or the initials until a profile-photo Storage bucket is provisioned in **the correct, separate ResumeBuilder Supabase project**. No storage bucket was created.
+
+The top-right account menu includes My Profile & Settings, Account Security, and Sign Out. Settings → Security offers Supabase TOTP authenticator **enroll → QR → challenge → verify**. Verified factors can be listed and removed after satisfying the second factor. Signed-in users with enrolled verified TOTP must enter their authenticator code before the client workspace is displayed. This user-facing challenge must be backed by server AAL authorization and appropriately restrictive database/storage RLS policies in the **actual** ResumeBuilder Supabase project; the new UI alone must not be treated as comprehensive database protection. Supabase Auth currently does not issue backup recovery codes, so users should enroll a second authenticator device to avoid lockout.
+
+Settings → Integrations calls an authenticated server endpoint `GET /api/ai/status`. It checks the providers' credentials against Gemini, OpenAI and Groq model-list endpoints without exposing API keys. A green Connected badge means only the credential test succeeded, not that particular models have remaining quota. Authentication errors or missing API keys appear as unavailable/unconfigured.
+
+Settings → Subscription displays proposed **Free (₱0/month), Pro (₱200/month), Ultra (₱400/month)** plan cards. **Billing, purchase flow, server-side plan entitlements and recurring charges are not yet implemented**, so no user is billed or upgraded by these controls.
+
+**Deployment boundary:** these changes were prepared only as a GitHub feature-branch pull request. The Supabase and Vercel projects accessible to the assistant are different from those used by the actual ResumeBuilder site; do not migrate, modify, bill or redeploy the unrelated projects. Configure and validate the real Supabase/Vercel resources separately when their correct identifiers are available.
+
+
+## iPhone Brave / Safari microphone and mobile form zoom
+
+- Touch-first input controls use 16px+ fonts to avoid iOS automatic zoom on focus. Clickable controls use `touch-action:manipulation`, which avoids accidental double-tap zoom while **preserving deliberate pinch zoom** for accessibility.
+- Brave iPhone can advertise a speech-recognition interface without running a reliable dictation service. Brave iOS now defaults to the explicitly tapped `MediaRecorder` audio flow. A separate `Record on iPhone` native file capture option and `Upload Audio` remain available. Speech that cannot start within 4.5 seconds switches to the recorder rather than indefinitely showing a live microphone. **Recorded answers are only transcribed after Stop & Transcribe**; this is not equivalent to streaming live speech-to-text.
+- Recording/transcription requires a signed-in account, microphone permission on the iPhone and in Brave, a working transcription API provider and the private ResumeBuilder Supabase API/database configuration. These are separate from other connected Supabase/Vercel projects and were **not** modified.
+- Browser speech playback pins one clear English voice for greeting and all 10 interview questions, prioritizing suitable enhanced or native system voices if available. Voice quality and exact voices depend on iOS-installed speech voices; no provider TTS API or paid voice service was enabled.
+- iOS native keyboard dictation remains an alternative when in-browser recording fails: tap the answer text field and use the iPhone keyboard microphone to insert text directly.
+- New browser smoke cases verify text-input sizing, consistent selected TTS voice, and Brave iOS recorder UI. CI emulation cannot verify the OS microphone/privacy prompts; test on a physical iPhone before claiming real-device compatibility.

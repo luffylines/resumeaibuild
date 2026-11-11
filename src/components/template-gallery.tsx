@@ -6,11 +6,14 @@ import type {Resume} from '@/lib/types';
 import {UNIQUE_RESUME_TEMPLATES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,canonicalTemplateId,designDisplayName,TEMPLATE_CATEGORIES,PHOTO_READY_TEMPLATES,getResumeTemplate} from '@/lib/templates';
 import type {ResumeTemplateId,TemplateCategory} from '@/lib/templates';
 import ResumeDocument from '@/components/resume-document';
+import {templatePreviewResume} from '@/lib/template-preview';
 
 type Props={resume:Resume;onUse:(id:ResumeTemplateId,accentColor:string,backgroundColor:string)=>void};
 const validHex=(s:string)=>/^#[0-9a-f]{6}$/i.test(s);
-function Preview({resume,id,accent,background,large=false}:{resume:Resume;id:ResumeTemplateId;accent:string;background:string;large?:boolean}){
- const preview={...resume,template:id,accentColor:accent,backgroundColor:background};
+function Preview({id,accent,background,large=false}:{id:ResumeTemplateId;accent:string;background:string;large?:boolean}){
+ // Show complete showcase content even when the user's active resume is blank.
+ // Layout selection below never overwrites the user's fields.
+ const preview={...templatePreviewResume,template:id,accentColor:accent,backgroundColor:background};
  return <div className={'rt-preview-stage '+(large?'rt-preview-stage-large':'')} aria-hidden="true"><div className="rt-preview-viewport"><ResumeDocument resume={preview} miniature/></div></div>;
 }
 function PalettePicker({title,values,value,change}:{title:string;values:readonly {name:string;hex:string}[];value:string;change:(v:string)=>void}){
@@ -34,7 +37,7 @@ export default function TemplateGallery({resume,onUse}:Props){
  <div className="rt-gallery-toolbar"><div className="rt-category-list" aria-label="Filter resume templates">{TEMPLATE_CATEGORIES.map(c=><button key={c} className={category===c?'active':''} onClick={()=>setCategory(c)}>{c} <small>{c==='All'?UNIQUE_RESUME_TEMPLATES.length:UNIQUE_RESUME_TEMPLATES.filter(t=>t.category===c).length}</small></button>)}</div><button type="button" className={'rt-photo-filter '+(photoOnly?'active':'')} aria-pressed={photoOnly} onClick={()=>setPhotoOnly(v=>!v)}><Camera size={16}/> With Photo <strong>{UNIQUE_RESUME_TEMPLATES.filter(t=>PHOTO_READY_TEMPLATES.has(t.id)).length}</strong></button><label className="rt-search"><Search size={17}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search templates..." aria-label="Search templates"/></label></div>
  <div className="rt-gallery-hint"><ShieldCheck size={18}/><span><strong>Applying online?</strong> Choose a clean, single-column design with an ATS-friendly label for online applications. Photo, sidebar, and multi-column layouts are optional and may be better for direct sharing or portfolios.</span></div>
  <div className="rt-gallery-grid">{filtered.map(t=><article key={t.id} className={'rt-template-card '+(selectedId===t.id?'rt-card-selected':'')}>
-   <div className="rt-card-image"><Preview resume={resume} id={t.id} accent={colorFor(t.id)} background={backgroundFor(t.id)}/><span className="rt-tag" style={{'--rt-tag-accent':colorFor(t.id)} as CSSProperties}>{t.tag}</span>
+   <div className="rt-card-image"><Preview id={t.id} accent={colorFor(t.id)} background={backgroundFor(t.id)}/><span className="rt-tag" style={{'--rt-tag-accent':colorFor(t.id)} as CSSProperties}>{t.tag}</span>
     <button className="rt-card-preview-button" onClick={()=>setExpanded(t.id)} aria-label={'Preview '+designDisplayName(t.id)}><Eye size={16}/> Preview</button>
    </div>
    <div className="rt-card-detail"><div className="rt-card-name"><h2>{designDisplayName(t.id)}</h2>{selectedId===t.id&&<span className="rt-selected-badge"><Check size={13}/> Selected</span>}</div><p>{t.description}</p><PalettePicker title="Accent color" values={DESIGN_COLOR_OPTIONS} value={colorFor(t.id)} change={v=>setAccentChoices(old=>({...old,[t.id]:v}))}/><PalettePicker title="Page background" values={PAGE_BACKGROUND_OPTIONS} value={backgroundFor(t.id)} change={v=>setBackgroundChoices(old=>({...old,[t.id]:v}))}/><span className="rt-bestfor"><FileText size={13}/> Best for: {t.audience}</span><div className="rt-card-footer"><span className="rt-category">{t.category}</span><button className="purple-button" onClick={()=>apply(t.id)}>Use Layout <ArrowRight size={15}/></button></div></div>
@@ -42,7 +45,7 @@ export default function TemplateGallery({resume,onUse}:Props){
  {filtered.length===0&&<div className="rt-no-results">No templates found. <button onClick={()=>{setCategory('All');setQuery('');setPhotoOnly(false);}}>Show all templates</button></div>}
  {picked&&expanded&&<div className="rt-modal-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setExpanded(null);}}><section className="rt-template-dialog" role="dialog" aria-modal="true" aria-label={'Preview '+picked.name}>
  <div className="rt-dialog-top"><div><span>RESUME TEMPLATE PREVIEW</span><h2>{designDisplayName(picked.id)}</h2><p>{picked.description}</p></div><button onClick={()=>setExpanded(null)} aria-label="Close preview"><X size={20}/></button></div>
- <div className="rt-dialog-preview"><Preview resume={resume} id={expanded} accent={colorFor(expanded)} background={backgroundFor(expanded)} large/></div>
+ <div className="rt-dialog-preview"><Preview id={expanded} accent={colorFor(expanded)} background={backgroundFor(expanded)} large/></div>
  <div className="rt-modal-palettes"><PalettePicker title="Accent color" values={DESIGN_COLOR_OPTIONS} value={colorFor(expanded)} change={v=>setAccentChoices(old=>({...old,[expanded]:v}))}/><label className="rt-custom-palette"><Palette size={15}/> Custom accent <input aria-label="Custom accent color" type="color" value={colorFor(expanded)} onChange={e=>setAccentChoices(old=>({...old,[expanded]:e.target.value}))}/></label><PalettePicker title="Page background" values={PAGE_BACKGROUND_OPTIONS} value={backgroundFor(expanded)} change={v=>setBackgroundChoices(old=>({...old,[expanded]:v}))}/><label className="rt-custom-palette"><Palette size={15}/> Custom background <input aria-label="Custom background color" type="color" value={backgroundFor(expanded)} onChange={e=>setBackgroundChoices(old=>({...old,[expanded]:e.target.value}))}/></label></div><div className="rt-dialog-actions"><span><Sparkles size={15}/> Example content for layout preview; your own information stays unchanged.</span><button className="purple-button" onClick={()=>{apply(expanded);setExpanded(null);}}>Use This Layout <ArrowRight size={17}/></button></div>
  </section></div>}
  </div>;

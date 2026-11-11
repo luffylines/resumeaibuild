@@ -533,3 +533,26 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .interview-inline-message{font-size:12px;line-height:1.6}
  .interview-coach-panel h2{overflow-wrap:anywhere}
 }
+
+
+/* iPhone/Brave/Safari focus-zoom: keep the actual focused control readable.
+ * 16px prevents WebKit's automatic focus zoom; manipulation prevents unwanted
+ * double-tap zoom on controls. The browser's intentional pinch zoom remains on.
+ * Unlike disabling user-scalable, this preserves accessibility. */
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+ html {-webkit-text-size-adjust: 100%;text-size-adjust:100%;}
+ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]),
+ textarea, select, [contenteditable="true"] {
+  font-size:16px!important;
+  line-height:1.45;
+  -webkit-text-size-adjust:100%;
+ }
+ button, a, label, summary, input, textarea, select, [role="button"], [role="tab"], [role="switch"] {
+  touch-action:manipulation;
+ }
+ .interview-answer-card textarea,.interview-coach-panel select,
+ .auth-form-card input,.settings-v2 input,.wizard-page input,
+ .wizard-page textarea,.wizard-page select {
+  font-size:16px!important;
+ }
+}

@@ -13,7 +13,7 @@ async function checkOverflow(page,name,route){const m=await page.evaluate(()=>({
 }}
 const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});let checked=0;
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});let checked=0;
  try{
   for(const size of sizes){
    const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1,isMobile:size.width<=768,hasTouch:size.width<=768});
@@ -65,7 +65,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const speechContext=await browser.newContext({viewport:{width:1280,height:850}});
   const speechPage=await speechContext.newPage();
   await speechPage.addInitScript(()=>{
-   const state={spoken:[],recognizer:null};
+   const state={spoken:[],voiceURIs:[],recognizer:null};
    // Stand-in local camera stream, no physical camera in CI.
    if(navigator.mediaDevices)Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>new MediaStream()});
    window.__resumeSpeechMock=state;
@@ -84,7 +84,11 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    window.SpeechRecognition=FakeRecognition;
    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{
     cancel(){},
-    speak(utterance){state.spoken.push(utterance.text);queueMicrotask(()=>utterance.onend?.());}
+    getVoices(){return [
+     {voiceURI:'compact',name:'English Compact',lang:'en-US',localService:true,default:true},
+     {voiceURI:'natural',name:'Samantha (Enhanced)',lang:'en-US',localService:true,default:false}
+    ];},
+    speak(utterance){state.spoken.push(utterance.text);state.voiceURIs.push(utterance.voice?.voiceURI||'default');queueMicrotask(()=>utterance.onend?.());}
    }});
   });
   await open(speechPage,'/app');
@@ -113,6 +117,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const previousCount=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.length);
   await speechPage.getByRole('button',{name:'Next Question'}).click();
   await speechPage.waitForFunction(count=>window.__resumeSpeechMock.spoken.length>count,previousCount);
+  const voicesUsed=await speechPage.evaluate(()=>window.__resumeSpeechMock.voiceURIs);
+  if(voicesUsed.some(uri=>uri!=='natural'))throw Error('Interviewer voice switched across questions: '+voicesUsed.join(', '));
+  console.log('PASS consistent English interviewer voice across the greeting and questions');
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
   // Voice controls should be discoverable without searching for the small robot icon.
@@ -142,6 +149,18 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await phonePage.getByRole('button',{name:'Open navigation menu'}).click();
   await phonePage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
   await phonePage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  const zoomCheck=await phonePage.evaluate(()=>{
+   const field=document.querySelector('textarea[aria-label="Your Answer"]');
+   const selector=document.getElementById('interview-resume-choice');
+   const click=document.querySelector('.interview-next');
+   return {answer:field?parseFloat(getComputedStyle(field).fontSize):0,
+    select:selector?parseFloat(getComputedStyle(selector).fontSize):0,
+    touch:click?getComputedStyle(click).touchAction:''};
+  });
+  if(zoomCheck.answer<16||zoomCheck.select<16||zoomCheck.touch!=='manipulation'){
+   throw Error('iPhone focus zoom controls not optimized: '+JSON.stringify(zoomCheck));
+  }
+  console.log('PASS iPhone focus controls remain 16px+ with single-tap behavior and accessible pinch zoom');
   // Chromium with an iPhone user-agent may expose live Web Speech.
   // Real Safari versions may instead require the server-side recorder.
   const phoneAI=phonePage.getByRole('button',{name:'Record answer with AI'}).last();
@@ -169,11 +188,49 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await bravePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
   await braveCtx.close();
   console.log('PASS Brave mobile: uses secure recording fallback instead of unsupported live dictation');
+  const braveIOSCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,
+   userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1 Brave'});
+  const braveIOSPage=await braveIOSCtx.newPage();
+  await open(braveIOSPage,'/app');
+  await braveIOSPage.getByRole('button',{name:'Open navigation menu'}).click();
+  await braveIOSPage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await braveIOSPage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  await braveIOSPage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
+  await braveIOSPage.getByRole('button',{name:'Record on iPhone'}).waitFor({state:'visible'});
+  await braveIOSPage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  await braveIOSPage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
+  await braveIOSCtx.close();
+  console.log('PASS Brave iOS: default recorder path, native iPhone recording option and auth guard');
+
 
 
 
   console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
   await speechContext.close();
+
+
+  // Settings smoke tests in demo mode: these do not touch Supabase or Vercel.
+  const settingsCtx=await browser.newContext({viewport:{width:1200,height:800}});
+  const settingsPage=await settingsCtx.newPage();
+  await open(settingsPage,'/app');
+  await settingsPage.locator('.side-nav').getByRole('button',{name:'Settings'}).click();
+  await settingsPage.getByRole('heading',{name:'Account Information'}).waitFor({state:'visible'});
+  if(await settingsPage.getByRole('button',{name:'Export my data'}).count())throw Error('Export my data must be removed');
+  const photoButton=settingsPage.getByRole('button',{name:'Upload Profile Photo'});
+  if(await photoButton.isEnabled())throw Error('Demo account must not upload an authenticated profile photo');
+  await settingsPage.getByRole('button',{name:'Subscription'}).click();
+  await settingsPage.getByRole('heading',{name:'Subscription Plans'}).waitFor({state:'visible'});
+  const prices=await settingsPage.locator('.settings-pricing-price').allTextContents();
+  if(prices.length!==3||!prices.some(p=>p.includes('200'))||!prices.some(p=>p.includes('400')))throw Error('Monthly Pro and Ultra pricing missing: '+prices.join(', '));
+  for(const button of await settingsPage.locator('.settings-pricing-card button').all()){
+   if(await button.isEnabled())throw Error('Cannot enable unconfigured billing checkout');
+  }
+  await settingsPage.getByRole('button',{name:'Integrations'}).click();
+  await settingsPage.getByText('Not verified').waitFor({state:'visible'});
+  await settingsPage.getByRole('button',{name:'Security'}).click();
+  await settingsPage.getByText('Sign in to set up two-factor authentication.').waitFor({state:'visible'});
+  await settingsCtx.close();
+  console.log('PASS account/settings: no data export, avatar controls, MFA sign-in requirement, proposed ₱200 / ₱400 plans and safe billing status');
 
   const adminContext=await browser.newContext({viewport:{width:1280,height:800}});
   const adminPage=await adminContext.newPage();
@@ -336,6 +393,40 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(naturalWidth<100)throw Error('Portrait preview illustration failed to load: '+naturalWidth);
   await photoPage.getByRole('button',{name:/With Photo 20/}).click();
   if(await photoPage.locator('.rt-template-card').count()!==20)throw Error('Photo-only gallery filter should show 20 photo-ready layouts');
+  // Every gallery sample must contain real-looking example sections independent
+  // of the signed-in user's saved resume, and the photo must never cover name
+  // or contact even when a long name wraps.
+  const collisions=await photoPage.evaluate(()=>{
+   const problems=[];
+   const overlap=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+   const cards=[...document.querySelectorAll('.rt-template-card')];
+   for(let index=0;index<cards.length;index++){
+    const card=cards[index];
+    const resume=card.querySelector('.resume-document');
+    const title=card.querySelector('.rd-header h2');
+    const header=card.querySelector('.rd-header');
+    const photo=card.querySelector('.rd-portrait');
+    if(!resume||!header||!title||!photo){problems.push(index+': missing markup');continue;}
+    if(!card.querySelector('.rd-key-experience')||!card.querySelector('.rd-key-education')||!card.querySelector('.rd-key-summary'))
+     problems.push(index+': incomplete sample sections');
+    // Stress wrapping without mutating stored resume information.
+    title.textContent='ALEXANDER CHRISTOPHER SANTOS DELA CRUZ';
+    const textBounds=title.getBoundingClientRect();
+    const portraitBounds=photo.getBoundingClientRect();
+    const contact=card.querySelector('.rd-contact');
+    if(overlap(textBounds,portraitBounds))problems.push(index+': portrait overlaps name');
+    if(contact&&overlap(contact.getBoundingClientRect(),portraitBounds))problems.push(index+': portrait overlaps contact');
+    const headerBounds=header.getBoundingClientRect();
+    if(portraitBounds.bottom>headerBounds.bottom+2)problems.push(index+': portrait extends below header');
+    if(portraitBounds.left<headerBounds.left-2||portraitBounds.right>headerBounds.right+2)
+     problems.push(index+': portrait outside header');
+    if(!title.textContent?.includes('ALEXANDER'))problems.push(index+': stress name not applied');
+   }
+   return problems;
+  });
+  if(collisions.length)throw Error('Portrait layout defects: '+collisions.join(' | '));
+  await photoPage.screenshot({path:path.join(shots,'gallery-photo-layouts.png'),fullPage:true});
+  console.log('PASS all 20 portrait layouts have populated sections and no avatar/name/contact/header collisions under a long sample name');
   await photoPage.getByRole('button',{name:/With Photo 20/}).click();
   if(await photoPage.locator('.rt-template-card').count()!==32)throw Error('All layouts should return after disabling photo-only filter');
   console.log('PASS all 32 unique layout cards, 20 photo-ready templates ordered first and rendered sample portrait');

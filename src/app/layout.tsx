@@ -7,7 +7,8 @@ import './mobile-modern.css';
 export const viewport: Viewport = {width:'device-width',initialScale:1,viewportFit:'cover'};
 export const metadata: Metadata = {
   title: 'ResumeBuilder — AI Resume Builder & Professional Templates',
-  description: 'Create professional photo-ready resumes, check ATS readiness, generate cover letters and practice interviews.'
+  description: 'Create professional photo-ready resumes, check ATS readiness, generate cover letters and practice interviews.',
+  icons: {icon:'/images/logo.png',shortcut:'/images/logo.png',apple:'/images/logo.png'}
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="en"><body>{children}</body></html>;

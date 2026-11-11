@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCircle2,Headphones,Lightbulb,LoaderCircle,Mic,MicOff,ShieldCheck,Sparkles,Video,VideoOff,Volume2,X,Languages,AudioLines,CloudUpload} from 'lucide-react';
 import type {Resume} from '@/lib/types';
 import {INTERVIEW_COUNT,buildInterviewQuestions,parseInterviewQuestions} from '@/lib/interview-questions';
+import {applyInterviewerVoice} from '@/lib/interview-voice';
 
 type SpeechItem={transcript:string};
 type SpeechResult=ArrayLike<SpeechItem>&{isFinal:boolean};
@@ -64,6 +65,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [cloudBusy,setCloudBusy]=useState(false);
  const [mobileVoice,setMobileVoice]=useState(false);
  const audioUploadRef=useRef<HTMLInputElement|null>(null);
+ const nativeAudioCaptureRef=useRef<HTMLInputElement|null>(null);
  const recognitionRef=useRef<BrowserRecognition|null>(null);
  const cloudRecorderRef=useRef<MediaRecorder|null>(null);
  const cloudStreamRef=useRef<MediaStream|null>(null);
@@ -81,6 +83,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const utteranceVersion=useRef(0);
  const voiceUtteranceRef=useRef<SpeechSynthesisUtterance|null>(null);
  const voiceStartTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const pinnedVoiceRef=useRef<{current:string|null;chosen:boolean}>({current:null,chosen:false});
+ const recognitionStartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const [iosRecorderMode,setIosRecorderMode]=useState(false);
 
  type Session={v:1|2;resumeId:string;index:number;questions:string[];started:boolean;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
@@ -180,18 +185,24 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
 
  useEffect(()=>{
   const browser=window as RecognitionBrowser&{brave?:{isBrave?:()=>Promise<boolean>}};
+  const ua=navigator.userAgent;
+  const isiOS=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const isAlternateIOS=isiOS&&(/Brave|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA/i.test(ua)||!(/Version\/.*Safari/i.test(ua)));
   const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
-  setSupported(live);
-  setMobileVoice(!live);
-  // Brave can expose SpeechRecognition but disable the remote speech service.
-  // Use the MediaRecorder + authenticated transcription flow instead.
-  const forceRecorder=()=>{
+  // Some iOS browsers surface Web Speech but cannot actually process speech.
+  // Prefer the MediaRecorder path; it works after a direct microphone tap when
+  // recording/AI provider and permission are available.
+  const forceRecorder=(reason:string)=>{
+   setIosRecorderMode(isiOS);
    setMobileVoice(true);
    setSupported(false);
-   setMessage('Brave / private browser detected. Use Record Answer (AI), then Stop & Transcribe. Browser live dictation may not be supported.');
+   setMessage(reason);
   };
-  if(/Brave/i.test(navigator.userAgent))forceRecorder();
-  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder();}).catch(()=>{});}catch{}
+  setSupported(live&&!isAlternateIOS);
+  setMobileVoice(!live||isAlternateIOS);
+  if(isAlternateIOS||/Brave/i.test(ua))forceRecorder('Use Record Answer (AI), then Stop & Transcribe. The recording is sent only after you stop it.');
+  // Brave's iOS User-Agent can be identical to Safari on some versions.
+  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder('Brave detected. Use Record Answer (AI) instead of browser live dictation.');}).catch(()=>{});}catch{}
  },[]);
  // Give the visitor an audible welcome shortly after opening Interview Practice
  // where autoplay is permitted. If iOS/Brave blocks unsolicited sound, the
@@ -204,7 +215,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    const version=++utteranceVersion.current;
    const voice=new SpeechSynthesisUtterance(greeting+' Tap Start Personalized Interview when you are ready.');
    voiceUtteranceRef.current=voice;
-   voice.lang='en-US';voice.rate=.94;
+   applyInterviewerVoice(voice,window.speechSynthesis,pinnedVoiceRef.current);
    let didStart=false;
    voice.onstart=()=>{
     if(version!==utteranceVersion.current)return;
@@ -229,9 +240,10 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   return()=>window.clearTimeout(timer);
  },[sessionLoadedFor,sessionKey,started,completed,questionLoading,greeting]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
- useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);if(voiceStartTimerRef.current)clearTimeout(voiceStartTimerRef.current);voiceUtteranceRef.current=null;recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
+ useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);if(voiceStartTimerRef.current)clearTimeout(voiceStartTimerRef.current);if(recognitionStartTimer.current)clearTimeout(recognitionStartTimer.current);voiceUtteranceRef.current=null;recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
  function setAnswerText(text:string){answerRef.current=text;liveAnswerRef.current=text;setAnswer(text);}
  function stopMic(disable=true){
+  if(recognitionStartTimer.current){clearTimeout(recognitionStartTimer.current);recognitionStartTimer.current=null;}
   if(disable)listeningWanted.current=false;
   if(restartTimer.current){clearTimeout(restartTimer.current);restartTimer.current=null;}
   const rec=recognitionRef.current;
@@ -249,13 +261,19 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   if(!Ctor){listeningWanted.current=false;setSupported(false);setMobileVoice(true);setMessage('Live speech recognition is unavailable. Use Record Answer (AI) or Upload Audio instead.');return;}
   const base=answerRef.current.trim();
   let finalTranscript=base;
+  let recognitionStarted=false;
   try{
    const rec=new Ctor();
    rec.lang=languageRef.current;
    rec.continuous=true;
    rec.interimResults=true;
    rec.maxAlternatives=1;
-   rec.onstart=()=>{if(recognitionRef.current===rec){setMicrophone(true);setMessage('Microphone is on. Your speech will appear live in Your Answer.');}};
+   rec.onstart=()=>{
+    if(recognitionRef.current!==rec)return;
+    recognitionStarted=true;
+    if(recognitionStartTimer.current){clearTimeout(recognitionStartTimer.current);recognitionStartTimer.current=null;}
+    setMicrophone(true);setMessage('Microphone is on. Your speech will appear live in Your Answer.');
+   };
    rec.onresult=e=>{
     if(recognitionRef.current!==rec)return;
     const finalParts:string[]=[];
@@ -277,6 +295,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    };
    rec.onerror=e=>{
     if(recognitionRef.current!==rec)return;
+    if(recognitionStartTimer.current){clearTimeout(recognitionStartTimer.current);recognitionStartTimer.current=null;}
     if(e.error==='no-speech'){setMessage('No speech detected yet. Keep speaking near your microphone.');return;}
     listeningWanted.current=false;
     setAnswerText(finalTranscript);
@@ -302,6 +321,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    };
    rec.onend=()=>{
     if(recognitionRef.current!==rec)return;
+    if(recognitionStartTimer.current){clearTimeout(recognitionStartTimer.current);recognitionStartTimer.current=null;}
     recognitionRef.current=null;
     setAnswerText(finalTranscript);
     setMicrophone(false);
@@ -315,11 +335,21 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    recognitionRef.current=rec;
    rec.start();
    setMicrophone(true);
-   setMessage('Listening… speak clearly. You can correct the transcript directly.');
+   setMessage('Starting microphone transcription… Speak when the microphone is ready.');
+   recognitionStartTimer.current=setTimeout(()=>{
+    recognitionStartTimer.current=null;
+    if(recognitionRef.current!==rec||recognitionStarted)return;
+    listeningWanted.current=false;recognitionRef.current=null;
+    setMicrophone(false);setInterim(false);
+    try{rec.stop();}catch{}
+    setSupported(false);setMobileVoice(true);
+    setMessage('This browser did not start live speech recognition. Use Record Answer (AI), then Stop & Transcribe, or your iPhone keyboard microphone.');
+   },4500);
   }catch{
    recognitionRef.current=null;
    listeningWanted.current=false;
    setMicrophone(false);
+   setSupported(false);setMobileVoice(true);
    setMessage('Unable to start speech recognition. Check the microphone permission icon next to the website address, or try Record with AI (backup).');
   }
  }
@@ -338,7 +368,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   setCloudRecording(false);
  }
 
- const mobileVoiceHelp='On Android/iPhone, use Record Answer (AI) for reliable transcription. Audio is sent to your configured AI provider only after you tap Stop & Transcribe.';
+ const mobileVoiceHelp='On iPhone/Brave: tap Record Answer (AI), allow Microphone, speak, then Stop & Transcribe. Transcription appears after processing, not live. If recording is blocked, use Upload Audio or iPhone keyboard dictation.';
  function getAudioMime(file:File|Blob):string{
   const mime=(file.type||'').split(';')[0].toLowerCase();
   if(mime)return mime;
@@ -401,8 +431,8 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   if(!signedIn){setMessage('Sign in to ResumeBuilder to use voice recording and AI transcription.');return;}
   if(cloudBusy)return;
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
-   setMessage('This mobile browser cannot record audio directly. Choose Upload Audio and select a recording from your phone.');
-   audioUploadRef.current?.click();return;
+   setMessage('This browser cannot use its built-in recorder. Try Record on iPhone, Upload Audio, or dictate through the iPhone keyboard microphone.');
+   nativeAudioCaptureRef.current?.click();return;
   }
   cancelCloud();
   stopMic();
@@ -449,9 +479,12 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   }catch(error){
    recordingStream?.getTracks().forEach(t=>t.stop());
    cancelCloud();
-   setMessage(error instanceof Error&&error.name==='NotAllowedError'
-    ?'Microphone permission denied. On iPhone: Settings → Safari → Microphone; on Android: Chrome site settings → Microphone. Then retry.'
-    :'Audio recording could not start. Try Upload Audio instead, or check browser microphone permission.');
+   const blocked=error instanceof Error&&['NotAllowedError','SecurityError','PermissionDeniedError'].includes(error.name);
+   const missing=error instanceof Error&&['NotFoundError','DevicesNotFoundError'].includes(error.name);
+   setMessage(blocked
+    ?'Microphone blocked. On iPhone: Settings → Privacy & Security → Microphone → Brave (if listed) → Allow. Then allow the website microphone prompt and retry. Or use iPhone keyboard dictation.'
+    :missing?'No microphone found. Check the phone microphone and use Record on iPhone or Upload Audio.'
+    :'Audio recording could not start. Try Record on iPhone, Upload Audio, or the iPhone keyboard microphone.');
   }
  }
  function toggleMic(){
@@ -481,11 +514,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   const text=(intro?greeting+' Let us begin. ':'')+(overrideQuestions?.[question]||questions[question]);
   const utterance=new SpeechSynthesisUtterance(text);
   voiceUtteranceRef.current=utterance; // Safari can drop utterances without a retained reference.
-  utterance.lang='en-US';utterance.rate=.92;utterance.pitch=1.02;
+  applyInterviewerVoice(utterance,window.speechSynthesis,pinnedVoiceRef.current);
   let didStart=false;
-  const voices=window.speechSynthesis.getVoices?.()||[];
-  const english=voices.find(v=>v.lang.toLowerCase()==='en-us')||voices.find(v=>v.lang.toLowerCase().startsWith('en'));
-  if(english)utterance.voice=english;
+  // Voice selection is locked to one voiceURI for all ten questions.
   const clearTimer=()=>{
    if(voiceStartTimerRef.current){clearTimeout(voiceStartTimerRef.current);voiceStartTimerRef.current=null;}
   };
@@ -545,6 +576,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   stopMic();
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   speakingRef.current=false;setSpeaking(false);
+  pinnedVoiceRef.current={current:null,chosen:false};
   setIndex(0);setStarted(false);setQuestions(buildInterviewQuestions(currentResume));setAnswers(QUESTIONS.map(()=>''));setAnswerText('');
   setFeedback('');setMessage('');setCompleted(false);
  }
@@ -663,8 +695,10 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
     <button type="button" className={'interview-voice-primary '+(microphone||cloudRecording?'active':'')} onClick={toggleMic} disabled={cloudBusy||completed||!started} aria-label={mobileVoice?(cloudRecording?'Stop and transcribe recording':'Record answer with AI'):(microphone?'Stop speaking':'Start speaking')}>{microphone||cloudRecording?<MicOff size={17}/>:<Mic size={17}/>} {mobileVoice?(cloudRecording?'Stop & Transcribe':'Record Answer (AI)'):(microphone?'Stop Listening':'Start Speaking')}</button>
     {!mobileVoice&&<button type="button" className={'interview-cloud-button '+(cloudRecording?'active':'')} onClick={()=>void toggleCloud()} disabled={cloudBusy||completed} aria-label={cloudRecording?'Stop and transcribe recording':'Record with AI backup'}><CloudUpload size={17}/>{cloudBusy?'Transcribing…':cloudRecording?'Stop & Transcribe':'Record with AI (backup)'}</button>}
     <input ref={audioUploadRef} className="interview-audio-upload-input" hidden type="file" accept="audio/mp4,audio/x-m4a,audio/m4a,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,.m4a,.mp4,.mp3,.wav,.webm,.ogg" onChange={e=>uploadRecordedAudio(e.target.files?.[0])}/>
+    <input ref={nativeAudioCaptureRef} className="interview-audio-upload-input" hidden type="file" accept="audio/*" capture="user" onChange={e=>uploadRecordedAudio(e.target.files?.[0])}/>
+    {iosRecorderMode&&<button type="button" className="interview-cloud-button" disabled={cloudBusy||cloudRecording||completed||!started} onClick={()=>{if(!signedIn){setMessage('Sign in to transcribe a recording.');return;}nativeAudioCaptureRef.current?.click();}}><Mic size={17}/> Record on iPhone</button>}
     <button type="button" className="interview-cloud-button" disabled={cloudBusy||cloudRecording||completed||!started} onClick={()=>audioUploadRef.current?.click()}><CloudUpload size={17}/> Upload Audio</button>
-    <span className="interview-voice-help">{mobileVoice?(signedIn?'Tap Record Answer, speak, then Stop & Transcribe. Or upload a recording saved on your phone.':'Sign in to record and transcribe an answer with AI.'):signedIn?'AI recording uses your Groq/Gemini key; 15 recordings per day.':'AI recording requires sign-in; browser dictation needs no key.'}</span>
+    <span className="interview-voice-help">{mobileVoice?(signedIn?'Record Answer → allow Microphone → speak → Stop & Transcribe. If Brave blocks recording, try Record on iPhone, Upload Audio, or keyboard dictation.':'Sign in for AI transcription, or use the iPhone keyboard microphone.'):signedIn?'AI recording uses a configured provider; 15 recordings per day.':'AI recording requires sign-in; browser dictation needs no key.'}</span>
    </div>
    <textarea aria-label="Your Answer" value={answer} disabled={completed||!started} onChange={e=>{if(listeningWanted.current){stopMic();setMessage('Microphone paused while editing your answer. Tap the mic to continue speaking.');}setAnswerText(e.target.value);}} rows={5} placeholder={microphone?'Listening to your voice…':'Tap the microphone above to speak, or type your answer here.'}/>
    <div className="interview-answer-bottom"><div className="interview-evaluation-note"><ShieldCheck size={16}/>{completed?'All questions completed. Your transcript remains available for review.':'No AI scoring yet. Your responses are collected until Finish & Evaluate on question 10.'}</div><span>{supported?'Speech recognition may make mistakes; review the transcript.':'You can type your answer if speech recognition is unavailable.'}</span></div>

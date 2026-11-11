@@ -344,3 +344,65 @@
  .resume-document.rd-style-monochrome-frame{border:0!important}
  .resume-document.rd-style-sapphire-columns .rd-header,.resume-document.rd-style-lilac-portfolio .rd-header,.resume-document.rd-style-nordic-photo .rd-header{margin:0 0 25px!important}
 }
+
+/* Photo-safe header contract for every portrait template (gallery, modal,
+ * real resume preview, PDF export). Do not let an absolutely-positioned
+ * portrait cover the applicant name, contact, or the next section.
+ * Gallery miniatures use rd-no-photo intentionally but display avatar.png,
+ * so explicitly include .resume-document--mini in these selectors. */
+.resume-document.rd-photo-layout:is(.rd-has-photo,.resume-document--mini) .rd-header{
+ position:relative;
+ box-sizing:border-box;
+ min-height:164px;
+}
+.resume-document.rd-photo-layout .rd-header-text,
+.resume-document.rd-photo-layout .rd-contact{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:normal}
+.resume-document.rd-photo-layout .rd-header-text h2{
+ max-width:100%;
+ overflow-wrap:anywhere;
+ word-break:break-word;
+ text-wrap:pretty;
+ hyphens:auto;
+}
+.resume-document.rd-photo-layout .rd-portrait{max-width:none;flex:none;box-sizing:border-box}
+.resume-document.rd-photo-layout .rd-portrait img{object-fit:cover;object-position:center;min-width:0;min-height:0}
+
+/* Right-aligned portraits: reserve the whole photo + frame + 20px gap.
+ * Existing designs retain their individual image styling and header colors. */
+.resume-document.rd-photo-layout:is(.rd-has-photo,.resume-document--mini):not(.rd-style-horizon-photo):not(.rd-style-warm-editorial-photo):not(.rd-style-graphite-graduate) .rd-header{
+ padding-right:max(165px,var(--rd-photo-right-space,165px))!important;
+}
+.resume-document.rd-style-portrait-navy,
+.resume-document.rd-style-black-gold{--rd-photo-right-space:190px}
+.resume-document.rd-style-burgundy-portfolio{--rd-photo-right-space:185px}
+.resume-document.rd-style-sapphire-columns,
+.resume-document.rd-style-emerald-ledger,
+.resume-document.rd-style-executive-portrait,
+.resume-document.rd-style-lilac-portfolio,
+.resume-document.rd-style-nordic-photo,
+.resume-document.rd-style-ivory-executive{--rd-photo-right-space:173px}
+.resume-document.rd-style-monochrome-frame{--rd-photo-right-space:166px}
+
+/* Left and centered photo designs require dedicated clear zones. */
+.resume-document.rd-style-horizon-photo:is(.rd-has-photo,.resume-document--mini) .rd-header{
+ padding-left:180px!important;padding-right:38px!important;min-height:196px;
+}
+.resume-document.rd-style-warm-editorial-photo:is(.rd-has-photo,.resume-document--mini) .rd-header{
+ padding-left:160px!important;padding-right:24px!important;min-height:174px;
+}
+.resume-document.rd-style-graphite-graduate:is(.rd-has-photo,.resume-document--mini) .rd-header{
+ padding-top:142px!important;padding-right:10px!important;padding-left:10px!important;min-height:0;
+}
+/* Small wizard resume is not a scaled 760px gallery thumbnail. */
+@media(max-width:540px){
+ .wizard-preview .resume-document.rd-photo-layout.rd-has-photo:not(.rd-style-horizon-photo):not(.rd-style-warm-editorial-photo):not(.rd-style-graphite-graduate) .rd-header{padding-right:100px!important;min-height:110px}
+ .wizard-preview .resume-document.rd-style-horizon-photo.rd-has-photo .rd-header{padding-left:105px!important;padding-right:12px!important;min-height:110px}
+ .wizard-preview .resume-document.rd-style-warm-editorial-photo.rd-has-photo .rd-header{padding-left:105px!important;padding-right:12px!important;min-height:110px}
+ .wizard-preview .resume-document.rd-style-horizon-photo.rd-has-photo .rd-portrait,
+ .wizard-preview .resume-document.rd-style-warm-editorial-photo.rd-has-photo .rd-portrait{left:12px;right:auto;top:12px}
+ .wizard-preview .resume-document.rd-style-graphite-graduate.rd-has-photo .rd-header{padding-top:99px!important}
+}
+/* Exports use the same header geometry as the actual template. */
+@media print{
+ .resume-document.rd-photo-layout.rd-has-photo:not(.rd-style-graphite-graduate) .rd-header{break-inside:avoid-page}
+}
