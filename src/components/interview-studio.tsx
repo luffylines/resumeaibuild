@@ -193,6 +193,41 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   if(/Brave/i.test(navigator.userAgent))forceRecorder();
   try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder();}).catch(()=>{});}catch{}
  },[]);
+ // Give the visitor an audible welcome shortly after opening Interview Practice
+ // where autoplay is permitted. If iOS/Brave blocks unsolicited sound, the
+ // Start button still speaks the FIRST question directly from the user's tap.
+ useEffect(()=>{
+  if(sessionLoadedFor!==sessionKey||started||completed||questionLoading)return;
+  const timer=window.setTimeout(()=>{
+   if(document.visibilityState!=='visible'||!('speechSynthesis'in window)||typeof SpeechSynthesisUtterance==='undefined')return;
+   if(speakingRef.current)return;
+   const version=++utteranceVersion.current;
+   const voice=new SpeechSynthesisUtterance(greeting+' Tap Start Personalized Interview when you are ready.');
+   voiceUtteranceRef.current=voice;
+   voice.lang='en-US';voice.rate=.94;
+   let didStart=false;
+   voice.onstart=()=>{
+    if(version!==utteranceVersion.current)return;
+    didStart=true;speakingRef.current=true;setSpeaking(true);setVoiceNeedsTap(false);
+   };
+   const done=()=>{
+    if(version!==utteranceVersion.current)return;
+    voiceUtteranceRef.current=null;speakingRef.current=false;setSpeaking(false);
+   };
+   voice.onend=done;
+   voice.onerror=()=>{done();if(!didStart)setVoiceNeedsTap(true);};
+   try{
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(voice);
+    window.setTimeout(()=>{
+     if(version!==utteranceVersion.current||didStart)return;
+     setVoiceNeedsTap(true);
+     setMessage('Your browser prevented the automatic welcome. Tap Start Personalized Interview to hear your first question.');
+    },3000);
+   }catch{done();setVoiceNeedsTap(true);}
+  },3000);
+  return()=>window.clearTimeout(timer);
+ },[sessionLoadedFor,sessionKey,started,completed,questionLoading,greeting]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
  useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);if(voiceStartTimerRef.current)clearTimeout(voiceStartTimerRef.current);voiceUtteranceRef.current=null;recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
  function setAnswerText(text:string){answerRef.current=text;liveAnswerRef.current=text;setAnswer(text);}
@@ -478,6 +513,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    // Keep cancel + speak within the same direct user gesture.
    window.speechSynthesis.cancel();
    window.speechSynthesis.speak(utterance);
+   if(window.speechSynthesis.paused)window.speechSynthesis.resume();
    speakingRef.current=true;setSpeaking(true);
    setMessage('Playing the interview question. If you cannot hear it, tap Read Question Aloud.');
    voiceStartTimerRef.current=setTimeout(()=>{
