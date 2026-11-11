@@ -764,3 +764,24 @@
 @media(max-width:1100px){.settings-pricing-grid{grid-template-columns:1fr}}
 @media(max-width:780px){.settings-pricing-grid{grid-template-columns:1fr;gap:12px}.settings-pricing-card{padding:18px}}
 @media(max-width:540px){.settings-v2 .settings-avatar{width:52px;height:52px}.settings-integrations>div{flex-wrap:wrap}.settings-integrations>div>span:nth-child(2){flex-basis:65%}.settings-integrations .connected,.settings-integrations .not-connected{margin-left:49px}.mfa-panel{padding:13px}.mfa-factor-row{flex-wrap:wrap}}
+
+/* Official ResumeBuilder PNG mark on every screen. Do not surround the
+ * image with the old purple icon tile; logo.png is already the brand. */
+.public-logo-mark,
+.resume-client-shell .brand-icon,
+.mfa-auth-brand .brand-icon,
+.admin-login-head .public-logo-mark,
+.password-card .public-logo-mark,
+.auth-back-brand .public-logo-mark{
+ background:transparent!important;
+ box-shadow:none!important;
+ border:0!important;
+ padding:0!important;
+ overflow:visible!important;
+}
+.public-logo-mark img,.resume-client-shell .brand-icon img,.mfa-auth-brand .brand-icon img{
+ object-fit:contain!important;max-width:100%;max-height:100%;
+}
+.resume-client-shell .avatar img,.settings-v2 .settings-avatar img{
+ object-fit:cover!important;object-position:center!important;
+}
