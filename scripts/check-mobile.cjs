@@ -13,7 +13,7 @@ async function checkOverflow(page,name,route){const m=await page.evaluate(()=>({
 }}
 const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});let checked=0;
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:{})});let checked=0;
  try{
   for(const size of sizes){
    const context=await browser.newContext({viewport:{width:size.width,height:size.height},deviceScaleFactor:1,isMobile:size.width<=768,hasTouch:size.width<=768});
