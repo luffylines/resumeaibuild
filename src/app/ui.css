@@ -937,3 +937,12 @@
  .mfa-otp-heading span{font-size:10px}
  .mfa-auth-card .mfa-panel-heading strong{font-size:15px}
 }
+
+/* Direct print guard: hide the entire demo editor DOM, not just descendants.
+   This works independently of :has() and global .resume-paper print rules. */
+@media print {
+ .wizard-page--demo,.wizard-page--demo *,.wizard-page--demo::before,.wizard-page--demo::after,
+ .cover-letter-preview--demo,.cover-letter-preview--demo *{
+  display:none!important;visibility:hidden!important;
+ }
+}
