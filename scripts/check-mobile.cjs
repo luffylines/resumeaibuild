@@ -335,6 +335,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    const root=el.closest('.wizard-page--demo');
    return {
     rootDisplay:root?getComputedStyle(root).display:'missing',
+    rootClass:root?.className||'missing',
+    mediaPrint:window.matchMedia('print').matches,
+    demoRulePresent:[...document.styleSheets].some(sheet=>{try{return [...sheet.cssRules].some(rule=>rule.cssText.includes('.wizard-page--demo')&&rule.cssText.includes('display: none'));}catch{return false;}}),
     display:getComputedStyle(el).display,
     visibility:getComputedStyle(el).visibility
    };
