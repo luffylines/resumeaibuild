@@ -81,3 +81,14 @@ The purple-and-white layouts follow the supplied homepage, user dashboard, admin
 **Important:** this is an implemented interpretation of the images, not a verified pixel-for-pixel copy. Third-party fonts, portrait photographs, live employer feeds, payments, avatar video calls, and other concepts in the artwork cannot be assumed to be available. A separate ResumeBuilder Supabase project and AI API key are required for real account persistence and AI responses. Production deployment has not been performed.
 
 The GitHub Actions workflow runs TypeScript, a production build, and HTTP smoke tests for the public pages, preview dashboard, and preview admin route. It does not test live OAuth, Supabase emails, or AI provider requests without the required private credentials.
+
+
+## Resume template library (20 designs)
+
+Templates are visible on the public homepage and in Dashboard → Templates. The designs include Modern Violet, Modern Blue, Modern Teal, Modern Coral, Modern Slate, Modern Sky, Modern Emerald, Modern Plum, Professional Indigo, Executive Navy, Executive Charcoal, Classic Professional, Minimal ATS, Clean Gray, Graduate Fresh, Timeline Pro, Tech Split, Creative Sidebar, Elegant Editorial and Bold Header.
+
+- Open /app?section=templates to compare scaled document previews, filter by category, search, or inspect a larger preview.
+- Use Template carries the chosen design into the five-step builder without replacing your content.
+- You can change designs on the Generate step, then save to persist the design ID in browser demo storage or the separate Supabase project.
+- Print PDF uses the same document design. Choose browser Save as PDF, A4 paper, 100% scale, and verify pagination before applying.
+- For online applications, start with a single-column template from Modern, Professional or Minimal. Split columns, sidebars and timelines are for visually oriented applications and may parse differently in an ATS. Heuristic ATS scores do not guarantee hiring.

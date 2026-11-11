@@ -88,3 +88,11 @@
  .rt-preview-stage-large .rt-preview-viewport{width:258px;height:344px}
  .rt-template-dialog{max-height:95vh}
 }
+
+/* The public page displays actual template designs, not generic placeholders. */
+.public-template-real{padding:0;overflow:hidden}
+.public-template-real>.rt-preview-stage{height:365px;background:linear-gradient(135deg,#f7f4fd,#ece9f5)}
+.public-template-real .public-template-bottom{padding:17px 19px;margin:0;border-top:1px solid #ece7f4}
+.public-template-real .public-template-bottom>div{display:flex;flex-direction:column;gap:5px}
+.public-template-real .public-template-bottom small{color:#91889e;font-size:10px}
+.public-template-cta{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin:28px 0 0}

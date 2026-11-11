@@ -56,6 +56,7 @@ function Status({value}:{value:ApplicationStatus}){return <span className={'stat
 export default function Home(){
  const [section,setSection]=useState<Section>('dashboard');
  const [mobileNav,setMobileNav]=useState(false);
+ useEffect(()=>{const initial=new URLSearchParams(window.location.search).get('section');if(initial==='templates')setSection('templates');},[]);
  const [resumes,setResumes]=useState<Resume[]>(sampleResumes);
  const [applications,setApplications]=useState<JobApplication[]>(starters);
  const [jobsData,setJobsData]=useState(sampleJobs);

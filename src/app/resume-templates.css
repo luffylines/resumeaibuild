@@ -114,3 +114,24 @@
  .resume-document.resume-paper .rd-empty-hint{display:none!important}
  .resume-document--mini,.resume-document--mini *{visibility:hidden!important}
 }
+
+
+/* Print only the chosen A4 resume, without form fields or dashboard UI. */
+@media print {
+ .resume-client-shell .sidebar,
+ .resume-client-shell .topbar,
+ .resume-client-shell .wizard-page>.page-heading,
+ .resume-client-shell .wizard-stagebar,
+ .resume-client-shell .wizard-editor,
+ .resume-client-shell .wizard-preview-head,
+ .resume-client-shell .wizard-preview>p,
+ .resume-client-shell .demo-notice,
+ .resume-client-shell .alert,
+ .resume-client-shell .rt-saved-preview {display:none!important}
+ .resume-client-shell .main-area,.resume-client-shell .content,.resume-client-shell .wizard-page,.resume-client-shell .wizard-layout,.resume-client-shell .wizard-preview{display:block!important;position:static!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:visible!important;background:transparent!important}
+ .resume-client-shell .resume-document.resume-paper{display:block!important;position:static!important;inset:auto!important;width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;box-shadow:none!important;border:0!important;visibility:visible!important}
+ .resume-client-shell .resume-document.resume-paper *{visibility:visible!important}
+ .resume-client-shell .resume-document.resume-paper .rd-section h3{color:var(--rd-accent)!important}
+ .resume-client-shell .resume-document.resume-paper.rd-style-classic .rd-section h3,
+ .resume-client-shell .resume-document.resume-paper.rd-style-minimal .rd-section h3{color:#202025!important}
+}
