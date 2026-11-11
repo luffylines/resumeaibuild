@@ -116,7 +116,7 @@ export async function exportResumeDOCX(resume:Resume){
   for(const e of section.entries){
    if(e.title)paras.push(new Paragraph({spacing:{after:55},children:[new TextRun({text:e.title,bold:true,size:20})]}));
    if(e.subtitle)paras.push(new Paragraph({spacing:{after:55},children:[new TextRun({text:e.subtitle,color:'667085',size:17})]}));
-   if(e.body)paras.push(new Paragraph({spacing:{after:140},children:[new TextRun({text:e.body,size:19,breakLine:false})]}));
+   if(e.body)paras.push(new Paragraph({spacing:{after:140},children:[new TextRun({text:e.body,size:19})]}));
   }
  }
  const doc=new Document({

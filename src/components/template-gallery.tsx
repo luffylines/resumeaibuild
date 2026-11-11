@@ -3,7 +3,7 @@ import {useEffect,useMemo,useState} from 'react';
 import type {CSSProperties} from 'react';
 import {ArrowRight,Check,Eye,FileText,Palette,Search,ShieldCheck,Sparkles,X} from 'lucide-react';
 import type {Resume} from '@/lib/types';
-import {UNIQUE_UNIQUE_RESUME_TEMPLATES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,canonicalTemplateId,designDisplayName,TEMPLATE_CATEGORIES,getResumeTemplate} from '@/lib/templates';
+import {UNIQUE_RESUME_TEMPLATES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,canonicalTemplateId,designDisplayName,TEMPLATE_CATEGORIES,getResumeTemplate} from '@/lib/templates';
 import type {ResumeTemplateId,TemplateCategory} from '@/lib/templates';
 import ResumeDocument from '@/components/resume-document';
 
