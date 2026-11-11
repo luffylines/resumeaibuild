@@ -1,0 +1,116 @@
+
+/* ResumeBuilder professional resume document system */
+/* A4-inspired, selectable, legible templates. All core content is real selectable text. */
+.resume-document{--rd-accent:#6736ec;--rd-ink:#25233b;--rd-muted:#606779;background:#fff!important;color:#242633!important;border:1px solid #e8e8ef;box-shadow:0 13px 32px #2420440b;width:100%;max-width:100%;min-height:850px;padding:43px 42px;line-height:1.5;font-family:Arial,Helvetica,sans-serif;position:relative;overflow-wrap:anywhere}
+.resume-document *{box-sizing:border-box}
+.resume-document .rd-accent-bar{position:absolute;inset:0 auto 0 0;width:6px;background:var(--rd-accent)}
+.resume-document .rd-header{margin:0 0 28px;padding:0 0 21px;border-bottom:2px solid var(--rd-accent);position:relative}
+.resume-document .rd-header h2{font-size:clamp(23px,3vw,34px);font-weight:800;letter-spacing:-.8px;line-height:1.18;margin:0 0 7px;color:var(--rd-ink);text-transform:none}
+.resume-document .rd-job-title{font-size:14px;font-weight:650;letter-spacing:.25px;margin:0;color:var(--rd-accent)}
+.resume-document .rd-contact{display:flex;gap:5px 12px;flex-wrap:wrap;margin:17px 0 0;font-size:10px;color:#59616b;line-height:1.55}
+.resume-document .rd-contact span{display:inline-block}
+.resume-document .rd-contact span+span:before{content:"•";padding-right:12px;color:var(--rd-accent)}
+.resume-document .rd-section{margin:0 0 21px}
+.resume-document .rd-section h3{color:var(--rd-accent);font-size:11px;letter-spacing:1.25px;font-weight:800;text-transform:uppercase;margin:0 0 11px;padding:0 0 8px;border-bottom:1px solid #e1e4ed}
+.resume-document .rd-section p{font-size:11px;font-weight:400;line-height:1.76;color:#393e49;margin:0;white-space:pre-line}
+.resume-document .rd-entry{margin:0 0 17px;break-inside:avoid}
+.resume-document .rd-entry-title{display:flex;align-items:baseline;justify-content:space-between;gap:9px;font-size:11px;margin:0 0 6px}
+.resume-document .rd-entry-title strong{font-weight:800;color:var(--rd-ink);font-size:11px}
+.resume-document .rd-entry-title>span{flex:none;white-space:nowrap;font-size:10px;color:#7b8492}
+.resume-document .rd-entry-company{font-size:10px;color:#505766}
+.resume-document .rd-entry-details{font-size:11px;line-height:1.75;white-space:pre-line;margin:3px 0 0}
+.resume-document .rd-skills{display:flex;flex-wrap:wrap;gap:7px 10px}
+.resume-document .rd-skills>span{display:inline-block;font-size:10px;line-height:1.6;font-weight:550;color:#3e4551}
+.resume-document .rd-skills>span:not(:last-child):after{content:" •";color:var(--rd-accent);padding-left:10px}
+.resume-document .rd-empty-hint{font-size:10px;color:#b5b5bd;font-style:italic;font-weight:400}
+.resume-document .rd-header-mark{display:none}
+.resume-document .rd-body{min-width:0}
+.resume-document .rd-primary,.resume-document .rd-secondary{min-width:0}
+.resume-document .rd-secondary{display:none}
+.resume-document.rd-layout-two-column .rd-body,.resume-document.rd-layout-sidebar .rd-body{display:grid;grid-template-columns:minmax(0,1.56fr) minmax(0,.84fr);gap:28px}
+.resume-document.rd-layout-two-column .rd-secondary,.resume-document.rd-layout-sidebar .rd-secondary{display:block}
+.resume-document.rd-layout-two-column .rd-secondary{padding:19px;background:#f3f6ff;border-left:3px solid var(--rd-accent)}
+.resume-document.rd-layout-two-column .rd-secondary .rd-skills>span{display:block;width:100%}
+.resume-document.rd-layout-sidebar .rd-body{grid-template-columns:minmax(0,.84fr) minmax(0,1.65fr);gap:0}
+.resume-document.rd-layout-sidebar .rd-secondary{grid-column:1;grid-row:1;background:var(--rd-accent);color:#fff;padding:24px 19px}
+.resume-document.rd-layout-sidebar .rd-primary{grid-column:2;grid-row:1;padding-left:27px}
+.resume-document.rd-layout-sidebar .rd-secondary h3,.resume-document.rd-layout-sidebar .rd-secondary .rd-entry-title strong{color:#fff;border-color:#ffffff60}
+.resume-document.rd-layout-sidebar .rd-secondary .rd-entry-title>span,.resume-document.rd-layout-sidebar .rd-secondary .rd-entry-company,.resume-document.rd-layout-sidebar .rd-secondary .rd-skills>span{color:#fff}
+.resume-document.rd-layout-sidebar .rd-secondary .rd-skills>span:not(:last-child):after{color:#fff}
+.resume-document.rd-layout-timeline .rd-primary>.rd-section:nth-child(2){border-left:2px solid #d2c1e9;padding-left:21px}
+.resume-document.rd-layout-timeline .rd-primary>.rd-section:nth-child(2) .rd-entry{position:relative}
+.resume-document.rd-layout-timeline .rd-primary>.rd-section:nth-child(2) .rd-entry:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--rd-accent);position:absolute;left:-26px;top:4px}
+.resume-document.rd-layout-band .rd-header{background:var(--rd-accent);color:#fff;margin:-43px -42px 26px;padding:34px 42px 26px;border:0}
+.resume-document.rd-layout-band .rd-header h2,.resume-document.rd-layout-band .rd-header .rd-job-title,.resume-document.rd-layout-band .rd-contact{color:#fff}
+.resume-document.rd-layout-band .rd-contact span+span:before{color:#f8f6ff}
+.resume-document.rd-layout-editorial{font-family:Georgia,'Times New Roman',serif}
+.resume-document.rd-layout-editorial .rd-header h2{font-size:40px;font-family:Georgia,'Times New Roman',serif;font-weight:500;letter-spacing:-1.7px}
+.resume-document.rd-layout-editorial .rd-section h3{letter-spacing:2px;border-color:var(--rd-accent);font-family:Arial,sans-serif}
+.resume-document.rd-layout-editorial .rd-section p,.resume-document.rd-layout-editorial .rd-entry-details{font-family:Georgia,'Times New Roman',serif}
+.resume-document.rd-style-modern .rd-header h2{color:var(--rd-accent)}
+.resume-document.rd-style-modern-blue .rd-accent-bar{width:10px}
+.resume-document.rd-style-modern-blue .rd-header{border-bottom-width:3px}
+.resume-document.rd-style-modern-teal .rd-header{border-bottom:1px solid #b0d8d3}
+.resume-document.rd-style-modern-teal .rd-job-title{display:inline-block;border-radius:4px;background:#e4f7f3;padding:5px 9px;margin:2px 0 0}
+.resume-document.rd-style-modern-coral .rd-header{background:#fff2f2;padding:18px 20px;margin:-16px -16px 25px;border-bottom-color:#eac5c6}
+.resume-document.rd-style-modern-slate .rd-header h2{font-size:30px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px}
+.resume-document.rd-style-modern-slate .rd-section h3{border-bottom:2px solid var(--rd-accent)}
+.resume-document.rd-style-modern-sky .rd-header{border-left:6px solid var(--rd-accent);padding-left:20px;border-bottom:0}
+.resume-document.rd-style-modern-emerald .rd-section h3{border-left:4px solid var(--rd-accent);padding-left:10px;border-bottom:0}
+.resume-document.rd-style-modern-plum .rd-header{text-align:center}
+.resume-document.rd-style-modern-plum .rd-contact{justify-content:center}
+.resume-document.rd-style-professional .rd-header{background:#354c87}
+.resume-document.rd-style-executive-navy .rd-header{background:#15355c}
+.resume-document.rd-style-executive-navy .rd-header h2{font-size:35px;letter-spacing:1.3px;text-transform:uppercase}
+.resume-document.rd-style-executive-black{font-family:Arial,Helvetica,sans-serif}
+.resume-document.rd-style-executive-black .rd-header{border-bottom:3px solid #292b36}
+.resume-document.rd-style-executive-black .rd-header h2{font-size:34px;text-transform:uppercase;letter-spacing:1px}
+.resume-document.rd-style-executive-black .rd-section h3{border-color:#272727}
+.resume-document.rd-style-classic{font-family:Georgia,'Times New Roman',serif}
+.resume-document.rd-style-classic .rd-header{text-align:center;border-color:#111}
+.resume-document.rd-style-classic .rd-header h2{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:31px}
+.resume-document.rd-style-classic .rd-header .rd-contact{justify-content:center}
+.resume-document.rd-style-classic .rd-section h3{color:#111;letter-spacing:.8px;border-bottom:1px solid #111;font-size:11px}
+.resume-document.rd-style-minimal .rd-accent-bar,.resume-document.rd-style-clean-gray .rd-accent-bar{display:none}
+.resume-document.rd-style-minimal .rd-header{border-color:#d5d5dc}
+.resume-document.rd-style-minimal .rd-section h3{color:#25262d;letter-spacing:1px}
+.resume-document.rd-style-minimal .rd-skills>span:not(:last-child):after{color:#999}
+.resume-document.rd-style-clean-gray .rd-header{background:#f3f4f7;border-bottom:0;padding:18px 20px;margin:-15px -15px 24px}
+.resume-document.rd-style-clean-gray .rd-section h3{color:#475569}
+.resume-document.rd-style-graduate .rd-primary{display:flex;flex-direction:column}
+.resume-document.rd-style-graduate .rd-primary>.rd-section:nth-child(1){order:1}
+.resume-document.rd-style-graduate .rd-primary>.rd-section:nth-child(2){order:4}
+.resume-document.rd-style-graduate .rd-primary>.rd-section:nth-child(3){order:2}
+.resume-document.rd-style-graduate .rd-primary>.rd-section:nth-child(4){order:3}
+.resume-document.rd-style-graduate .rd-section h3{border-left:3px solid var(--rd-accent);padding-left:10px}
+.resume-document.rd-style-timeline .rd-header{border-bottom:3px solid var(--rd-accent)}
+.resume-document.rd-style-tech-split .rd-header{padding-bottom:16px}
+.resume-document.rd-style-tech-split .rd-secondary{background:#eaf2ff}
+.resume-document.rd-style-creative-sidebar{padding:38px}
+.resume-document.rd-style-creative-sidebar .rd-header{margin:0 0 15px;padding:0 0 15px}
+.resume-document.rd-style-creative-sidebar .rd-header-mark{display:flex;position:absolute;right:0;top:2px;align-items:center;justify-content:center;border:2px solid var(--rd-accent);color:var(--rd-accent);font-weight:800;border-radius:50%;width:52px;height:52px;font-size:25px}
+.resume-document.rd-style-creative-sidebar .rd-header h2{max-width:85%}
+.resume-document.rd-style-creative-sidebar .rd-body{margin-left:-38px;margin-right:-38px;margin-bottom:-38px}
+.resume-document.rd-style-creative-sidebar .rd-secondary{padding-left:30px}
+.resume-document.rd-style-editorial .rd-accent-bar{width:4px}
+.resume-document.rd-style-editorial .rd-header h2{color:#554b45}
+.resume-document.rd-style-bold-header .rd-header{background:#c34b3c}
+.resume-document.rd-style-bold-header .rd-header h2{font-size:40px;font-weight:900;text-transform:uppercase;letter-spacing:1.8px}
+.resume-document .rd-section:last-child,.resume-document .rd-entry:last-child{margin-bottom:0}
+.resume-document--mini{width:760px!important;max-width:none!important;min-height:1010px!important;padding:52px!important;font-size:14px!important;transform-origin:top left;box-shadow:none!important;border:0!important;pointer-events:none}
+.resume-document--mini.rd-layout-band .rd-header{margin:-52px -52px 30px;padding:36px 52px}
+.resume-document--mini .rd-header h2{font-size:38px}
+.resume-document--mini .rd-section h3{font-size:13px}
+.resume-document--mini .rd-section p,.resume-document--mini .rd-entry-title strong,.resume-document--mini .rd-entry-details{font-size:12px}
+@media print{
+ @page{size:A4;margin:13mm}
+ html,body{background:#fff!important}
+ .resume-document.resume-paper{position:relative!important;inset:auto!important;display:block!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;border:0!important;padding:0!important;margin:0!important;box-shadow:none!important;overflow:visible!important;visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .resume-document.resume-paper .rd-accent-bar{display:none!important}
+ .resume-document.resume-paper.rd-layout-band .rd-header{margin:0 0 24px!important;padding:25px!important}
+ .resume-document.resume-paper.rd-style-modern-coral .rd-header,.resume-document.resume-paper.rd-style-clean-gray .rd-header{margin:0 0 20px!important}
+ .resume-document.resume-paper .rd-header{break-inside:avoid}
+ .resume-document.resume-paper .rd-section{break-inside:avoid-page}
+ .resume-document.resume-paper .rd-empty-hint{display:none!important}
+ .resume-document--mini,.resume-document--mini *{visibility:hidden!important}
+}
