@@ -43,7 +43,7 @@ function cap(s:string){return s.replace(/\b\w/g,c=>c.toUpperCase());}
 function Field({label,value,onChange,placeholder,wide=false,rows=0}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string;wide?:boolean;rows?:number}){
  return <label className={'field '+(wide?'wide':'')}><span>{label}</span>{rows?<textarea rows={rows} value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)}/>:<input value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)}/>}</label>;
 }
-function Status({value}:{value:ApplicationStatus}){return <span className={'status status-'+value.toLowerCase()}><span className="status-dot"/>{value}</span>;}
+
 export default function Home(){
  const [section,setSection]=useState<Section>('dashboard');
  const [mobileNav,setMobileNav]=useState(false);

@@ -14,7 +14,7 @@ const sample:Data={userTotal:1248,users:[{id:'d1',name:'Jesse Delacruz',email:'j
 const nav:{id:Tab;label:string;icon:typeof LayoutDashboard}[]=[{id:'dashboard',label:'Dashboard',icon:LayoutDashboard},{id:'users',label:'Users',icon:Users},{id:'resumes',label:'Resumes',icon:FileText},{id:'ats',label:'ATS Reports',icon:ShieldCheck},{id:'plans',label:'Plans & Subscriptions',icon:ClipboardList},{id:'usage',label:'Usage & API',icon:Zap},{id:'activity',label:'Activity Logs',icon:Activity},{id:'settings',label:'System Settings',icon:Settings}];
 const date=(d?:string|null)=>d?new Date(d).toLocaleDateString():'—';
 const dateTime=(d?:string|null)=>d?new Date(d).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}):'—';
-type ExportKind='activity'|'users'|'resumes'|'ats'|'jobs'|'usage';
+type ExportKind='activity'|'users'|'resumes'|'ats'|'usage';
 function Stat({title,value,icon:Icon,extra}:{title:string;value:string|number;icon:typeof Users;extra:string}){return <div className="admin-stat"><span><Icon size={23}/></span><div><small>{title}</small><strong>{typeof value==='number'?value.toLocaleString():value}</strong><em>{extra}</em></div></div>}
 export default function AdminPanel({demo}:{demo:boolean}){
  const [tab,setTab]=useState<Tab>('dashboard');const [data,setData]=useState<Data>(sample);const [loading,setLoading]=useState(!demo);
