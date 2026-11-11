@@ -58,6 +58,66 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    await open(page,'/demo');await checkOverflow(page,size.name,'/demo');
    await context.close();checked++;console.log('PASS '+size.name+' ('+size.width+' x '+size.height+') public, login, client, templates, admin, guide, demo');
   }
+
+  // Client-side speech is verified with a deterministic browser mock. This checks
+  // our Next Question and textarea behavior, not real-world transcription accuracy.
+  const speechContext=await browser.newContext({viewport:{width:1280,height:850}});
+  const speechPage=await speechContext.newPage();
+  await speechPage.addInitScript(()=>{
+   const state={spoken:[],recognizer:null};
+   window.__resumeSpeechMock=state;
+   class FakeUtterance{constructor(text){this.text=text;this.onend=null;this.onerror=null;}}
+   class FakeRecognition{
+    constructor(){this.lang='en-US';this.continuous=false;this.interimResults=false;this.maxAlternatives=1;this.onstart=null;this.onend=null;this.onresult=null;this.onerror=null;}
+    start(){state.recognizer=this;this.onstart?.();}
+    stop(){this.onend?.();}
+    emit(transcript,isFinal){
+     const result=[{transcript}];
+     result.isFinal=isFinal;
+     this.onresult?.({resultIndex:0,results:[result]});
+    }
+   }
+   window.SpeechSynthesisUtterance=FakeUtterance;
+   window.SpeechRecognition=FakeRecognition;
+   Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{
+    cancel(){},
+    speak(utterance){state.spoken.push(utterance.text);queueMicrotask(()=>utterance.onend?.());}
+   }});
+  });
+  await open(speechPage,'/app');
+  if(!(await speechPage.locator('.dashboard-admin-link').count()))throw Error('Missing Admin Preview access on demo client dashboard');
+  await speechPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await speechPage.getByRole('button',{name:'Next Question'}).click();
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.length===1);
+  const spoken=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[0]);
+  if(!spoken.includes('challenging project'))throw Error('Next Question did not automatically speak the new question: '+spoken);
+  await speechPage.getByRole('button',{name:'Start microphone transcription'}).click();
+  await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.emit('I led a team project using Laravel',false));
+  await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='I led a team project using Laravel');
+  await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.emit('I led a team project using Laravel',true));
+  const finalAnswer=await speechPage.locator('textarea[aria-label="Your Answer"]').inputValue();
+  if(finalAnswer!=='I led a team project using Laravel')throw Error('Speech transcript was duplicated or lost: '+finalAnswer);
+  await speechPage.locator('#interview-language').selectOption('fil-PH');
+  await speechPage.getByRole('button',{name:'Start microphone transcription'}).click();
+  const locale=await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.lang);
+  if(locale!=='fil-PH')throw Error('Speech language switch not applied');
+  await speechPage.getByRole('button',{name:'Next Question'}).click();
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock.spoken.length===2);
+  await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
+  await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
+  console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
+  await speechContext.close();
+
+  const adminContext=await browser.newContext({viewport:{width:1280,height:800}});
+  const adminPage=await adminContext.newPage();
+  await open(adminPage,'/admin');
+  await adminPage.getByRole('heading',{name:'Admin Dashboard'}).waitFor({state:'visible'});
+  await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Job Posts'}).click();
+  await adminPage.getByRole('button',{name:'Add Job Post'}).click();
+  await adminPage.getByRole('dialog',{name:'Job editor'}).waitFor({state:'visible'});
+  await adminContext.close();
+  console.log('PASS Admin Dashboard preview, navigation and job post editor');
+
   console.log('PASS: '+checked+' responsive viewport suites');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
