@@ -48,8 +48,18 @@ jobs:
           redirect=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/admin)
           echo '/admin → HTTP' "$redirect" '(login redirect)'
           if [ "$redirect" != '307' ] && [ "$redirect" != '308' ]; then exit 1; fi
-      - name: Install headless Chromium for responsive UI tests
-        run: npx playwright install --with-deps chromium
+      - name: Use runner Chrome for responsive UI tests
+        shell: bash
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+            google-chrome --version
+          elif command -v chromium >/dev/null 2>&1; then
+            echo "CHROME_PATH=$(command -v chromium)" >> "$GITHUB_ENV"
+            chromium --version
+          else
+            npx playwright install --with-deps chromium
+          fi
       - name: Responsive navigation and overflow checks
         shell: bash
         run: |
