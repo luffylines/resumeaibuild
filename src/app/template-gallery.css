@@ -235,3 +235,12 @@
  .wizard-page--design .rt-wizard-thumb .rt-preview-stage{--rt-scale:.22;height:225px}
  .wizard-page--design .rt-wizard-thumb .rt-preview-viewport{width:167px;height:223px}
 }
+
+/* Quick photo-first browsing controls in Template Gallery and Generate step */
+.rt-photo-filter{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:9px 13px;border-radius:11px;border:1px solid #d9c8fc;background:#f5f0ff;color:#6534d4;font-weight:800;font-size:11px;white-space:nowrap;cursor:pointer;transition:background .18s,transform .18s}
+.rt-photo-filter:hover{background:#ebe0ff;transform:translateY(-1px)}
+.rt-photo-filter.active{background:#6935e9;border-color:#6935e9;color:#fff}
+.rt-photo-filter strong{background:#ffffffbb;border-radius:9px;padding:3px 6px;color:#5931b6;font-size:10px}
+.rt-photo-filter.active strong{color:#5326a0}
+.wizard-page--design .rt-wizard-filters button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+@media(max-width:680px){.rt-photo-filter{width:100%;justify-content:center;order:2}}
