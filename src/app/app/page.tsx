@@ -19,7 +19,7 @@ import InterviewStudio from '@/components/interview-studio';
 import {authReturnUrl} from '@/lib/auth-return-url';
 import SettingsPanel from '@/components/settings-panel';
 import MfaPanel from '@/components/mfa-panel';
-import {accountAvatar,readProfilePhoto} from '@/lib/profile-photo';
+import {accountAvatar,loadProfilePhoto,readProfilePhoto} from '@/lib/profile-photo';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
@@ -103,10 +103,15 @@ export default function Home(){
  const isDemo=!user;
  const avatarSrc=accountAvatar(user,resumes,profilePhoto);
  useEffect(()=>{
-  const update=()=>setProfilePhoto(user?.id?readProfilePhoto(user.id):'');
-  update();
-  window.addEventListener('resumebuilder:avatar-changed',update);
-  return()=>window.removeEventListener('resumebuilder:avatar-changed',update);
+  const id=user?.id;
+  let active=true;
+  const refresh=()=>{
+   setProfilePhoto(id?readProfilePhoto(id):'');
+   if(id)void loadProfilePhoto(id).then(url=>{if(active)setProfilePhoto(url);});
+  };
+  refresh();
+  window.addEventListener('resumebuilder:avatar-changed',refresh);
+  return()=>{active=false;window.removeEventListener('resumebuilder:avatar-changed',refresh);};
  },[user?.id]);
  useEffect(()=>{
   if(!profileMenuOpen)return;
