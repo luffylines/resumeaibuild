@@ -243,7 +243,15 @@ export default function Home(){
   if(!sb)return;const {error:e}=await sb.auth.verifyOtp({email,token:otp,type:'email'});
   if(e)setError(e.message);else{setShowAuth(false);flash('You are signed in.');}
  }
- async function signOut(){if(sb){const {error:e}=await sb.auth.signOut();if(e){setError(e.message);return;}}setUser(null);await init(null);flash('Signed out.');}
+ async function signOut(){
+  if(!sb||!user){window.location.assign('/login');return;}
+  const {error:e}=await sb.auth.signOut();
+  if(e){setError('Unable to sign out: '+e.message);return;}
+  setMobileNav(false);
+  setUser(null);
+  // Return to public login instead of leaving a logged-out user in demo mode.
+  window.location.assign('/login');
+ }
  const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',interview:'Interview Practice',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
  const filteredResumes=resumes.filter(r=>(r.title+' '+r.name+' '+r.skills).toLowerCase().includes(search.toLowerCase()));
  return <div className="app-shell resume-client-shell">
@@ -266,12 +274,13 @@ export default function Home(){
    <div className="sidebar-bottom">
     <div className="sidebar-tip"><span><Sparkles size={18}/></span><strong>Career toolkit</strong><p>Your next opportunity starts with a stronger resume.</p></div>
     <button className="account-button" onClick={()=>{go('settings');}}><span className="avatar">{formattedName.slice(0,1).toUpperCase()}</span><span className="account-text"><strong>{user?.user_metadata?.full_name|| (isDemo?'Christian B. Aring (Demo)':user?.email)}</strong><small>{isDemo?'Demo workspace':'Personal account'}</small></span><Settings2 size={17}/></button>
+    {user&&<button type="button" className="sidebar-logout" onClick={()=>void signOut()} aria-label="Sign out of ResumeBuilder"><LogOut size={17}/> Log Out</button>}
    </div>
   </aside>
   <div className="main-area">
    <header className="topbar"><button className="mobile-menu icon-button" onClick={()=>setMobileNav(true)} aria-label="Open navigation menu" aria-expanded={mobileNav} aria-controls="mobile-workspace-nav"><Menu/></button>
     <div className="breadcrumbs">Workspace <ChevronRight size={15}/><strong>{title[section]}</strong></div>
-    <div className="top-actions"><div className="searchbox"><Search size={17}/><input placeholder="Search resumes..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')go('resumes');}}/></div><span className="top-separator"/><button onClick={()=>user?go('settings'):window.location.assign('/login')} className="profile-chip"><span className="avatar mini">{formattedName.slice(0,1).toUpperCase()}</span><span>{user?'My Account':'Demo Mode'}</span><ChevronDown size={14}/></button></div>
+    <div className="top-actions"><div className="searchbox"><Search size={17}/><input placeholder="Search resumes..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')go('resumes');}}/></div><span className="top-separator"/><button onClick={()=>user?go('settings'):window.location.assign('/login')} className="profile-chip"><span className="avatar mini">{formattedName.slice(0,1).toUpperCase()}</span><span>{user?'My Account':'Demo Mode'}</span><ChevronDown size={14}/></button>{user&&<button type="button" className="topbar-logout" onClick={()=>void signOut()} aria-label="Log out of ResumeBuilder"><LogOut size={16}/><span className="topbar-logout-label">Log Out</span></button>}</div>
    </header>
    <main className="content">
     {!ready&&<div className="inline-info"><LoaderCircle className="spin" size={18}/> Loading workspace…</div>}
