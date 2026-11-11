@@ -1,6 +1,6 @@
 # ResumeBuilder
 
-**AI Resume Builder & Job Matching** — a clean, responsive career dashboard with a modern responsive purple-and-white SaaS interface.
+**AI Resume Builder & Professional CV Templates** — a clean, responsive career dashboard with a modern responsive purple-and-white SaaS interface.
 
 ## Screens and routes
 
@@ -11,7 +11,7 @@
 | `/demo` | Interactive self-paced product tour | Everyone |
 | `/signup` | Google or email/password registration | Everyone |
 | `/login` | Google, email/password, email OTP | Everyone |
-| `/app` | Career dashboard, resume editor, ATS checker, job matching, interview practice | Demo or signed-in |
+| `/app` | Career dashboard, resume editor, ATS checker, photo templates, interview practice | Demo or signed-in |
 | `/admin/login` | Dedicated administrator email/password login | Public (requires separate Supabase for live sign-in) |
 | `/admin` | Admin Dashboard, reporting, Excel downloads and audit logs | Server-verified administrator only; redirects to `/admin/login` otherwise |
 | `/admin/preview` | Sample-only Admin Dashboard | Public demo ONLY when Supabase is not configured |
@@ -20,8 +20,6 @@
 - **Resume Builder:** add personal details, experience, education, and skills; live resume preview; browser Print → Save as PDF.
 - **ATS Checker:** honest, local heuristic scoring based on content completeness and optional job description keyword overlap (not a guarantee of passing a real ATS).
 - **AI Tools:** enhance resume summaries, create cover letters, and request interview feedback via **Gemini or OpenAI**.
-- **Job Matching:** skill-match estimates against clearly labeled **sample roles** (not live vacancies).
-- **Application Tracker:** add applications and update statuses.
 - **Authentication:** Google OAuth and email one-time passwords via Supabase Auth.
 - **Data:** demo workspace uses browser localStorage; signed-in workspace stores data in **your separate Supabase PostgreSQL project**, protected by row-level security.
 
@@ -42,7 +40,7 @@ Next.js 16, TypeScript, React 19, Tailwind CSS 4, Lucide, Supabase Auth/PostgreS
 
    On Windows PowerShell, use `Copy-Item .env.example .env.local`.
 
-3. Open **http://localhost:3000**. Demo mode runs without API keys. All sample profiles, applications, and jobs are illustrative.
+3. Open **http://localhost:3000**. Demo mode runs without API keys. All sample profiles and demo resumes are illustrative.
 4. For real accounts, **create a NEW Supabase project specifically for ResumeBuilder**. Do not reuse the SKVASRA project or its keys.
 5. Run `supabase/schema.sql` and then `supabase/admin.sql` in **the new ResumeBuilder project's SQL Editor only**. Never run these in SKVASRA.
 6. In your new Supabase project, enable **Authentication → Providers → Google** and configure Google OAuth credentials if you want Google login. Add the allowed development origin and callback paths according to your Supabase OAuth guide. Set **Site URL** to `http://localhost:3000` while developing and add **Redirect URLs** for `http://localhost:3000/auth/callback`.
@@ -70,7 +68,7 @@ Not deployed by design. The code can later be hosted with Vercel or another Next
 ## Preview vs live functionality
 
 - **Demo (no database):** homepage, how-to guide, editable resume, template selection, printable PDF, local ATS scoring, demo sample jobs and tracking. the `/admin/login` page links to `/admin/preview`, which is sample-only and not protected by a password; the live `/admin` is protected by real Supabase authentication and the dedicated admin role; the figures (e.g. 1,248 users) are NOT real. Demo jobs are locally editable only.
-- **After setting up a NEW Supabase project:** real Google/email authentication, secure per-user resumes and applications, admin-published jobs, user plan labels, ATS reports and activity logs. The live admin panel requires a manually approved user ID plus a private server secret.
+- **After setting up a NEW Supabase project:** real Google/email authentication, secure per-user resumes, user plan labels, ATS reports and activity logs. The live admin panel requires a manually approved user ID plus a private server secret.
 - **After adding Gemini or OpenAI:** resume draft suggestions, cover letters and interview response feedback. AI-generated claims must be reviewed by users.
 - **Not yet integrated:** external live vacancy feeds, video/voice avatar interviewer, actual subscription billing, AI provider cost metering, and production-grade per-user rate limiting. The app does not fake live employer vacancies or bill users.
 
@@ -78,14 +76,14 @@ Do not deploy publicly until the production auth redirects, project secrets, usa
 
 ## 2026 reference-image UI update
 
-The purple-and-white layouts follow the supplied homepage, user dashboard, admin dashboard and feature-panel references. Included are the five-step Resume Builder wizard, live resume preview, 28 professional resume templates, editable AI cover letters (tone/copy/download), a color-coded Kanban job tracker with drag-and-drop, AI Interview robot panel with optional local camera and browser voice features, settings tabs, six-digit OTP UI, password recovery, illustrated signup guide, and an interactive product demo.
+The purple-and-white layouts follow the supplied homepage, user dashboard, admin dashboard and feature-panel references. Included are the five-step Resume Builder wizard, live resume preview, 32 unique resume layouts, editable AI cover letters (tone/copy/download), AI Interview robot panel with optional local camera and browser voice features, settings tabs, six-digit OTP UI, password recovery, illustrated signup guide, and an interactive product demo.
 
 **Important:** this is an implemented interpretation of the images, not a verified pixel-for-pixel copy. Third-party fonts, portrait photographs, live employer feeds, payments, avatar video calls, and other concepts in the artwork cannot be assumed to be available. A separate ResumeBuilder Supabase project and AI API key are required for real account persistence and AI responses. Production deployment has not been performed.
 
 The GitHub Actions workflow runs TypeScript, a production build, and HTTP smoke tests for the public pages, preview dashboard, and preview admin route. It does not test live OAuth, Supabase emails, or AI provider requests without the required private credentials.
 
 
-## Resume template library (28 designs)
+## Resume template library (32 unique layouts, 20 photo-ready)
 
 Templates are visible on the public homepage and in Dashboard → Templates. Upload a portrait only if you choose to: the wizard supports JPEG/PNG/WebP up to 8 MB, resizes to a centered 480 × 480 JPEG before storing the image with the resume content, and supports Remove/Replace. No photo is needed to use any template. The designs include Modern Violet, Modern Blue, Modern Teal, Modern Coral, Modern Slate, Modern Sky, Modern Emerald, Modern Plum, Professional Indigo, Executive Navy, Executive Charcoal, Classic Professional, Minimal ATS, Clean Gray, Graduate Fresh, Timeline Pro, Tech Split, Creative Sidebar, Elegant Editorial and Bold Header, plus eight photo-ready designs: Navy Portrait Pro, Studio Beige CV, Executive Portrait, Blue Profile, Modern Portrait, Editorial Beige, Black & Gold CV, and Graduate Profile.
 
@@ -113,7 +111,7 @@ This code has not been deployed to Vercel or connected to a new Supabase project
 
 ## Template grouping and full-size exports (November 2026)
 
-Color-only variations are grouped so the gallery shows **20 distinct layout cards**, rather than 28 mostly duplicated cards. The older 28 template identifiers remain supported for saved-resume compatibility. Select an accent color and page background from each card or from Build Resume → Generate; choices persist with the resume. The printable design uses the same CSS styles as the preview.
+Color-only variations stay grouped. The gallery now shows **32 truly distinct layout cards**, including **20 photo-ready styles** shown first. Existing legacy template IDs remain supported for saved-resume compatibility. Select an accent color and page background from each card or from Build Resume → Generate; choices persist with the resume. The printable design uses the same CSS styles as the preview.
 
 Under **Build Resume → Generate**, the four aligned export buttons are: **Download PDF** (selectable text, no browser URL/date/footer), **Download DOCX** (editable paragraphs/headings for Word and Canva import), **Download PNG** (high-resolution image of the resume), and **Print** (native browser dialog). Browser print headers and footers are controlled by the browser: choose A4 and turn OFF 'Headers and footers' if your print preview displays a localhost URL, date or page counter. The page CSS also requests zero printer margins, but some browsers/printers can override this. The PDF and DOCX files are generated from the resume data rather than a screenshot, to keep the text editable. Fonts and complex layout may reflow when importing DOCX or PDF into Canva; verify the design after importing.
 
@@ -147,3 +145,12 @@ The **Generate** step in the resume wizard now uses a polished design picker wit
 For the PNG export, the app now renders a temporary, actual-size A4-proportioned resume document, waits for fonts and portrait images, and captures the document rather than the offscreen wrapper. It exports at 2× resolution and measures the full rendered height so longer content is not clipped. The capture node is always removed afterward. Browser tests check PNG pixel dimensions, color diversity, and real image content instead of checking only the file signature. PNG images are not text-editable in Canva; prefer the PDF or DOCX import for further editing.
 
 **Print** still depends on the browser's print dialog. For browser-supplied date, page number or localhost URL, disable "Headers and footers" when printing.
+
+
+## Simplified ResumeBuilder workspace — November 11, 2026
+
+Job Matching and Job Tracker are no longer displayed or loaded in the client app. The admin sidebar, dashboard usage reports and Excel exports no longer expose Job Posts or application counts. The homepage and demo now focus on resume creation, ATS checking, cover letters, interview practice and professional templates. Historical job-related database tables and local-storage keys are **left untouched** to avoid deleting data; no migrations or destructive database operations are required.
+
+Twelve additional original professional portrait layouts have been implemented, providing 20 photo-ready designs out of 32 unique layout cards. Photo-ready options appear **before** text-only templates in the gallery and Generate step. Both also include a **With Photo** filter. Sample gallery portraits are **illustrative placeholders only** and are never inserted into full resumes unless the user uploads an actual picture. On the Profile step, JPEG/PNG/WebP portrait upload is optional; the user may remove it at any time. All populated resume sections (summary, experience, education, certifications, references, projects, custom sections) remain available in every layout. Uploaded photos are stored with the user's resume content.
+
+Note: PDF/DOCX files are still generated as text-based documents to support editing and ATS use; those formats may simplify complex visual decorations compared with the HTML design. PNG/Print capture the visual layout. Canva import is a PDF download and editor handoff, not direct Canva OAuth sync.
