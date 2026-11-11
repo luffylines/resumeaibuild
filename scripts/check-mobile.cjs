@@ -46,7 +46,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    }
    if(size.width<=390)await page.screenshot({path:path.join(shots,'client-'+size.name+'.png')});
    await open(page,'/app?section=templates');await checkOverflow(page,size.name,'/app?section=templates');
-   await open(page,'/admin');await checkOverflow(page,size.name,'/admin');
+   await open(page,'/admin/preview');await checkOverflow(page,size.name,'/admin/preview');
    if(size.width<=840){
     await page.getByRole('button',{name:'Open admin menu'}).click();
     const nav=page.locator('#admin-mobile-nav');await nav.waitFor({state:'visible'});
@@ -54,6 +54,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
     await pause(350);if(await nav.evaluate(el=>el.classList.contains('menu-open')))throw Error('Admin drawer did not close');
    }
    if(size.width<=390)await page.screenshot({path:path.join(shots,'admin-'+size.name+'.png')});
+   await open(page,'/admin/login');await checkOverflow(page,size.name,'/admin/login');
    await open(page,'/guide');await checkOverflow(page,size.name,'/guide');
    await open(page,'/demo');await checkOverflow(page,size.name,'/demo');
    await context.close();checked++;console.log('PASS '+size.name+' ('+size.width+' x '+size.height+') public, login, client, templates, admin, guide, demo');
@@ -110,7 +111,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 
   const adminContext=await browser.newContext({viewport:{width:1280,height:800}});
   const adminPage=await adminContext.newPage();
-  await open(adminPage,'/admin');
+  await open(adminPage,'/admin/preview');
   await adminPage.getByRole('heading',{name:'Admin Dashboard'}).waitFor({state:'visible'});
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Job Posts'}).click();
   await adminPage.getByRole('button',{name:'Add Job Post'}).click();

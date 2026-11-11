@@ -35,7 +35,7 @@ jobs:
             fi
             sleep 1
           done
-          for route in / /guide /demo /signup /login /forgot-password /auth/reset /app /admin; do
+          for route in / /guide /demo /signup /login /forgot-password /auth/reset /app /admin/login /admin/preview; do
             code=$(curl --silent --show-error --output /tmp/resumebuilder-page.html --write-out "%{http_code}" "http://127.0.0.1:3000$route")
             echo "$route → HTTP $code"
             if [ "$code" != "200" ]; then
@@ -43,6 +43,9 @@ jobs:
               exit 1
             fi
           done
+          redirect=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/admin)
+          echo '/admin → HTTP' "$redirect" '(login redirect)'
+          if [ "$redirect" != '307' ] && [ "$redirect" != '308' ]; then exit 1; fi
       - name: Install headless Chromium for responsive UI tests
         run: npx playwright install --with-deps chromium
       - name: Responsive navigation and overflow checks
