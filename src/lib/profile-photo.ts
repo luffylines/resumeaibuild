@@ -31,11 +31,7 @@ export async function saveProfilePhoto(userId:string,file:File):Promise<string>{
   return data;
  }finally{URL.revokeObjectURL(url);}
 }
-export function accountAvatar(user:User|null,resumes:Resume[]=[],custom=''):string{
- if(custom)return custom;
- const metadata=user?.user_metadata as Record<string,unknown>|undefined;
- for(const value of [metadata?.avatar_url,metadata?.picture]){
-  if(typeof value==='string'&&/^https:\/\/[^\s]+$/i.test(value))return value;
- }
- return resumes.find(r=>r.photo&&/^data:image\/(jpeg|png|webp);base64,/i.test(r.photo))?.photo||'';
+/** Shared default for both Google/password sign-in; user-uploaded photo wins. */
+export function accountAvatar(_user:User|null,_resumes:Resume[]=[],custom=''):string{
+ return custom||'/images/avatar.png';
 }
