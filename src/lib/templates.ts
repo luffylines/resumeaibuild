@@ -39,3 +39,50 @@ export function isDesignForward(id?:string):boolean {
  const template=getResumeTemplate(id);
  return template.category==='Creative';
 }
+
+
+/**
+ * Keep older IDs in RESUME_TEMPLATES for saved-resume compatibility.
+ * A storefront card is a unique visual composition, NOT a color variant.
+ */
+const duplicateToCanonical:Record<string,string>={
+ 'modern-blue':'modern','modern-teal':'modern','modern-coral':'modern',
+ 'modern-slate':'modern','modern-sky':'modern','modern-emerald':'modern',
+ 'modern-plum':'modern','executive-navy':'professional'
+};
+export function canonicalTemplateId(id?:string):ResumeTemplateId {
+ return (duplicateToCanonical[id||'']||getResumeTemplate(id).id) as ResumeTemplateId;
+}
+export const UNIQUE_RESUME_TEMPLATES=RESUME_TEMPLATES.filter(t=>!duplicateToCanonical[t.id]);
+export const DESIGN_COLOR_OPTIONS=[
+ {name:'Violet',hex:'#6736EC'},
+ {name:'Navy',hex:'#243C63'},
+ {name:'Blue',hex:'#2563EB'},
+ {name:'Teal',hex:'#078E84'},
+ {name:'Emerald',hex:'#14805A'},
+ {name:'Coral',hex:'#C95F65'},
+ {name:'Plum',hex:'#9854A5'},
+ {name:'Charcoal',hex:'#353B48'},
+ {name:'Beige',hex:'#9A8074'}
+] as const;
+export const PAGE_BACKGROUND_OPTIONS=[
+ {name:'White',hex:'#FFFFFF'},
+ {name:'Ivory',hex:'#FFFDF8'},
+ {name:'Cool gray',hex:'#F7F8FB'},
+ {name:'Soft blue',hex:'#F2F7FD'},
+ {name:'Soft blush',hex:'#FFF6F5'}
+] as const;
+/** The photo-ready variants have a deliberate portrait area; others can be used without one. */
+export const PHOTO_READY_TEMPLATES=new Set<ResumeTemplateId>([
+ 'portrait-navy','studio-beige','executive-portrait','blue-profile',
+ 'modern-portrait','editorial-beige','black-gold','graduate-portrait'
+]);
+export function designDisplayName(id:string):string {
+ const canonical=canonicalTemplateId(id);
+ if(canonical==='modern')return 'Modern Clean';
+ if(canonical==='professional')return 'Professional Header';
+ return getResumeTemplate(canonical).name;
+}
+export function isGroupedDesign(id?:string):boolean {
+ return !!id&&canonicalTemplateId(id)!==id;
+}
