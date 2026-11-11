@@ -26,17 +26,21 @@ const QUESTIONS=[
  'Describe a time you received critical feedback.',
  'Where do you see your career in five years?'
 ];
-type Props={targetRole:string;resumes:Resume[];activeResumeId:string;onEditResume?:(resume:Resume)=>void;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean};
-export default function InterviewStudio({targetRole,resumes,activeResumeId,onEditResume,runAI,busy,signedIn}:Props){
+type Props={targetRole:string;resumes:Resume[];activeResumeId:string;onEditResume?:(resume:Resume)=>void;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean;userId:string};
+export default function InterviewStudio({targetRole,resumes,activeResumeId,onEditResume,runAI,busy,signedIn,userId}:Props){
  const [index,setIndex]=useState(0);
  const [resumeId,setResumeId]=useState(activeResumeId);
  const [answers,setAnswers]=useState<string[]>(()=>QUESTIONS.map(()=>''));
  const [completed,setCompleted]=useState(false);
+ const sessionKey='resumebuilder:interview:v1:'+userId;
+ const [sessionLoadedFor,setSessionLoadedFor]=useState('');
+ const [sessionSavedAt,setSessionSavedAt]=useState<number|null>(null);
+ const [sessionSaveFailed,setSessionSaveFailed]=useState(false);
  const currentResume=resumes.find(r=>r.id===resumeId)||resumes.find(r=>r.id===activeResumeId)||resumes[0];
  const role=(currentResume?.targetRole||targetRole||'').trim();
  const targetLabel=role&&role.toLowerCase()!=='general'?role:'Not set in resume';
  const [answer,setAnswer]=useState('');
- const answeredCount=answers.filter(x=>x.trim().length>0).length+(answers[index]?.trim()?0:answer.trim()?1:0);
+ const answeredCount=answers.filter((x,i)=>i!==index&&!!x.trim()).length+(answer.trim()?1:0);
  const [feedback,setFeedback]=useState('');
  const [message,setMessage]=useState('');
  const [language,setLanguage]=useState('en-US');
@@ -62,6 +66,53 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  const video=useRef<HTMLVideoElement|null>(null);
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const utteranceVersion=useRef(0);
+
+ type Session={v:1;resumeId:string;index:number;answers:string[];answer:string;completed:boolean;feedback:string;savedAt:number};
+ const currentSessionRef=useRef<Session|null>(null);
+ currentSessionRef.current={v:1,resumeId,index,answers,answer,completed,feedback,savedAt:Date.now()};
+ function flushSession(){
+  if(sessionLoadedFor!==sessionKey||!currentSessionRef.current)return;
+  try{
+   localStorage.setItem(sessionKey,JSON.stringify(currentSessionRef.current));
+   setSessionSavedAt(currentSessionRef.current.savedAt);
+   setSessionSaveFailed(false);
+  }catch{setSessionSaveFailed(true);}
+ }
+ useEffect(()=>{
+  try{
+   const raw=localStorage.getItem(sessionKey);
+   if(raw){
+    const data=JSON.parse(raw) as Partial<Session>;
+    if(data.v===1&&typeof data.resumeId==='string'&&resumes.some(r=>r.id===data.resumeId)){
+     const restored=Array.from({length:QUESTIONS.length},(_,i)=>typeof data.answers?.[i]==='string'?data.answers[i].slice(0,5000):'');
+     const restoredIndex=Number.isInteger(data.index)&&data.index!>=0&&data.index!<QUESTIONS.length?data.index!:0;
+     const currentAnswer=typeof data.answer==='string'?data.answer.slice(0,5000):restored[restoredIndex];
+     setResumeId(data.resumeId);
+     setIndex(restoredIndex);
+     setAnswers(restored);
+     setAnswerText(currentAnswer);
+     setCompleted(data.completed===true);
+     setFeedback(typeof data.feedback==='string'?data.feedback:'');
+     if(typeof data.savedAt==='number')setSessionSavedAt(data.savedAt);
+     setMessage('Interview progress restored. Your previous answers are still here.');
+    }
+   }
+  }catch{}
+  setSessionLoadedFor(sessionKey);
+ },[sessionKey]);
+ useEffect(()=>{
+  if(sessionLoadedFor!==sessionKey)return;
+  flushSession();
+ },[sessionLoadedFor,sessionKey,resumeId,index,answers,answer,completed,feedback]);
+ useEffect(()=>{
+  if(sessionLoadedFor!==sessionKey)return;
+  const flush=()=>{if(currentSessionRef.current)try{localStorage.setItem(sessionKey,JSON.stringify(currentSessionRef.current));}catch{}};
+  const hidden=()=>{if(document.visibilityState==='hidden')flush();};
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',hidden);
+  return()=>{flush();window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hidden);};
+ },[sessionLoadedFor,sessionKey]);
+
  useEffect(()=>{
   const browser=window as RecognitionBrowser;
   setSupported(!!(browser.SpeechRecognition||browser.webkitSpeechRecognition));
@@ -379,7 +430,8 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
    </section>
   </div>
   <section className="interview-answer-card panel">
-   <div className="interview-answer-title"><h2>Your Answer</h2><small>{completed?'Interview complete — review your saved response below.':'Speak or type your answer. It will be saved when you press Next.'}</small></div>
+   <div className="interview-answer-title"><h2>Your Answer</h2><small>{completed?'Interview complete — review your saved response below.':'Speak or type your answer. Auto-save keeps it when you navigate away.'}</small></div>
+   <div className="interview-autosave-notice" role="status"><CheckCircle2 size={15}/>{sessionSaveFailed?'Could not auto-save on this device. Check browser storage.':sessionSavedAt?'Interview progress auto-saved on this device':'Interview progress saves automatically on this device'}</div>
    <div className="interview-language-row"><label htmlFor="interview-language"><Languages size={16}/> Speech language</label>
     <select id="interview-language" value={language} onChange={e=>{const nextLanguage=e.target.value;languageRef.current=nextLanguage;setLanguage(nextLanguage);if(listeningWanted.current){stopMic();setMessage('Language changed. Tap the microphone button to start again.');}}}><option value="en-US">English (US)</option><option value="fil-PH">Filipino / Tagalog</option><option value="en-PH">English (Philippines)</option></select>
     <span role="status" className={'interview-live-status '+(microphone?'active':'')}><AudioLines size={15}/>{cloudRecording?'Recording for AI…':cloudBusy?'Transcribing audio…':speaking?'Bot speaking':microphone?(interim?'Transcribing live…':'Listening…'):'Microphone off'}</span>
