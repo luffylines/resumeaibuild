@@ -20,26 +20,26 @@ Next.js 16, TypeScript, React 19, Tailwind CSS 4, Lucide, Supabase Auth/PostgreS
 1. Install Node.js 20.9+ (Node 22 recommended).
 2. Clone this repository, open the folder, then run:
 
-   \`\`\`bash
+   ```bash
    npm install
    cp .env.example .env.local
    npm run dev
-   \`\`\`
+   ```
 
-   On Windows PowerShell, use \`Copy-Item .env.example .env.local\`.
+   On Windows PowerShell, use `Copy-Item .env.example .env.local`.
 
 3. Open **http://localhost:3000**. Demo mode runs without API keys. All sample profiles, applications, and jobs are illustrative.
 4. For real accounts, **create a NEW Supabase project specifically for ResumeBuilder**. Do not reuse the SKVASRA project or its keys.
-5. Paste \`supabase/schema.sql\` into **your new project's SQL Editor** and run it once. The tables use user ownership and RLS.
-6. In your new Supabase project, enable **Authentication → Providers → Google** and configure Google OAuth credentials if you want Google login. Add the allowed development origin and callback paths according to your Supabase OAuth guide. Set **Site URL** to \`http://localhost:3000\` while developing and add **Redirect URLs** for \`http://localhost:3000/auth/callback\`.
-7. Enable Email provider. For **six-digit email OTP**, customize the email template to display \`{{ .Token }}\` instead of only a magic link (refer to Supabase Auth docs). Verify rate limits, SMTP quota, and email delivery before public launch.
-8. In \`.env.local\`, set \`NEXT_PUBLIC_SUPABASE_URL\` and \`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\` from **the new project**. These are intended to be public. Restart the dev server.
-9. For AI, set **either** \`GEMINI_API_KEY\` or \`OPENAI_API_KEY\` in \`.env.local\`. **Never prefix private AI keys with NEXT_PUBLIC_ and never commit .env.local.** AI endpoints require a signed-in Supabase user.
-10. Run \`npm run typecheck\` and \`npm run build\` for checks.
+5. Paste `supabase/schema.sql` into **your new project's SQL Editor** and run it once. The tables use user ownership and RLS.
+6. In your new Supabase project, enable **Authentication → Providers → Google** and configure Google OAuth credentials if you want Google login. Add the allowed development origin and callback paths according to your Supabase OAuth guide. Set **Site URL** to `http://localhost:3000` while developing and add **Redirect URLs** for `http://localhost:3000/auth/callback`.
+7. Enable Email provider. For **six-digit email OTP**, customize the email template to display `{{ .Token }}` instead of only a magic link (refer to Supabase Auth docs). Verify rate limits, SMTP quota, and email delivery before public launch.
+8. In `.env.local`, set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from **the new project**. These are intended to be public. Restart the dev server.
+9. For AI, set **either** `GEMINI_API_KEY` or `OPENAI_API_KEY` in `.env.local`. **Never prefix private AI keys with NEXT_PUBLIC_ and never commit .env.local.** AI endpoints require a signed-in Supabase user.
+10. Run `npm run typecheck` and `npm run build` for checks.
 
 ## Security & limitations
 
-- All user-data tables have RLS ownership policies and \`anon\` access revoked.
+- All user-data tables have RLS ownership policies and `anon` access revoked.
 - API keys for Gemini/OpenAI stay on the server; requests require authentication.
 - Before a public release, implement durable per-user AI rate limits/usage controls, cost caps, anti-abuse monitoring, and provider quota handling.
 - The job recommendation cards are **examples**, not live job openings. A real job API integration would be a separate feature.
