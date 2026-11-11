@@ -83,3 +83,12 @@ create table if not exists public.activity_logs (
 alter table public.activity_logs enable row level security;
 revoke all on public.activity_logs from anon,authenticated;
 -- Read/write audit events using server-side secret only.
+
+
+-- Run in the NEW ResumeBuilder Supabase project only.
+-- Best-effort client IP is for audit display, NOT authorization. Blank values
+-- are expected for local environments and untrusted proxy configurations.
+alter table public.activity_logs add column if not exists ip_address inet;
+alter table public.activity_logs add column if not exists user_agent text;
+create index if not exists activity_logs_time_idx on public.activity_logs(created_at desc);
+create index if not exists activity_logs_actor_idx on public.activity_logs(actor_id,created_at desc);
