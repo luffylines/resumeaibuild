@@ -154,3 +154,17 @@ Job Matching and Job Tracker are no longer displayed or loaded in the client app
 Twelve additional original professional portrait layouts have been implemented, providing 20 photo-ready designs out of 32 unique layout cards. Photo-ready options appear **before** text-only templates in the gallery and Generate step. Both also include a **With Photo** filter. Sample gallery portraits are **illustrative placeholders only** and are never inserted into full resumes unless the user uploads an actual picture. On the Profile step, JPEG/PNG/WebP portrait upload is optional; the user may remove it at any time. All populated resume sections (summary, experience, education, certifications, references, projects, custom sections) remain available in every layout. Uploaded photos are stored with the user's resume content.
 
 Note: PDF/DOCX files are still generated as text-based documents to support editing and ATS use; those formats may simplify complex visual decorations compared with the HTML design. PNG/Print capture the visual layout. Canva import is a PDF download and editor handoff, not direct Canva OAuth sync.
+
+## Live Interview Practice voice and required API setup (November 2026)
+
+**Browser speech-to-text:** Start Speaking uses browser Web Speech and requires microphone permission. No API key is needed. Read Question Aloud and Next Question use browser text-to-speech.
+
+**Optional Record with AI (backup):** The user explicitly starts a recording for up to 40 seconds. The app sends it to authenticated /api/transcribe, using GROQ_API_KEY with whisper-large-v3-turbo first, or GEMINI_API_KEY, or OPENAI_API_KEY. The user can review and edit the returned transcript. Audio is not persisted by the app and is sent only after the user chooses the backup recorder. Use no confidential interview content without understanding the AI provider data policies.
+
+AI transcription requires a signed-in Supabase account plus server-only SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) so the API can check a limit of 15 recordings per rolling 24 hours in the existing ai_events table. These are basic non-atomic limits, not a comprehensive production abuse or budget system. Provider spending and rate limits should also be enabled. Run the SQL files included in this repo in the new ResumeBuilder database.
+
+**AI feedback and AI resume generation** use GEMINI_API_KEY (preferred when present) or OPENAI_API_KEY. The environment variable key must be written exactly GEMINI_API_KEY, not Gemini API.
+
+**Email OTP with Resend:** Setting MAIL_MAILER, MAIL_FROM_NAME, MAIL_FROM_ADDRESS or RESEND_API_KEY in Vercel alone does not configure Supabase Auth mail. In the ResumeBuilder Supabase project, navigate to Authentication > SMTP Settings and use Resend host smtp.resend.com, port 465 (SSL), username resend, password = Resend API key, sender email from a verified Resend domain, sender name ResumeBuilder. In Authentication > Email Templates, customize Magic Link / OTP to include the six-digit {{ .Token }}. Configure Site URL and Redirect URLs for your real Vercel address.
+
+Redeploy Vercel when adding/updating environment variables and after code changes. Never put secret API keys in NEXT_PUBLIC_ variables, commits, or frontend JavaScript.
