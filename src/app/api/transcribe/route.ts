@@ -1,7 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createClient} from '@supabase/supabase-js';
 import {serverSupabase} from '@/lib/supabase-server';
-import {geminiModel} from '@/lib/ai-model';
+import {geminiModels} from '@/lib/ai-model';
 
 export const runtime='nodejs';
 const MAX_AUDIO_BYTES=2_500_000;
@@ -63,20 +63,34 @@ export async function POST(req:NextRequest){
    const json=await res.json();if(!res.ok)throw Error(json.error?.message||'Groq speech recognition is unavailable.');
    transcript=typeof json.text==='string'?json.text.trim():'';
   }else if(process.env.GEMINI_API_KEY){
-   const data=Buffer.from(await audio.arrayBuffer()).toString('base64');
-   const model=geminiModel();
-   const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
-    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
-    body:JSON.stringify({
-     contents:[{parts:[
-      {text:'Transcribe the recorded interview answer faithfully in its original language (English/Filipino/Taglish). Return ONLY the spoken words with natural punctuation. Do not answer the question, paraphrase, summarize, correct factual claims, or invent speech if audio is silent.'},
-      {inlineData:{mimeType:mime,data}}
-     ]}],
-     generationConfig:{maxOutputTokens:1100}
-    }),signal:abort
-   });
-   const json=await res.json();if(!res.ok)throw Error(json.error?.message||'Gemini transcription unavailable.');
-   transcript=(json.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('').trim();
+   const encoded=Buffer.from(await audio.arrayBuffer()).toString('base64');
+   let providerBusy=false;
+   for(const model of geminiModels()){
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
+     method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
+     body:JSON.stringify({
+      contents:[{parts:[
+       {text:'Transcribe the recorded interview answer faithfully in its original language (English/Filipino/Taglish). Return ONLY the spoken words with natural punctuation. Do not answer the question, paraphrase, summarize, correct factual claims, or invent speech if audio is silent.'},
+       {inlineData:{mimeType:mime,data:encoded}}
+      ]}],
+      generationConfig:{maxOutputTokens:1100}
+     }),signal:AbortSignal.timeout(15000)
+    });
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok){
+     if([403,404,408,429,500,502,503,504].includes(res.status)){
+      providerBusy=true;
+      console.warn('[Transcription] Gemini model unavailable:',model,res.status);
+      continue;
+     }
+     throw Error(res.status===401?'Gemini transcription API key is invalid.':'Gemini transcription rejected the audio.');
+    }
+    transcript=(json.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('').trim();
+    if(transcript)break;
+    // Silence/blocked generation should not trigger model hopping.
+    break;
+   }
+   if(!transcript&&providerBusy)throw Error('AI speech transcription is temporarily busy. Your recorded answer was not saved; please try again or type your response.');
   }else{
    const upload=new FormData();upload.append('model','gpt-4o-mini-transcribe');
    upload.append('file',audio,'interview'+(mime==='audio/mp4'?'.mp4':mime==='audio/ogg'?'.ogg':mime==='audio/wav'?'.wav':mime==='audio/mpeg'||mime==='audio/mp3'?'.mp3':mime==='audio/x-m4a'||mime==='audio/m4a'?'.m4a':'.webm'));

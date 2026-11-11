@@ -36,6 +36,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [started,setStarted]=useState(false);
  const [questionLoading,setQuestionLoading]=useState(false);
  const generationRef=useRef(0);
+ const questionPrefetchRef=useRef('');
  const [completed,setCompleted]=useState(false);
  const [practiceFocus,setPracticeFocus]=useState('');
  const sessionKey='resumebuilder:interview:v1:'+userId;
@@ -54,6 +55,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [language,setLanguage]=useState('en-US');
  const [microphone,setMicrophone]=useState(false);
  const [speaking,setSpeaking]=useState(false);
+ const [voiceNeedsTap,setVoiceNeedsTap]=useState(false);
  const [camera,setCamera]=useState(false);
  const [cameraLoading,setCameraLoading]=useState(false);
  const [supported,setSupported]=useState(true);
@@ -77,6 +79,8 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const video=useRef<HTMLVideoElement|null>(null);
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const utteranceVersion=useRef(0);
+ const voiceUtteranceRef=useRef<SpeechSynthesisUtterance|null>(null);
+ const voiceStartTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
 
  type Session={v:1|2;resumeId:string;index:number;questions:string[];started:boolean;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
@@ -135,16 +139,97 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   return()=>{flush();window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hidden);};
  },[sessionLoadedFor,sessionKey]);
 
+ // Prepare AI questions while the user reviews the interview screen, BEFORE
+ // the Start click. Mobile Safari needs speech synthesis inside that click;
+ // awaiting an AI response first loses the browser's user activation.
  useEffect(()=>{
-  const browser=window as RecognitionBrowser;
+  if(sessionLoadedFor!==sessionKey||started||completed||!signedIn||!currentResume)return;
+  const resume=currentResume;
+  const key=sessionKey+':'+resume.id+':'+(resume.updatedAt||'');
+  if(questionPrefetchRef.current===key)return;
+  questionPrefetchRef.current=key;
+  let cancelled=false;
+  const context=JSON.stringify({
+   type:'generate_ten_questions',
+   variationSeed:crypto.randomUUID(),
+   name:resume.name||userName,
+   summary:(resume.summary||'').slice(0,850),
+   skills:(resume.skills||'').slice(0,600),
+   experience:(resume.experience||[]).slice(0,5).map(x=>({role:x.role,company:x.company,details:(x.details||'').slice(0,270)})),
+   education:(resume.education||[]).slice(0,4).map(x=>({degree:x.degree,school:x.school})),
+   projects:(resume.projects||[]).slice(0,5).map(x=>({name:x.name,role:x.role,details:(x.details||'').slice(0,240)})),
+   certifications:(resume.certifications||[]).slice(0,4).map(x=>({title:x.title,issuer:x.issuer})),
+   volunteer:(resume.volunteer||[]).slice(0,3).map(x=>({role:x.role,organization:x.organization})),
+   awards:(resume.awards||[]).slice(0,3).map(x=>({title:x.title}))
+  });
+  void (async()=>{
+   try{
+    const response=await fetch('/api/ai',{
+     method:'POST',credentials:'same-origin',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({task:'interview_questions',context})
+    });
+    if(!response.ok)return;
+    const data=await response.json() as {output?:string};
+    const parsed=parseInterviewQuestions(data.output||'');
+    if(parsed&&!cancelled)setQuestions(parsed);
+   }catch{/* Resume-derived question fallback is already available. */}
+  })();
+  return()=>{cancelled=true;};
+ },[sessionLoadedFor,sessionKey,started,completed,signedIn,resumeId,currentResume?.id,currentResume?.updatedAt,userName]);
+
+ useEffect(()=>{
+  const browser=window as RecognitionBrowser&{brave?:{isBrave?:()=>Promise<boolean>}};
   const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
   setSupported(live);
-  // Attempt live speech recognition on mobile when the browser supports it.
-  // Otherwise fall back to explicit audio recording with server transcription.
   setMobileVoice(!live);
+  // Brave can expose SpeechRecognition but disable the remote speech service.
+  // Use the MediaRecorder + authenticated transcription flow instead.
+  const forceRecorder=()=>{
+   setMobileVoice(true);
+   setSupported(false);
+   setMessage('Brave / private browser detected. Use Record Answer (AI), then Stop & Transcribe. Browser live dictation may not be supported.');
+  };
+  if(/Brave/i.test(navigator.userAgent))forceRecorder();
+  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder();}).catch(()=>{});}catch{}
  },[]);
+ // Give the visitor an audible welcome shortly after opening Interview Practice
+ // where autoplay is permitted. If iOS/Brave blocks unsolicited sound, the
+ // Start button still speaks the FIRST question directly from the user's tap.
+ useEffect(()=>{
+  if(sessionLoadedFor!==sessionKey||started||completed||questionLoading)return;
+  const timer=window.setTimeout(()=>{
+   if(document.visibilityState!=='visible'||!('speechSynthesis'in window)||typeof SpeechSynthesisUtterance==='undefined')return;
+   if(speakingRef.current)return;
+   const version=++utteranceVersion.current;
+   const voice=new SpeechSynthesisUtterance(greeting+' Tap Start Personalized Interview when you are ready.');
+   voiceUtteranceRef.current=voice;
+   voice.lang='en-US';voice.rate=.94;
+   let didStart=false;
+   voice.onstart=()=>{
+    if(version!==utteranceVersion.current)return;
+    didStart=true;speakingRef.current=true;setSpeaking(true);setVoiceNeedsTap(false);
+   };
+   const done=()=>{
+    if(version!==utteranceVersion.current)return;
+    voiceUtteranceRef.current=null;speakingRef.current=false;setSpeaking(false);
+   };
+   voice.onend=done;
+   voice.onerror=()=>{done();if(!didStart)setVoiceNeedsTap(true);};
+   try{
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(voice);
+    window.setTimeout(()=>{
+     if(version!==utteranceVersion.current||didStart)return;
+     setVoiceNeedsTap(true);
+     setMessage('Your browser prevented the automatic welcome. Tap Start Personalized Interview to hear your first question.');
+    },3000);
+   }catch{done();setVoiceNeedsTap(true);}
+  },3000);
+  return()=>window.clearTimeout(timer);
+ },[sessionLoadedFor,sessionKey,started,completed,questionLoading,greeting]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
- useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
+ useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);if(voiceStartTimerRef.current)clearTimeout(voiceStartTimerRef.current);voiceUtteranceRef.current=null;recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
  function setAnswerText(text:string){answerRef.current=text;liveAnswerRef.current=text;setAnswer(text);}
  function stopMic(disable=true){
   if(disable)listeningWanted.current=false;
@@ -382,72 +467,79 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  }
  function speakQuestion(question:number,resumeMic:boolean,intro=false,overrideQuestions?:string[]){
   const version=++utteranceVersion.current;
-  speakingRef.current=true;
-  setSpeaking(true);
+  if(voiceStartTimerRef.current){clearTimeout(voiceStartTimerRef.current);voiceStartTimerRef.current=null;}
+  voiceUtteranceRef.current=null;
+  setVoiceNeedsTap(false);
   stopMic(!resumeMic);
   if(resumeMic)listeningWanted.current=true;
   if(!('speechSynthesis'in window)||typeof SpeechSynthesisUtterance==='undefined'){
-   speakingRef.current=false;setSpeaking(false);
-   setMessage('Voice playback is unsupported in this browser. The question is shown on screen.');
+   speakingRef.current=false;setSpeaking(false);setVoiceNeedsTap(true);
+   setMessage('This browser does not support speech playback. The question remains visible so you can answer.');
    if(resumeMic)beginMic();
    return;
   }
-  const voice=new SpeechSynthesisUtterance((question===0&&intro?'Welcome to your interview practice. '+greeting+' Let us begin. ':'')+(overrideQuestions?.[question]||questions[question]));
-  voice.lang='en-US';voice.rate=.92;voice.pitch=1.02;
-  const finished=()=>{
-   if(version!==utteranceVersion.current)return;
-   speakingRef.current=false;setSpeaking(false);
-   if(resumeMic&&listeningWanted.current){
-    beginMic();
-   }else{
-    setMessage('Question finished. Press the microphone button to speak your answer, or type below.');
-   }
+  const text=(intro?greeting+' Let us begin. ':'')+(overrideQuestions?.[question]||questions[question]);
+  const utterance=new SpeechSynthesisUtterance(text);
+  voiceUtteranceRef.current=utterance; // Safari can drop utterances without a retained reference.
+  utterance.lang='en-US';utterance.rate=.92;utterance.pitch=1.02;
+  let didStart=false;
+  const voices=window.speechSynthesis.getVoices?.()||[];
+  const english=voices.find(v=>v.lang.toLowerCase()==='en-us')||voices.find(v=>v.lang.toLowerCase().startsWith('en'));
+  if(english)utterance.voice=english;
+  const clearTimer=()=>{
+   if(voiceStartTimerRef.current){clearTimeout(voiceStartTimerRef.current);voiceStartTimerRef.current=null;}
   };
-  voice.onend=finished;
-  voice.onerror=finished;
+  const finished=(failed=false)=>{
+   if(version!==utteranceVersion.current)return;
+   clearTimer();
+   voiceUtteranceRef.current=null;
+   speakingRef.current=false;setSpeaking(false);
+   if(failed){
+    setVoiceNeedsTap(true);
+    setMessage('Your browser blocked or failed to start audio. Tap Read Question Aloud to hear the question.');
+   }else if(resumeMic&&listeningWanted.current){
+    beginMic();
+   }else setMessage('Question finished. You may speak into the microphone or type your answer.');
+  };
+  utterance.onstart=()=>{
+   if(version!==utteranceVersion.current)return;
+   didStart=true;
+   clearTimer();
+   speakingRef.current=true;setSpeaking(true);setVoiceNeedsTap(false);
+  };
+  utterance.onend=()=>finished();
+  utterance.onerror=()=>finished(true);
   try{
+   // Keep cancel + speak within the same direct user gesture.
    window.speechSynthesis.cancel();
-   window.speechSynthesis.speak(voice);
-   setMessage(resumeMic?'Bot is reading the question. Your microphone will resume afterward.':'Bot is reading the question aloud.');
-  }catch{finished();}
+   window.speechSynthesis.speak(utterance);
+   if(window.speechSynthesis.paused)window.speechSynthesis.resume();
+   speakingRef.current=true;setSpeaking(true);
+   setMessage('Playing the interview question. If you cannot hear it, tap Read Question Aloud.');
+   voiceStartTimerRef.current=setTimeout(()=>{
+    if(version!==utteranceVersion.current||didStart)return;
+    speakingRef.current=false;setSpeaking(false);setVoiceNeedsTap(true);
+    setMessage('Audio did not begin automatically. Tap Read Question Aloud (some mobile browsers require a separate tap).');
+   },3500);
+  }catch{finished(true);}
  }
- async function beginInterview(){
+ function beginInterview(){
   if(started||questionLoading||completed)return;
-  setQuestionLoading(true);
-  const version=++generationRef.current;
-  const resume=currentResume;
-  // Always prepare a distinct ten-question fallback, even without an AI key.
-  let generated=buildInterviewQuestions(resume);
-  if(signedIn&&resume){
-   const context=JSON.stringify({
-    type:'generate_ten_questions',
-    variationSeed:crypto.randomUUID(),
-    name:resume.name||userName,
-    summary:(resume.summary||'').slice(0,850),
-    skills:(resume.skills||'').slice(0,600),
-    experience:(resume.experience||[]).slice(0,5).map(x=>({role:x.role,company:x.company,details:x.details.slice(0,270)})),
-    education:(resume.education||[]).slice(0,4).map(x=>({degree:x.degree,school:x.school})),
-    projects:(resume.projects||[]).slice(0,5).map(x=>({name:x.name,role:x.role,details:x.details.slice(0,240)})),
-    certifications:(resume.certifications||[]).slice(0,4).map(x=>({title:x.title,issuer:x.issuer})),
-    volunteer:(resume.volunteer||[]).slice(0,3).map(x=>({role:x.role,organization:x.organization})),
-    awards:(resume.awards||[]).slice(0,3).map(x=>({title:x.title}))
-   });
-   const output=await runAI('interview_questions',context);
-   if(output){const parsed=parseInterviewQuestions(output);if(parsed)generated=parsed;}
-  }
-  if(version!==generationRef.current)return;
-  setQuestions(generated);
+  // Do NOT await network work before speech. Safari/iOS and Brave may require
+  // the first speechSynthesis.speak() to run synchronously inside a user tap.
+  const prepared=questions.length===INTERVIEW_COUNT?questions:buildInterviewQuestions(currentResume);
+  setQuestions(prepared);
   setIndex(0);
   setAnswerText('');
   setAnswers(Array.from({length:INTERVIEW_COUNT},()=>''));
   setStarted(true);
-  setQuestionLoading(false);
-  setMessage('Your personalized ten-question interview is ready. Speak or type your answer; feedback comes after all ten questions.');
-  speakQuestion(0,false,true,generated);
+  setMessage('Your personalized interview is starting. Voice playback may require tapping Read Question Aloud if the browser blocks sound.');
+  speakQuestion(0,false,true,prepared);
  }
  function clearInterview(){
   cancelCloud();
   generationRef.current++;
+  questionPrefetchRef.current='';
   setQuestionLoading(false);
   utteranceVersion.current++;
   stopMic();
@@ -538,7 +630,12 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   <div className="page-heading"><div><div className="eyebrow">PRACTICE WITH AI</div><h1>Interview Practice</h1><p>Practice using any resume, without limiting it to one job. Complete all 10 questions for your overall AI feedback.</p></div><span className="interview-session-label"><Headphones size={17}/> Interview Session</span></div>
   <div className="interview-studio-grid">
    <section className="interview-stage-panel"><div className="interview-stage-top"><span><span className="live-dot"/> AI Interviewer</span><span>{speaking?'Asking Question':microphone?'Listening':'Practice Mode'}</span></div>
-    <div className="interview-visual">{camera?<video ref={video} autoPlay playsInline muted aria-label="Your private camera preview"/>:<div className={'interview-bot '+(speaking?'bot-talking':'')}><div className="bot-antenna"/><div className="bot-head"><div className="bot-screen"><span/><span/><i/></div></div><div className="bot-neck"/><div className="bot-torso"><span/></div><div className="bot-left-arm"/><div className="bot-right-arm"/></div>}</div>
+    <div className={'interview-visual'+(camera?' interview-visual-with-camera':'')}>
+     <div className={'interview-bot '+(speaking?'bot-talking':'')} aria-label={speaking?'AI interviewer is speaking':'AI interviewer'}>
+      <div className="bot-antenna"/><div className="bot-head"><div className="bot-screen"><span/><span/><i/></div></div><div className="bot-neck"/><div className="bot-torso"><span/></div><div className="bot-left-arm"/><div className="bot-right-arm"/>
+     </div>
+     {camera&&<div className="interview-camera-tile"><video ref={video} autoPlay playsInline muted aria-label="Your private camera preview"/><span>You · Camera On</span></div>}
+    </div>
     <div className="interview-stage-actions"><button className={microphone||cloudRecording?'active':''} onClick={toggleMic} disabled={cloudBusy||completed||!started} aria-label={mobileVoice?(cloudRecording?'Stop and transcribe recording':'Record answer with AI'):(microphone?'Stop microphone':'Start microphone transcription')} title={mobileVoice?'Record answer then transcribe':'Speak and transcribe your answer'}>{microphone||cloudRecording?<MicOff size={19}/>:<Mic size={19}/>}</button><button className="hangup" onClick={reset} aria-label="Reset interview practice" title="Reset practice"><X size={21}/></button><button className={camera?'active':''} onClick={()=>void toggleCamera()} disabled={cameraLoading} aria-label={camera?'Turn off camera':'Turn on local camera preview'} title="Local camera preview only">{camera?<VideoOff size={19}/>:<Video size={19}/>}</button></div>
     <div className="interview-stage-caption"><ShieldCheck size={14}/> {mobileVoice?mobileVoiceHelp:'Browser dictation uses your browser\'s speech service. AI backup uploads audio only when you choose to record.'}</div>
    </section>
@@ -548,7 +645,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
     </select></div>
     <div className="interview-role"><strong>{targetLabel}</strong></div>
     <div className="interview-progress-text"><CheckCircle2 size={14}/> {answeredCount}/{questions.length} answered · AI evaluates after the final question</div>
-    <button className="interview-read-aloud" disabled={!started||questionLoading} onClick={()=>speakQuestion(index,listeningWanted.current,index===0)}><Volume2 size={17}/> {speaking?'Reading question…':'Read Question Aloud'}</button>
+    <button className="interview-read-aloud" disabled={!started||questionLoading} onClick={()=>speakQuestion(index,listeningWanted.current,index===0)}><Volume2 size={17}/> {speaking?'Reading question…':voiceNeedsTap?'Tap to Play Question Audio':'Read Question Aloud'}</button>
     <div className="interview-coach-tips"><h3><Lightbulb size={17}/> Tips</h3><p><Check size={15}/> Be concise and relevant.</p><p><Check size={15}/> Highlight your actual skills.</p><p><Check size={15}/> Mention notable achievements.</p></div>
     <div className="interview-nav-actions">{index>0&&!completed&&<button className="interview-back" onClick={previous} disabled={busy||cloudRecording||cloudBusy}><ArrowLeft size={16}/> Previous</button>}
     {!completed&&<button className="interview-next" onClick={next} disabled={busy||cloudRecording||cloudBusy||questionLoading}>{!started?<><Sparkles size={17}/> {questionLoading?'Preparing Questions…':'Start Personalized Interview'}</>:index===questions.length-1?<><Sparkles size={17}/> Finish & Evaluate</>:<>Next Question <ArrowRight size={17}/></>}</button>}

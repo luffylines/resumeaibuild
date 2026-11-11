@@ -676,3 +676,38 @@
 .demo-tour-next p{font-size:12px;color:#79718e;line-height:1.7}
 @media(max-width:900px){.demo-tour{grid-template-columns:1fr}}
 @media(max-width:540px){.demo-player-body{grid-template-columns:1fr}.demo-tour-next{align-items:center;text-align:center}.demo-player-top{flex-wrap:wrap}.demo-caption h2{font-size:23px}.demo-illustration{min-height:180px}}
+
+/* Interview camera is picture-in-picture; the AI interviewer is always visible. */
+.interview-visual-with-camera{isolation:isolate}
+.interview-visual-with-camera .interview-bot{z-index:1;flex:none}
+.interview-camera-tile{position:absolute;right:12px;bottom:12px;z-index:3;width:min(35%,160px);aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:2px solid #c3d7ff;box-shadow:0 8px 24px #09114388;background:#121637}
+.interview-camera-tile video{display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.interview-camera-tile>span{position:absolute;left:5px;bottom:5px;right:5px;padding:5px;border-radius:5px;background:#10132abf;color:white;text-align:center;font-size:10px;font-weight:700}
+.interview-bot.bot-talking .bot-screen i{animation:interview-mouth 350ms ease-in-out infinite alternate}
+.interview-bot.bot-talking .bot-screen span{animation:robot-glow 350ms ease-in-out infinite alternate}
+@keyframes interview-mouth{from{width:19px;height:9px;border-bottom-width:3px}to{width:30px;height:20px;border-bottom-width:6px}}
+@media(max-width:540px){
+ .interview-camera-tile{right:8px;bottom:8px;width:30%;max-width:108px;min-width:80px}
+ .interview-visual-with-camera .interview-bot{transform:translate(-20px,19px) scale(.88)}
+}
+
+/* Neutral password field, including password-manager/browser autofill. */
+.auth-form-card .password-box{background:#fff;overflow:hidden}
+.auth-form-card .password-box input{background:#fff!important;color:#2c2740!important;-webkit-text-fill-color:#2c2740!important;border:0!important;border-radius:0!important;box-shadow:none!important;caret-color:#2c2740}
+.auth-form-card .password-box input:focus{outline:none}
+.auth-form-card .password-box input:-webkit-autofill,
+.auth-form-card .password-box input:-webkit-autofill:hover,
+.auth-form-card .password-box input:-webkit-autofill:focus{
+ -webkit-text-fill-color:#2c2740!important;
+ -webkit-box-shadow:0 0 0 1000px #fff inset!important;
+ box-shadow:0 0 0 1000px #fff inset!important;
+ transition:background-color 99999s ease-out;
+}
+.auth-form-card .password-box button{background:transparent;color:#6e687f;flex:none}
+.auth-form-card .password-box:focus-within{border-color:#8b7ca8;box-shadow:0 0 0 2px #dcd8ea}
+.resume-client-shell .sidebar-logout{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:9px;min-height:43px;padding:10px 14px;background:#fff;border:1px solid #eadfea;border-radius:10px;color:#6e285b;font-size:12px;font-weight:750;cursor:pointer}
+.resume-client-shell .sidebar-logout:hover{background:#fff4fa;border-color:#ce90bb}
+.resume-client-shell .sidebar-logout:focus-visible,.resume-client-shell .topbar-logout:focus-visible{outline:3px solid #a78bfa;outline-offset:3px}
+.resume-client-shell .topbar-logout{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #e6dce9;border-radius:9px;background:#fff;color:#6b315b;padding:8px 10px;font-size:11px;font-weight:750}
+.resume-client-shell .topbar-logout:hover{background:#fff1f7}
+@media(max-width:700px){.resume-client-shell .topbar-logout{height:36px;width:36px;padding:0}.resume-client-shell .topbar-logout-label{display:none}}
