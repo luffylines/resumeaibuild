@@ -66,6 +66,8 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const speechPage=await speechContext.newPage();
   await speechPage.addInitScript(()=>{
    const state={spoken:[],recognizer:null};
+   // Stand-in local camera stream, no physical camera in CI.
+   if(navigator.mediaDevices)Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>new MediaStream()});
    window.__resumeSpeechMock=state;
    class FakeUtterance{constructor(text){this.text=text;this.onend=null;this.onerror=null;}}
    class FakeRecognition{
@@ -89,13 +91,14 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(!(await speechPage.locator('.dashboard-admin-link').count()))throw Error('Missing Admin Preview access on demo client dashboard');
   await speechPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
   await speechPage.getByRole('button',{name:'Start Personalized Interview'}).click();
-  await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.length===1);
-  const welcome=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[0]);
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.some(x=>x.includes('Let us begin.')));
+  const welcome=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.find(x=>x.includes('Let us begin.')));
   if(!welcome.includes('Christian'))throw Error('Interview greeting did not use resume name: '+welcome);
   if(!(await speechPage.getByText('Current Question (1/10)').count()))throw Error('Wrong interview question counter');
+  const firstCount=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.length);
   await speechPage.getByRole('button',{name:'Next Question'}).click();
-  await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.length===2);
-  const spoken=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken[1]);
+  await speechPage.waitForFunction(count=>window.__resumeSpeechMock.spoken.length>count,firstCount);
+  const spoken=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.at(-1));
   if(!spoken.trim()||spoken.length<10)throw Error('Next Question was not read aloud: '+spoken);
   await speechPage.getByRole('button',{name:'Start microphone transcription'}).click();
   await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.emit('I led a team project using Laravel',false));
@@ -107,8 +110,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await speechPage.getByRole('button',{name:'Start microphone transcription'}).click();
   const locale=await speechPage.evaluate(()=>window.__resumeSpeechMock.recognizer.lang);
   if(locale!=='fil-PH')throw Error('Speech language switch not applied');
+  const previousCount=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.length);
   await speechPage.getByRole('button',{name:'Next Question'}).click();
-  await speechPage.waitForFunction(()=>window.__resumeSpeechMock.spoken.length===3);
+  await speechPage.waitForFunction(count=>window.__resumeSpeechMock.spoken.length>count,previousCount);
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
   // Voice controls should be discoverable without searching for the small robot icon.
@@ -121,6 +125,12 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await speechPage.waitForFunction(()=>window.__resumeSpeechMock.recognizer!==null);
   await speechPage.getByRole('button',{name:'Stop speaking'}).click();
   await speechPage.getByText('Microphone paused. Your transcript has been kept.').waitFor({state:'visible'});
+  await speechPage.getByRole('button',{name:'Turn on local camera preview'}).click();
+  await speechPage.locator('.interview-camera-tile video').waitFor({state:'visible'});
+  await speechPage.locator('.interview-bot').waitFor({state:'visible'});
+  if(await speechPage.locator('.interview-bot').count()!==1)throw Error('Enabling the camera hid the talking interviewer bot');
+  await speechPage.getByRole('button',{name:'Turn off camera'}).click();
+  console.log('PASS camera picture-in-picture, bot remains visible while camera is enabled');
   console.log('PASS discoverable voice controls, stop & retry, authenticated AI fallback notice');
 
   // iPhone Safari emulation: mobile uses AI recorder instead of unsupported
@@ -145,6 +155,22 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await phonePage.getByRole('button',{name:'Upload Audio'}).waitFor({state:'visible'});
   await phoneCtx.close();
   console.log('PASS iPhone voice-first controls, native recording fallback and general interviews');
+  // Simulate Brave exposing Web Speech yet blocking its remote speech service.
+  const braveCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,
+    userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/154.0.0.0 Mobile Safari/537.36'});
+  const bravePage=await braveCtx.newPage();
+  await bravePage.addInitScript(()=>{window.brave={isBrave:async()=>true};});
+  await open(bravePage,'/app');
+  await bravePage.getByRole('button',{name:'Open navigation menu'}).click();
+  await bravePage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await bravePage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  await bravePage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
+  await bravePage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  await bravePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
+  await braveCtx.close();
+  console.log('PASS Brave mobile: uses secure recording fallback instead of unsupported live dictation');
+
+
 
   console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
   await speechContext.close();
