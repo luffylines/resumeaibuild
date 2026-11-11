@@ -279,6 +279,55 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   console.log('PASS photo upload/remove, dynamic CV sections, template switching and 32 unique resume layout cards');
   console.log('PASS Admin Dashboard preview, navigation and reports (without Job Posts)');
 
+
+  // Autosave regression: typing, navigating away, returning and hard reload
+  // must preserve a new resume, wizard stage, AI prompt and interview answers.
+  const draftContext=await browser.newContext({viewport:{width:1280,height:850}});
+  const draftPage=await draftContext.newPage();
+  await draftPage.addInitScript(()=>{
+   window.SpeechSynthesisUtterance=class{constructor(text){this.text=text;this.onend=null;this.onerror=null;}};
+   Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{cancel(){},speak(u){queueMicrotask(()=>u.onend?.());}}});
+  });
+  await open(draftPage,'/app');
+  await draftPage.locator('.create-button').click();
+  await draftPage.getByLabel('Full Name').fill('Resume Auto Save Test');
+  await draftPage.getByLabel('Target Job Title').fill('Systems Analyst');
+  await draftPage.waitForFunction(()=>{
+   const value=JSON.parse(localStorage.getItem('resumebuilder:drafts:v1:demo')||'{}');
+   return Object.values(value.drafts||{}).some(d=>d.name==='Resume Auto Save Test'&&d.targetRole==='Systems Analyst');
+  });
+  await draftPage.locator('.side-nav').getByRole('button',{name:'ATS Checker'}).click();
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
+  await draftPage.getByLabel('Full Name').waitFor({state:'visible'});
+  if(await draftPage.getByLabel('Full Name').inputValue()!=='Resume Auto Save Test')throw Error('Resume input lost on tab change');
+  await draftPage.locator('.wizard-stagebar').getByRole('button',{name:'Generate'}).click();
+  await draftPage.getByLabel('Describe your background').fill('This is a long interview-focused professional introduction and training project.');
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Dashboard'}).click();
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
+  await draftPage.getByLabel('Describe your background').waitFor({state:'visible'});
+  if(!(await draftPage.getByLabel('Describe your background').inputValue()).includes('training project'))throw Error('Wizard prompt lost on navigation');
+  await draftPage.reload({waitUntil:'networkidle'});
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
+  await draftPage.getByLabel('Describe your background').waitFor({state:'visible'});
+  await draftPage.locator('.wizard-stagebar').getByRole('button',{name:'Profile'}).click();
+  if(await draftPage.getByLabel('Target Job Title').inputValue()!=='Systems Analyst')throw Error('Resume draft lost after reload');
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await draftPage.locator('.interview-role strong').getByText('Systems Analyst').waitFor({state:'visible'});
+  await draftPage.getByLabel('Your Answer').fill('I designed an incident management workflow for our capstone group.');
+  await draftPage.getByRole('button',{name:'Next Question'}).click();
+  await draftPage.getByText('Current Question (2/10)').waitFor({state:'visible'});
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Dashboard'}).click();
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await draftPage.getByText('Current Question (2/10)').waitFor({state:'visible'});
+  await draftPage.getByRole('button',{name:'Previous'}).click();
+  if(!(await draftPage.getByLabel('Your Answer').inputValue()).includes('incident management'))throw Error('Previous interview answer was lost on navigation');
+  await draftPage.reload({waitUntil:'networkidle'});
+  await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await draftPage.getByText('Current Question (1/10)').waitFor({state:'visible'});
+  if(!(await draftPage.getByLabel('Your Answer').inputValue()).includes('incident management'))throw Error('Interview transcript lost after page reload');
+  await draftContext.close();
+  console.log('PASS autosave: resume input, wizard stage/prompt and interview transcript persist on navigation and refresh');
+
   console.log('PASS: '+checked+' responsive viewport suites');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
