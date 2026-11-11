@@ -3,11 +3,20 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {ArrowRight,Menu,X} from 'lucide-react';
 import {BrandMark} from '@/components/brand-icons';
+import {browserSupabase} from '@/lib/supabase';
 
 const items=[['Home','#home'],['Features','#features'],['How It Works','#how-it-works'],['Pricing','#pricing'],['Templates','#templates'],['FAQ','#faq']] as const;
 
 export default function PublicHeader(){
  const [open,setOpen]=useState(false);
+ const [signedIn,setSignedIn]=useState(false);
+ useEffect(()=>{
+  const sb=browserSupabase();if(!sb)return;
+  let live=true;
+  void sb.auth.getUser().then(({data})=>{if(live)setSignedIn(!!data.user);}).catch(()=>{});
+  const {data:{subscription}}=sb.auth.onAuthStateChange((_event,session)=>{if(live)setSignedIn(!!session?.user);});
+  return()=>{live=false;subscription.unsubscribe();};
+ },[]);
  useEffect(()=>{
   if(!open)return;
   const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false);};
@@ -21,11 +30,11 @@ export default function PublicHeader(){
  return <>
   <header className="public-header">
    <div className="public-nav">
-    <Link href="/" className="public-logo" onClick={()=>setOpen(false)}><span className="public-logo-mark"><BrandMark size={20}/></span><span>ResumeBuilder</span></Link>
+    <Link href={signedIn?"/app":"/"} className="public-logo" aria-label={signedIn?"Open my ResumeBuilder dashboard":"ResumeBuilder home"} onClick={()=>setOpen(false)}><span className="public-logo-mark"><BrandMark size={52}/></span><span>ResumeBuilder</span></Link>
     <nav className="public-desktop-links" aria-label="Primary navigation">{items.map(([title,href])=><a href={href} key={href}>{title}</a>)}</nav>
-    <div className="public-ctas"><Link className="public-outline" href="/login">Log In</Link><Link className="public-primary" href="/signup">Sign Up Free <ArrowRight size={16}/></Link></div>
+    <div className="public-ctas">{signedIn?<Link className="public-primary" href="/app">My Dashboard <ArrowRight size={16}/></Link>:<><Link className="public-outline" href="/login">Log In</Link><Link className="public-primary" href="/signup">Sign Up Free <ArrowRight size={16}/></Link></>}</div>
     <div className="public-mobile-actions">
-     <Link className="public-mobile-signup" href="/signup">Sign Up</Link>
+     <Link className="public-mobile-signup" href={signedIn?"/app":"/signup"}>{signedIn?"Dashboard":"Sign Up"}</Link>
      <button className="public-hamburger" type="button" aria-label={open?'Close navigation menu':'Open navigation menu'} aria-expanded={open} aria-controls="public-mobile-panel" onClick={()=>setOpen(v=>!v)}>{open?<X size={23}/>:<Menu size={23}/>}</button>
     </div>
    </div>
@@ -33,7 +42,7 @@ export default function PublicHeader(){
   {open&&<><button type="button" className="public-mobile-scrim" aria-label="Close navigation menu" onClick={()=>setOpen(false)}/><nav id="public-mobile-panel" className="public-mobile-panel" aria-label="Mobile navigation">
    <div className="public-mobile-panel-title">EXPLORE RESUMEBUILDER</div>
    {items.map(([title,href],i)=><a href={href} key={href} onClick={()=>setOpen(false)}><span>{title}</span><ArrowRight size={16}/></a>)}
-   <div className="public-mobile-panel-actions"><Link className="public-outline" href="/login" onClick={()=>setOpen(false)}>Log In</Link><Link className="public-primary" href="/signup" onClick={()=>setOpen(false)}>Create Account <ArrowRight size={17}/></Link></div>
+   <div className="public-mobile-panel-actions">{signedIn?<Link className="public-primary" href="/app" onClick={()=>setOpen(false)}>My Dashboard <ArrowRight size={17}/></Link>:<><Link className="public-outline" href="/login" onClick={()=>setOpen(false)}>Log In</Link><Link className="public-primary" href="/signup" onClick={()=>setOpen(false)}>Create Account <ArrowRight size={17}/></Link></>}</div>
   </nav></>}
  </>;
 }
