@@ -331,9 +331,16 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const preview=photoPage.locator('.wizard-preview .resume-document');
   await preview.waitFor({state:'visible'});
   await photoPage.emulateMedia({media:'print'});
-  const printVisibility=await preview.evaluate(el=>({display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility}));
+  const printVisibility=await preview.evaluate(el=>{
+   const root=el.closest('.wizard-page--demo');
+   return {
+    rootDisplay:root?getComputedStyle(root).display:'missing',
+    display:getComputedStyle(el).display,
+    visibility:getComputedStyle(el).visibility
+   };
+  });
   await photoPage.emulateMedia({media:'screen'});
-  if(printVisibility.display!=='none'&&printVisibility.visibility!=='hidden')throw Error('Browser Print still exposes an unwatermarked demo resume: '+JSON.stringify(printVisibility));
+  if(printVisibility.rootDisplay!=='none'&&printVisibility.display!=='none'&&printVisibility.visibility!=='hidden')throw Error('Browser Print still exposes an unwatermarked demo resume: '+JSON.stringify(printVisibility));
   console.log('PASS demo resume: edits and watermark, no download/print/Canva buttons or clean export target');
   await open(photoPage,'/app?section=letters');
   await photoPage.getByRole('heading',{name:'Cover Letter'}).waitFor({state:'visible'});
