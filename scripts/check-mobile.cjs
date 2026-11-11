@@ -343,7 +343,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.emulateMedia({media:'screen'});
   if(printVisibility.rootDisplay!=='none'&&printVisibility.display!=='none'&&printVisibility.visibility!=='hidden')throw Error('Browser Print still exposes an unwatermarked demo resume: '+JSON.stringify(printVisibility));
   console.log('PASS demo resume: edits and watermark, no download/print/Canva buttons or clean export target');
-  await open(photoPage,'/app?section=letters');
+  await photoPage.locator('.side-nav').getByRole('button',{name:'Cover Letter'}).click();
   await photoPage.getByRole('heading',{name:'Cover Letter'}).waitFor({state:'visible'});
   await photoPage.getByText('AI generation is locked in Demo Mode').waitFor({state:'visible'});
   if(await photoPage.getByRole('button',{name:'Copy'}).count()||await photoPage.getByRole('button',{name:'Download'}).count())throw Error('Demo cover letter exposes copy/download');
