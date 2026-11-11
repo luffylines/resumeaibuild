@@ -12,11 +12,7 @@ export function GoogleIcon({size=20,...props}:IconProps){
  </svg>;
 }
 
-/** Simple white document + sparkle glyph for the ResumeBuilder mark. */
-export function BrandMark({size=21,...props}:IconProps){
- return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...props}>
-  <path d="M6.8 3.5h7.1l3.7 3.7v12.1c0 .8-.6 1.4-1.4 1.4H6.8c-.8 0-1.4-.6-1.4-1.4V4.9c0-.8.6-1.4 1.4-1.4Z"/>
-  <path d="M13.8 3.8V7h3.4M8.2 11.1h4.5M8.2 14.2h4.2M8.2 17.3h2.6"/>
-  <path d="m17.9 10.5.55 1.65 1.65.55-1.65.55-.55 1.65-.55-1.65-1.65-.55 1.65-.55.55-1.65Z" fill="currentColor" stroke="none"/>
- </svg>;
+/** Shared ResumeBuilder brand image used by every public/admin/workspace logo. */
+export function BrandMark({size=21,className}:{size?:number;className?:string}){
+ return <img src="/images/logo.png" alt="" aria-hidden="true" width={size} height={size} className={className} style={{display:'block',width:size,height:size,objectFit:'contain',flexShrink:0}}/>;
 }
