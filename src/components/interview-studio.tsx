@@ -209,7 +209,11 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
       :e.error==='aborted'
       ?'Voice input stopped. Click Start speaking to try again.'
       :'Speech recognition stopped ('+e.error+'). Check microphone permission, or try Record with AI (backup).';
-    setMessage(reason);
+    const serviceFailed=['network','service-not-allowed','language-not-supported'].includes(e.error);
+    if(serviceFailed){
+     setMobileVoice(true);
+     setMessage(reason+' Live dictation was not available, so the microphone button now uses Record Answer (AI) and transcribes after you stop.');
+    }else setMessage(reason);
    };
    rec.onend=()=>{
     if(recognitionRef.current!==rec)return;
