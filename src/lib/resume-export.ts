@@ -1,6 +1,7 @@
 'use client';
 import type {Resume} from '@/lib/types';
 import {getResumeTemplate,PHOTO_READY_TEMPLATES} from '@/lib/templates';
+import {getResumeSections} from '@/lib/resume-sections';
 
 function cleanName(r:Resume){return (r.name||r.title||'resume').replace(/[^\p{L}\p{N}\-_ ]/gu,'').trim().replace(/\s+/g,'_').slice(0,65)||'resume';}
 function download(blob:Blob,file:string){
@@ -9,13 +10,18 @@ function download(blob:Blob,file:string){
  setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 function safeHex(value:string|undefined,fall:string){return /^#[0-9a-f]{6}$/i.test(value||'')?value!:fall;}
+/** Always derive export content from the same template-aware sections as the live preview. */
 function makeBlocks(r:Resume){
- return [
-  {name:'PROFESSIONAL SUMMARY',entries:r.summary?[{title:'',subtitle:'',body:r.summary}]:[]},
-  {name:'WORK EXPERIENCE',entries:r.experience.filter(e=>e.role||e.company||e.details).map(e=>({title:[e.role,e.company].filter(Boolean).join(' · '),subtitle:e.dates,body:e.details}))},
-  {name:'EDUCATION',entries:r.education.filter(e=>e.degree||e.school).map(e=>({title:e.degree,subtitle:[e.school,e.dates].filter(Boolean).join(' · '),body:''}))},
-  {name:'SKILLS',entries:r.skills?[{title:'',subtitle:'',body:r.skills.split(',').map(s=>s.trim()).filter(Boolean).join('  •  ')}]:[]}
- ].filter(s=>s.entries.length);
+ return getResumeSections(r).map(section=>({
+  name:section.title.toUpperCase(),
+  entries:section.entries.map(entry=>({
+   title:entry.title,
+   subtitle:entry.subtitle,
+   body:section.kind==='skills'
+    ?entry.body.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).join('  •  ')
+    :entry.body
+  }))
+ }));
 }
 function normalizePdf(s:string){return s.replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/[•]/g,'·').replace(/[^\u0020-\u00FF\n]/g,'?');}
 function breakText(text:string,width:number,measure:(text:string)=>number){
