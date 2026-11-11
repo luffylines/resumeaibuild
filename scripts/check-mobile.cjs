@@ -327,6 +327,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const preview=photoPage.locator('.wizard-preview .resume-document');
   await preview.waitFor({state:'visible'});
   await photoPage.emulateMedia({media:'print'});
+  await photoPage.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
   const printVisibility=await preview.evaluate(el=>{
    const root=el.closest('.wizard-page--demo');
    return {
@@ -338,6 +339,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
     visibility:getComputedStyle(el).visibility
    };
   });
+  await photoPage.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
   await photoPage.emulateMedia({media:'screen'});
   if(printVisibility.rootDisplay!=='none'&&printVisibility.display!=='none'&&printVisibility.visibility!=='hidden')throw Error('Browser Print still exposes an unwatermarked demo resume: '+JSON.stringify(printVisibility));
   console.log('PASS demo resume: edits and watermark, no download/print/Canva buttons or clean export target');
