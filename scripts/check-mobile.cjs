@@ -65,7 +65,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const speechContext=await browser.newContext({viewport:{width:1280,height:850}});
   const speechPage=await speechContext.newPage();
   await speechPage.addInitScript(()=>{
-   const state={spoken:[],recognizer:null};
+   const state={spoken:[],voiceURIs:[],recognizer:null};
    // Stand-in local camera stream, no physical camera in CI.
    if(navigator.mediaDevices)Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,value:async()=>new MediaStream()});
    window.__resumeSpeechMock=state;
@@ -84,7 +84,11 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    window.SpeechRecognition=FakeRecognition;
    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{
     cancel(){},
-    speak(utterance){state.spoken.push(utterance.text);queueMicrotask(()=>utterance.onend?.());}
+    getVoices(){return [
+     {voiceURI:'compact',name:'English Compact',lang:'en-US',localService:true,default:true},
+     {voiceURI:'natural',name:'Samantha (Enhanced)',lang:'en-US',localService:true,default:false}
+    ];},
+    speak(utterance){state.spoken.push(utterance.text);state.voiceURIs.push(utterance.voice?.voiceURI||'default');queueMicrotask(()=>utterance.onend?.());}
    }});
   });
   await open(speechPage,'/app');
@@ -113,6 +117,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const previousCount=await speechPage.evaluate(()=>window.__resumeSpeechMock.spoken.length);
   await speechPage.getByRole('button',{name:'Next Question'}).click();
   await speechPage.waitForFunction(count=>window.__resumeSpeechMock.spoken.length>count,previousCount);
+  const voicesUsed=await speechPage.evaluate(()=>window.__resumeSpeechMock.voiceURIs);
+  if(voicesUsed.some(uri=>uri!=='natural'))throw Error('Interviewer voice switched across questions: '+voicesUsed.join(', '));
+  console.log('PASS consistent English interviewer voice across the greeting and questions');
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
   // Voice controls should be discoverable without searching for the small robot icon.
@@ -142,6 +149,18 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await phonePage.getByRole('button',{name:'Open navigation menu'}).click();
   await phonePage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
   await phonePage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  const zoomCheck=await phonePage.evaluate(()=>{
+   const field=document.querySelector('textarea[aria-label="Your Answer"]');
+   const selector=document.getElementById('interview-resume-choice');
+   const click=document.querySelector('.interview-next');
+   return {answer:field?parseFloat(getComputedStyle(field).fontSize):0,
+    select:selector?parseFloat(getComputedStyle(selector).fontSize):0,
+    touch:click?getComputedStyle(click).touchAction:''};
+  });
+  if(zoomCheck.answer<16||zoomCheck.select<16||zoomCheck.touch!=='manipulation'){
+   throw Error('iPhone focus zoom controls not optimized: '+JSON.stringify(zoomCheck));
+  }
+  console.log('PASS iPhone focus controls remain 16px+ with single-tap behavior and accessible pinch zoom');
   // Chromium with an iPhone user-agent may expose live Web Speech.
   // Real Safari versions may instead require the server-side recorder.
   const phoneAI=phonePage.getByRole('button',{name:'Record answer with AI'}).last();
@@ -169,6 +188,20 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await bravePage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
   await braveCtx.close();
   console.log('PASS Brave mobile: uses secure recording fallback instead of unsupported live dictation');
+  const braveIOSCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,
+   userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1 Brave'});
+  const braveIOSPage=await braveIOSCtx.newPage();
+  await open(braveIOSPage,'/app');
+  await braveIOSPage.getByRole('button',{name:'Open navigation menu'}).click();
+  await braveIOSPage.locator('#mobile-workspace-nav').getByRole('button',{name:'Interview Practice'}).click();
+  await braveIOSPage.getByRole('button',{name:'Start Personalized Interview'}).click();
+  await braveIOSPage.getByRole('button',{name:'Record answer with AI'}).last().waitFor({state:'visible'});
+  await braveIOSPage.getByRole('button',{name:'Record on iPhone'}).waitFor({state:'visible'});
+  await braveIOSPage.getByRole('button',{name:'Record answer with AI'}).last().click();
+  await braveIOSPage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
+  await braveIOSCtx.close();
+  console.log('PASS Brave iOS: default recorder path, native iPhone recording option and auth guard');
+
 
 
 
