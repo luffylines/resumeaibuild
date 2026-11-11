@@ -24,7 +24,7 @@ export default function ResumeDocument({resume:r,miniature=false}:Props){
  const sections=getResumeSections(r);
  const hasPortraitTemplate=PHOTO_READY_TEMPLATES.has(template.id);
  const validPhoto=!!(r.photo&&/^data:image\/(jpeg|png|webp);base64,/i.test(r.photo));
- const portrait=hasPortraitTemplate?<div className={'rd-portrait '+(validPhoto?'rd-portrait-active':'rd-portrait-placeholder')}>{validPhoto?<img src={r.photo!} alt="Applicant profile photo" width={116} height={116}/>:miniature?<div className="rd-portrait-silhouette" aria-hidden="true"><i/><span/></div>:null}</div>:null;
+ const portrait=hasPortraitTemplate?<div className={'rd-portrait '+(validPhoto?'rd-portrait-active':'rd-portrait-placeholder')}>{validPhoto?<img src={r.photo!} alt="Applicant profile photo" width={116} height={116}/>:miniature?<img src="/images/resume-avatar-demo.svg" alt="" aria-hidden="true" width={116} height={116} loading="eager"/>:null}</div>:null;
  const columns=template.layout==='two-column'||template.layout==='sidebar';
  return <article
   className={'resume-document '+(miniature?'resume-document--mini':'resume-paper')+' rd-style-'+template.id+' rd-layout-'+template.layout+(hasPortraitTemplate?' rd-photo-layout':'')+(validPhoto?' rd-has-photo':' rd-no-photo')}
