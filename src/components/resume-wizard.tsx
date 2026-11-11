@@ -1,6 +1,6 @@
 'use client';
 import {useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,Check,Download,Camera,FileDown,FileImage,FileType,Printer,Palette,ExternalLink,FileText,GraduationCap,Plus,Save,Sparkles,Trash2,UserRound,BriefcaseBusiness,ShieldCheck,Camera,ImageUp,XCircle} from 'lucide-react';
+import {ArrowLeft,ArrowRight,Check,Download,FileDown,FileImage,FileType,Printer,Palette,ExternalLink,FileText,GraduationCap,Plus,Save,Sparkles,Trash2,UserRound,BriefcaseBusiness,ShieldCheck,Camera,ImageUp,XCircle} from 'lucide-react';
 import type {ReactNode} from 'react';
 import {UNIQUE_RESUME_TEMPLATES,TEMPLATE_CATEGORIES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,getResumeTemplate,canonicalTemplateId,designDisplayName,PHOTO_READY_TEMPLATES} from '@/lib/templates';
 import ResumeDocument from '@/components/resume-document';
