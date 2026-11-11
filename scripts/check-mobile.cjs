@@ -107,6 +107,8 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
   // Voice controls should be discoverable without searching for the small robot icon.
+  // The previous question intentionally auto-resumed the mic; stop it before testing the new start control.
+  if(await speechPage.getByRole('button',{name:'Stop speaking'}).count())await speechPage.getByRole('button',{name:'Stop speaking'}).click();
   await speechPage.getByRole('button',{name:'Start speaking'}).waitFor({state:'visible'});
   await speechPage.getByRole('button',{name:'Record with AI backup'}).click();
   await speechPage.getByText('Sign in to your ResumeBuilder account').waitFor({state:'visible'});
