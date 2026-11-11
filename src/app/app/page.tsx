@@ -18,6 +18,8 @@ import ResumeWizard from '@/components/resume-wizard';
 import InterviewStudio from '@/components/interview-studio';
 import {authReturnUrl} from '@/lib/auth-return-url';
 import SettingsPanel from '@/components/settings-panel';
+import MfaPanel from '@/components/mfa-panel';
+import {accountAvatar,readProfilePhoto} from '@/lib/profile-photo';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
@@ -49,6 +51,10 @@ function Field({label,value,onChange,placeholder,wide=false,rows=0}:{label:strin
 export default function Home(){
  const [section,setSection]=useState<Section>('dashboard');
  const [mobileNav,setMobileNav]=useState(false);
+ const [profileMenuOpen,setProfileMenuOpen]=useState(false);
+ const [profilePhoto,setProfilePhoto]=useState('');
+ const [mfaState,setMfaState]=useState<'checking'|'guest'|'required'|'verified'|'error'>('checking');
+ const [mfaError,setMfaError]=useState('');
  useEffect(()=>{
   if(!mobileNav)return;
   const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setMobileNav(false);};
@@ -94,8 +100,33 @@ export default function Home(){
  const results=atsScore(activeResume,jobDescription);
  const formattedName=user?.user_metadata?.full_name?.split(' ')[0]||user?.email?.split('@')[0]||'Christian';
  const isDemo=!user;
+ const avatarSrc=accountAvatar(user,resumes,profilePhoto);
+ useEffect(()=>{
+  const update=()=>setProfilePhoto(user?.id?readProfilePhoto(user.id):'');
+  update();
+  window.addEventListener('resumebuilder:avatar-changed',update);
+  return()=>window.removeEventListener('resumebuilder:avatar-changed',update);
+ },[user?.id]);
+ useEffect(()=>{
+  if(!profileMenuOpen)return;
+  const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape')setProfileMenuOpen(false);};
+  document.addEventListener('keydown',onKey);
+  return()=>document.removeEventListener('keydown',onKey);
+ },[profileMenuOpen]);
  const currentScore=atsScore(activeResume).score;
- const go=(s:Section)=>{setSection(s);setMobileNav(false);setError('');window.scrollTo({top:0,behavior:'smooth'});};
+ const go=(s:Section)=>{setSection(s);setMobileNav(false);setProfileMenuOpen(false);setError('');window.scrollTo({top:0,behavior:'smooth'});};
+ const verifyMfaState=useCallback(async(nextUser:User|null)=>{
+  if(!sb||!nextUser){setMfaState('guest');return;}
+  setMfaState('checking');setMfaError('');
+  try{
+   const {data,error}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+   if(error)throw error;
+   setMfaState(data.nextLevel==='aal2'&&data.currentLevel!=='aal2'?'required':'verified');
+  }catch(error){
+   setMfaState('error');
+   setMfaError(error instanceof Error?error.message:'Could not confirm two-factor security state.');
+  }
+ },[sb]);
  const init=useCallback(async(u:User|null)=>{
   try{
    if(sb&&u){
@@ -130,11 +161,11 @@ export default function Home(){
  },[sb]);
  useEffect(()=>{
   let active=true;
-  if(!sb){void init(null);return;}
-  void sb.auth.getUser().then(({data})=>{if(!active)return;setUser(data.user);void init(data.user);});
-  const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')return;setTimeout(()=>{if(!active)return;setUser(session?.user||null);void init(session?.user||null);},0);});
+  if(!sb){setMfaState('guest');void init(null);return;}
+  void sb.auth.getUser().then(({data})=>{if(!active)return;setMfaState(data.user?'checking':'guest');setUser(data.user);void verifyMfaState(data.user);void init(data.user);});
+  const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')return;setTimeout(()=>{if(!active)return;setMfaState(session?.user?'checking':'guest');setUser(session?.user||null);void verifyMfaState(session?.user||null);void init(session?.user||null);},0);});
   return ()=>{active=false;subscription.unsubscribe();};
- },[sb,init]);
+ },[sb,init,verifyMfaState]);
  useEffect(()=>{if(ready&&!user){try{localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));}catch{setAutosaveStatus('error');}}},[ready,user,resumes]);
 
  function cloudUpsert(item:Resume,owner:string){
@@ -248,12 +279,28 @@ export default function Home(){
   const {error:e}=await sb.auth.signOut();
   if(e){setError('Unable to sign out: '+e.message);return;}
   setMobileNav(false);
+  setProfileMenuOpen(false);
   setUser(null);
   // Return to public login instead of leaving a logged-out user in demo mode.
   window.location.assign('/login');
  }
  const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',interview:'Interview Practice',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
  const filteredResumes=resumes.filter(r=>(r.title+' '+r.name+' '+r.skills).toLowerCase().includes(search.toLowerCase()));
+ if(user&&mfaState!=='verified'){
+  return <main className="mfa-auth-page">
+   <section className="mfa-auth-card">
+    <div className="mfa-auth-brand"><span className="brand-icon"><BrandMark size={20}/></span> ResumeBuilder</div>
+    {mfaState==='checking'&&<p><LoaderCircle size={18} className="spin"/> Checking your account security…</p>}
+    {mfaState==='required'&&<MfaPanel user={user} mode="challenge" onVerified={()=>setMfaState('verified')} onSignOut={signOut}/>}
+    {mfaState==='error'&&<>
+     <h2>Unable to verify account security</h2>
+     <p role="alert">{mfaError}</p>
+     <button className="outline-button" onClick={()=>void verifyMfaState(user)}>Retry Security Check</button>
+     <button className="outline-button" onClick={()=>void signOut()}>Sign Out</button>
+    </>}
+   </section>
+  </main>;
+ }
  return <div className="app-shell resume-client-shell">
   {mobileNav&&<button className="workspace-scrim" aria-label="Close sidebar navigation" onClick={()=>setMobileNav(false)}/>}
   <aside id="mobile-workspace-nav" className={'sidebar '+(mobileNav?'sidebar-open':'')}>
@@ -273,14 +320,14 @@ export default function Home(){
    </div>}
    <div className="sidebar-bottom">
     <div className="sidebar-tip"><span><Sparkles size={18}/></span><strong>Career toolkit</strong><p>Your next opportunity starts with a stronger resume.</p></div>
-    <button className="account-button" onClick={()=>{go('settings');}}><span className="avatar">{formattedName.slice(0,1).toUpperCase()}</span><span className="account-text"><strong>{user?.user_metadata?.full_name|| (isDemo?'Christian B. Aring (Demo)':user?.email)}</strong><small>{isDemo?'Demo workspace':'Personal account'}</small></span><Settings2 size={17}/></button>
+    <button className="account-button" onClick={()=>{go('settings');}}><span className="avatar">{avatarSrc?<img src={avatarSrc} alt="Your profile picture" />:formattedName.slice(0,1).toUpperCase()}</span><span className="account-text"><strong>{user?.user_metadata?.full_name|| (isDemo?'Christian B. Aring (Demo)':user?.email)}</strong><small>{isDemo?'Demo workspace':'Personal account'}</small></span><Settings2 size={17}/></button>
     {user&&<button type="button" className="sidebar-logout" onClick={()=>void signOut()} aria-label="Sign out of ResumeBuilder"><LogOut size={17}/> Log Out</button>}
    </div>
   </aside>
   <div className="main-area">
    <header className="topbar"><button className="mobile-menu icon-button" onClick={()=>setMobileNav(true)} aria-label="Open navigation menu" aria-expanded={mobileNav} aria-controls="mobile-workspace-nav"><Menu/></button>
     <div className="breadcrumbs">Workspace <ChevronRight size={15}/><strong>{title[section]}</strong></div>
-    <div className="top-actions"><div className="searchbox"><Search size={17}/><input placeholder="Search resumes..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')go('resumes');}}/></div><span className="top-separator"/><button onClick={()=>user?go('settings'):window.location.assign('/login')} className="profile-chip"><span className="avatar mini">{formattedName.slice(0,1).toUpperCase()}</span><span>{user?'My Account':'Demo Mode'}</span><ChevronDown size={14}/></button>{user&&<button type="button" className="topbar-logout" onClick={()=>void signOut()} aria-label="Log out of ResumeBuilder"><LogOut size={16}/><span className="topbar-logout-label">Log Out</span></button>}</div>
+    <div className="top-actions"><div className="searchbox"><Search size={17}/><input placeholder="Search resumes..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')go('resumes');}}/></div><span className="top-separator"/><div className="workspace-account-menu"><button type="button" onClick={()=>user?setProfileMenuOpen(open=>!open):window.location.assign('/login')} className="profile-chip" aria-haspopup={user?'menu':undefined} aria-expanded={user?profileMenuOpen:undefined}><span className="avatar mini">{avatarSrc?<img src={avatarSrc} alt="Your profile picture"/>:formattedName.slice(0,1).toUpperCase()}</span><span>{user?'My Account':'Demo Mode'}</span><ChevronDown size={14}/></button>{user&&profileMenuOpen&&<div className="workspace-account-dropdown" role="menu"><button type="button" role="menuitem" onClick={()=>go('settings')}><UserRound size={16}/> My Profile &amp; Settings</button><button type="button" role="menuitem" onClick={()=>go('settings')}><ShieldCheck size={16}/> Account Security</button><button type="button" role="menuitem" onClick={()=>void signOut()}><LogOut size={16}/> Sign Out</button></div>}</div>{user&&<button type="button" className="topbar-logout" onClick={()=>void signOut()} aria-label="Log out of ResumeBuilder"><LogOut size={16}/><span className="topbar-logout-label">Log Out</span></button>}</div>
    </header>
    <main className="content">
     {!ready&&<div className="inline-info"><LoaderCircle className="spin" size={18}/> Loading workspace…</div>}
