@@ -13,7 +13,7 @@ async function guarded(){
 }
 const err=(status:number,error:string)=>NextResponse.json({error},{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(){
- const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error);
+ const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error??'Admin authorization failed.');
  const db=guard.admin;
  const [users,resumes,ats,jobs,applications,profiles,events,ai]=await Promise.all([
   db.auth.admin.listUsers({page:1,perPage:200}),
@@ -33,7 +33,7 @@ export async function GET(){
 }
 export async function POST(req:NextRequest){
  const origin=req.headers.get('origin');if(origin&&origin!==req.nextUrl.origin)return err(403,'Invalid request origin.');
- const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error);
+ const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error??'Admin authorization failed.');
  let body:Record<string,unknown>;try{body=await req.json();}catch{return err(400,'Invalid JSON.');}
  if(!body||typeof body!=='object')return err(400,'Invalid request.');
  const db=guard.admin;
