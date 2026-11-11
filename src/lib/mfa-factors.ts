@@ -15,3 +15,12 @@ export function classifyFactors(data:MfaFactorList){
 export function requiresMfaChallenge(data:MfaFactorList,currentLevel:string|null|undefined){
  return classifyFactors(data).verified.length>0&&currentLevel!=='aal2';
 }
+
+/** This function deliberately has NO ability to delete verified factors.
+ * Only explicitly unverified enrollment attempts are eligible for cleanup.
+ */
+export async function removeUnverifiedFactors(factors:MfaFactor[],remove:(factorId:string)=>Promise<void>){
+ for(const factor of factors){
+  if(factor.status==='unverified')await remove(factor.id);
+ }
+}
