@@ -106,6 +106,31 @@ export default function Home(){
  useEffect(()=>{try{const cached=localStorage.getItem('resumebuilder:demo-cover-letter:v1');if(cached!==null)setDemoLetter(cached);}catch{}},[]);
  useEffect(()=>{if(!ready||!isDemo)return;try{localStorage.setItem('resumebuilder:demo-cover-letter:v1',demoLetter);}catch{}},[demoLetter,isDemo,ready]);
  const avatarSrc=accountAvatar(user,resumes,profilePhoto);
+ // Browsers can always take screenshots; for ordinary Print requests,
+ // hide demo previews before the print document is captured. Restore the UI
+ // afterwards so visitors can continue editing.
+ useEffect(()=>{
+  if(!isDemo)return;
+  const previous=new Map<HTMLElement,{display:string;priority:string}>();
+  const hide=()=>{
+   for(const element of document.querySelectorAll<HTMLElement>('.wizard-page--demo,.cover-letter-preview--demo')){
+    if(previous.has(element))continue;
+    previous.set(element,{display:element.style.getPropertyValue('display'),priority:element.style.getPropertyPriority('display')});
+    element.style.setProperty('display','none','important');
+   }
+  };
+  const restore=()=>{
+   for(const [element,style] of previous){
+    if(style.display)element.style.setProperty('display',style.display,style.priority);
+    else element.style.removeProperty('display');
+   }
+   previous.clear();
+  };
+  window.addEventListener('beforeprint',hide);
+  window.addEventListener('afterprint',restore);
+  return()=>{window.removeEventListener('beforeprint',hide);window.removeEventListener('afterprint',restore);restore();};
+ },[isDemo]);
+
  useEffect(()=>{
   const id=user?.id;
   let active=true;
