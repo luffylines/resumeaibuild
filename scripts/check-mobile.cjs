@@ -118,6 +118,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await adminPage.getByRole('dialog',{name:'Job editor'}).waitFor({state:'visible'});
   await adminPage.getByRole('button',{name:'Close'}).click();
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Activity Logs'}).click();
+  console.log('DEBUG ADMIN TAB',await adminPage.locator('.admin-sidebar button.selected').allTextContents(),(await adminPage.locator('.admin-main').innerText()).slice(0,900));
   await adminPage.getByRole('columnheader',{name:'IP Address'}).waitFor({state:'visible'});
   await adminPage.getByRole('columnheader',{name:'Device / Browser'}).waitFor({state:'visible'});
   await adminPage.getByLabel('Reporting period').selectOption('all');
