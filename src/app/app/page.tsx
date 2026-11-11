@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import {
  Activity,ArrowDownToLine,ArrowLeft,ArrowRight,BarChart3,BookOpen,BriefcaseBusiness,Check,CheckCircle2,
@@ -13,6 +13,7 @@ import {browserSupabase,configured} from '@/lib/supabase';
 import {emptyResume,sampleResume,sampleResumes,uid} from '@/lib/types';
 import type {Resume} from '@/lib/types';
 import {UNIQUE_RESUME_TEMPLATES,PHOTO_READY_TEMPLATES} from '@/lib/templates';
+import {cacheResumeDraft,cachedResumeDraft,discardCachedResumeDraft,isCacheNewer,latestCachedResumeDraft} from '@/lib/resume-autosave';
 import ResumeWizard from '@/components/resume-wizard';
 import InterviewStudio from '@/components/interview-studio';
 import SettingsPanel from '@/components/settings-panel';
@@ -80,7 +81,15 @@ export default function Home(){
  const [sentOtp,setSentOtp]=useState(false);
  const [showAuth,setShowAuth]=useState(false);
  const sb=useMemo(()=>browserSupabase(),[]);
- const activeResume=resumes.find(r=>r.id===selectedId)||resumes[0]||draft;
+ const scope=user?.id||'demo';
+ const [autosaveStatus,setAutosaveStatus]=useState<'idle'|'saving'|'local'|'synced'|'error'>('idle');
+ const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const syncVersion=useRef(0);
+ const syncQueue=useRef<Promise<void>>(Promise.resolve());
+ const lastDraft=useRef<{key:string;body:string}|null>(null);
+ const scopeRef=useRef(scope);scopeRef.current=scope;
+ const [formsLoadedFor,setFormsLoadedFor]=useState('');
+ const activeResume=draft.id===selectedId?draft:resumes.find(r=>r.id===selectedId)||resumes[0]||draft;
  const results=atsScore(activeResume,jobDescription);
  const formattedName=user?.user_metadata?.full_name?.split(' ')[0]||user?.email?.split('@')[0]||'Christian';
  const isDemo=!user;
@@ -92,11 +101,18 @@ export default function Home(){
     const rr=await (sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false});const role=await (sb as any).from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();setIsAdmin(!!role.data);
     if(rr.error)throw rr.error;
     const r=(rr.data||[]).map((x:{content:Resume})=>x.content);
-    setResumes(r);
-    if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}else{const blank=emptyResume();setDraft(blank);setSelectedId(blank.id);}
+    const cached=latestCachedResumeDraft(u.id);
+    const remote=cached?r.find((x:Resume)=>x.id===cached.id):null;
+    const chosen=cached&&isCacheNewer(cached,remote)?cached:r[0]||emptyResume();
+    setResumes(cached&&isCacheNewer(cached,remote)?[chosen,...r.filter((x:Resume)=>x.id!==chosen.id)]:r);
+    setDraft(chosen);setSelectedId(chosen.id);
    }else{
     const r=loadDemo('resumebuilder_resumes',sampleResumes);
-    setResumes(r);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
+    const cached=latestCachedResumeDraft('demo');
+    const old=cached?r.find((x:Resume)=>x.id===cached.id):null;
+    const chosen=cached&&isCacheNewer(cached,old)?cached:r[0]||emptyResume();
+    setResumes(cached&&isCacheNewer(cached,old)?[chosen,...r.filter((x:Resume)=>x.id!==chosen.id)]:r);
+    setIsAdmin(false);setDraft(chosen);setSelectedId(chosen.id);
    }
   }catch(e){setError(e instanceof Error?e.message:'Unable to load saved data.');}
   finally{setReady(true);}
@@ -105,10 +121,67 @@ export default function Home(){
   let active=true;
   if(!sb){void init(null);return;}
   void sb.auth.getUser().then(({data})=>{if(!active)return;setUser(data.user);void init(data.user);});
-  const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION')return;setTimeout(()=>{if(!active)return;setUser(session?.user||null);void init(session?.user||null);},0);});
+  const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')return;setTimeout(()=>{if(!active)return;setUser(session?.user||null);void init(session?.user||null);},0);});
   return ()=>{active=false;subscription.unsubscribe();};
  },[sb,init]);
  useEffect(()=>{if(ready&&!user)localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));},[ready,user,resumes]);
+
+ function cloudUpsert(item:Resume,owner:string){
+  const next=syncQueue.current.then(async()=>{
+   if(!sb||scopeRef.current!==owner)return 'Account changed';
+   const {error}=await (sb as any).from('resumes').upsert({
+    id:item.id,user_id:owner,title:item.title,content:item,updated_at:item.updatedAt
+   },{onConflict:'id'});
+   return error?.message||'';
+  });
+  syncQueue.current=next.then(()=>{},()=>{});
+  return next;
+ }
+ // Debounced cloud writes, with immediate per-account local backup.
+ useEffect(()=>{
+  if(!ready)return;
+  const key=scope+':'+draft.id;
+  const body=JSON.stringify({...draft,updatedAt:''});
+  const previous=lastDraft.current;lastDraft.current={key,body};
+  if(!previous||previous.key!==key||previous.body===body)return;
+  const item={...draft,updatedAt:new Date().toISOString()};
+  const stored=cacheResumeDraft(scope,item);
+  setResumes(prev=>[item,...prev.filter(r=>r.id!==item.id)]);
+  const version=++syncVersion.current;
+  if(syncTimer.current)clearTimeout(syncTimer.current);
+  if(sb&&user){
+   setAutosaveStatus('saving');
+   const owner=user.id;
+   syncTimer.current=setTimeout(()=>{
+    syncTimer.current=null;
+    void cloudUpsert(item,owner).then(error=>{
+     if(version===syncVersion.current&&scopeRef.current===owner)setAutosaveStatus(error?'error':'synced');
+    }).catch(()=>{if(version===syncVersion.current)setAutosaveStatus('error');});
+   },900);
+  }else setAutosaveStatus(stored?'local':'error');
+ },[draft,ready,scope,user,sb]);
+ useEffect(()=>()=>{if(syncTimer.current)clearTimeout(syncTimer.current);},[]);
+ useEffect(()=>{
+  if(!ready)return;
+  try{
+   const raw=localStorage.getItem('resumebuilder:forms:v1:'+scope);
+   if(raw){const v=JSON.parse(raw);
+    if(typeof v.jobDescription==='string')setJobDescription(v.jobDescription);
+    if(typeof v.letterRole==='string')setLetterRole(v.letterRole);
+    if(typeof v.letterCompany==='string')setLetterCompany(v.letterCompany);
+    if(typeof v.letterTone==='string')setLetterTone(v.letterTone);
+    if(typeof v.letterOutput==='string')setLetterOutput(v.letterOutput);
+   }
+  }catch{}
+  setFormsLoadedFor(scope);
+ },[ready,scope]);
+ useEffect(()=>{
+  if(!ready||formsLoadedFor!==scope)return;
+  try{localStorage.setItem('resumebuilder:forms:v1:'+scope,JSON.stringify({
+   jobDescription,letterRole,letterCompany,letterTone,letterOutput
+  }));}catch{}
+ },[ready,scope,formsLoadedFor,jobDescription,letterRole,letterCompany,letterTone,letterOutput]);
+
  const flash=(text:string)=>{setNotice(text);setError('');};
  const auditUser=(action:string,detail:string)=>{if(sb&&user)void fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,detail})}).catch(()=>{});};
  async function saveResume(r:Resume){
