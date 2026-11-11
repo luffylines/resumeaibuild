@@ -215,7 +215,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    const version=++utteranceVersion.current;
    const voice=new SpeechSynthesisUtterance(greeting+' Tap Start Personalized Interview when you are ready.');
    voiceUtteranceRef.current=voice;
-   applyInterviewerVoice(voice,window.speechSynthesis,pinnedVoiceRef);
+   applyInterviewerVoice(voice,window.speechSynthesis,pinnedVoiceRef.current);
    let didStart=false;
    voice.onstart=()=>{
     if(version!==utteranceVersion.current)return;
@@ -514,7 +514,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   const text=(intro?greeting+' Let us begin. ':'')+(overrideQuestions?.[question]||questions[question]);
   const utterance=new SpeechSynthesisUtterance(text);
   voiceUtteranceRef.current=utterance; // Safari can drop utterances without a retained reference.
-  applyInterviewerVoice(utterance,window.speechSynthesis,pinnedVoiceRef);
+  applyInterviewerVoice(utterance,window.speechSynthesis,pinnedVoiceRef.current);
   let didStart=false;
   // Voice selection is locked to one voiceURI for all ten questions.
   const clearTimer=()=>{
