@@ -4,23 +4,12 @@ import type {User} from '@supabase/supabase-js';
 import {Check,CheckCircle2,Copy,KeyRound,LoaderCircle,RotateCcw,ShieldCheck,ShieldOff,Smartphone,X} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 
-type Factor={id:string;friendly_name?:string;status?:string;factor_type?:string};
+import {classifyFactors} from '@/lib/mfa-factors';
+import type {MfaFactor as Factor,MfaFactorList as FactorList} from '@/lib/mfa-factors';
+
 type Pending={id:string;qr:string;secret:string};
 type Props={user:User|null;mode?:'settings'|'challenge';onVerified?:()=>void;onSignOut?:()=>Promise<void>};
-type FactorList={all?:Factor[];totp:Factor[]};
 
-/** SDK .totp generally represents enabled factors; the .all collection is
- * needed to find enrollment attempts left in 'unverified' state. Never treat
- * an unverified factor as enabled or delete a verified factor during retry.
- */
-function classifyFactors(data:FactorList){
- const all=Array.isArray(data.all)?data.all:data.totp;
- const totp=all.filter(f=>f.factor_type==='totp'||(!f.factor_type&&data.totp.some(x=>x.id===f.id)));
- return {
-  verified:totp.filter(f=>f.status==='verified'),
-  unverified:totp.filter(f=>f.status==='unverified')
- };
-}
 function qrSource(qr:string){
  if(qr.startsWith('data:image/svg+xml')||qr.startsWith('data:image/png'))return qr;
  if(qr.trimStart().startsWith('<svg'))return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(qr);
