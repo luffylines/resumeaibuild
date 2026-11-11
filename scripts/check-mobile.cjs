@@ -265,14 +265,28 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
    if(label==='Download DOCX'){
     const {execFileSync}=require('node:child_process');
-    const xml=execFileSync('unzip',['-p',await d.path(),'word/document.xml'],{encoding:'utf8'});
-    for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
-     if(!xml.toLowerCase().includes(marker.toLowerCase()))throw Error('Missing user-added content in DOCX: '+marker);
-    }
+    const files=execFileSync('unzip',['-Z','-1',await d.path()],{encoding:'utf8'});
+    if(!files.includes('word/media/image'))throw Error('Design-accurate DOCX did not include rendered resume page artwork');
    }
 
   }
 
+
+  // The separate editable export must preserve all entered text. The visual
+  // DOCX above deliberately uses rasterized artwork to match the live preview.
+  const editableEvent=photoPage.waitForEvent('download',{timeout:30000});
+  await photoPage.getByRole('button',{name:'Editable DOCX (simple layout)'}).click();
+  const editable=await editableEvent;
+  const {execFileSync}=require('node:child_process');
+  const editableXml=execFileSync('unzip',['-p',await editable.path(),'word/document.xml'],{encoding:'utf8'});
+  for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
+   if(!editableXml.toLowerCase().includes(marker.toLowerCase()))throw Error('Editable DOCX missing user-added content: '+marker);
+  }
+  const atsEvent=photoPage.waitForEvent('download',{timeout:30000});
+  await photoPage.getByRole('button',{name:'Text-based PDF (ATS)'}).click();
+  const atsPdf=await atsEvent;
+  if(fs.readFileSync(await atsPdf.path()).subarray(0,4).toString()!=='%PDF')throw Error('Text-based PDF was not generated');
+  console.log('PASS visual DOCX artwork plus separately editable DOCX and text PDF');
 
   // Check Canva handoff independently of Canva's external network response.
   await photoContext.route('https://www.canva.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<html><body>Canva PDF Editor (test stub)</body></html>'}));
