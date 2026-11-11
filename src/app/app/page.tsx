@@ -305,7 +305,7 @@ export default function Home(){
  return <div className="app-shell resume-client-shell">
   {mobileNav&&<button className="workspace-scrim" aria-label="Close sidebar navigation" onClick={()=>setMobileNav(false)}/>}
   <aside id="mobile-workspace-nav" className={'sidebar '+(mobileNav?'sidebar-open':'')}>
-   <div className="brand"><span className="brand-icon"><BrandMark size={20}/></span><span>Resume<span className="brand-bold">Builder</span></span><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
+   <div className="brand"><button type="button" className="workspace-brand-home" aria-label={user?"Go to my ResumeBuilder dashboard":"Go to ResumeBuilder home"} onClick={()=>user?go("dashboard"):window.location.assign("/")}><span className="brand-icon"><BrandMark size={49}/></span><span>Resume<span className="brand-bold">Builder</span></span></button><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
    <button className="create-button" onClick={startNew}><Plus size={17}/> Create New Resume <ArrowRight size={16}/></button>
    <div className="side-label">WORKSPACE</div>
    <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><span className="side-nav-icon"><Icon size={18} strokeWidth={1.9}/></span><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
