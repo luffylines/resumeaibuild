@@ -1,14 +1,14 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
-import type {JobApplication,Resume} from '@/lib/types';
+import type {Resume} from '@/lib/types';
 import {ArrowRight,Bell,Check,CheckCircle2,Cloud,Download,ExternalLink,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 import {GoogleIcon} from '@/components/brand-icons';
 type Tab='account'|'subscription'|'integrations'|'security'|'notifications';
-type Props={user:User|null;resumes:Resume[];applications:JobApplication[];signOut:()=>Promise<void>};
+type Props={user:User|null;resumes:Resume[];signOut:()=>Promise<void>};
 const menu:{id:Tab;label:string;icon:typeof UserRound}[]=[{id:'account',label:'Account',icon:UserRound},{id:'subscription',label:'Subscription',icon:WalletCards},{id:'integrations',label:'Integrations',icon:Cloud},{id:'security',label:'Security',icon:ShieldCheck},{id:'notifications',label:'Notifications',icon:Bell}];
-export default function SettingsPanel({user,resumes,applications,signOut}:Props){
+export default function SettingsPanel({user,resumes,signOut}:Props){
  const [tab,setTab]=useState<Tab>('account'),[name,setName]=useState(user?.user_metadata?.full_name||'Christian B. Aring'),[notice,setNotice]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [notify,setNotify]=useState<Record<string,boolean>>(()=>{if(typeof window==='undefined')return {interview:true,applications:true,product:false};try{return JSON.parse(localStorage.getItem('resume_notification_prefs')||'{"interview":true,"applications":true,"product":false}') as Record<string,boolean>;}catch{return {interview:true,applications:true,product:false};}});
  const sb=browserSupabase();
@@ -16,7 +16,7 @@ export default function SettingsPanel({user,resumes,applications,signOut}:Props)
  const providers=user?.app_metadata?.providers as string[]|undefined;
  const saveName=async()=>{if(!name.trim()){setError('Please enter your name.');return;}setBusy(true);setError('');try{if(user&&sb){const {error:e}=await sb.auth.updateUser({data:{full_name:name.trim()}});if(e)throw e;}else localStorage.setItem('resume_demo_name',name.trim());setNotice('Profile name saved. Refresh to see the updated account name.');}catch(e){setError(e instanceof Error?e.message:'Unable to update profile.');}finally{setBusy(false);}};
  const resetPassword=async()=>{if(!user?.email||!sb){setError('Sign in to request a password reset email.');return;}setBusy(true);setError('');try{const {error:e}=await sb.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+'/auth/reset'});if(e)throw e;setNotice('Password reset instructions sent to your email, if supported by the provider.');}catch(e){setError(e instanceof Error?e.message:'Unable to send reset email.');}finally{setBusy(false);}};
- const exportData=()=>{const json=JSON.stringify({exportedAt:new Date().toISOString(),resumes,applications},null,2);const obj=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(obj);const link=document.createElement('a');link.href=url;link.download='resumebuilder-my-data.json';link.click();URL.revokeObjectURL(url);};
+ const exportData=()=>{const json=JSON.stringify({exportedAt:new Date().toISOString(),resumes},null,2);const obj=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(obj);const link=document.createElement('a');link.href=url;link.download='resumebuilder-my-data.json';link.click();URL.revokeObjectURL(url);};
  const toggle=(key:string)=>{const next={...notify,[key]:!notify[key]};setNotify(next);localStorage.setItem('resume_notification_prefs',JSON.stringify(next));setNotice('Saved your local notification preference. Actual email notifications are not configured yet.');};
  return <div className="settings-v2"><div className="page-heading"><div><div className="eyebrow">MY ACCOUNT</div><h1>Settings</h1><p>Manage your account, subscription, and integrations.</p></div></div>
  <div className="settings-v2-layout"><nav className="settings-v2-nav">{menu.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>{setTab(n.id);setNotice('');setError('');}} className={tab===n.id?'selected':''}><span className="settings-tab-icon"><Icon size={18} strokeWidth={1.9}/></span>{n.label}<ArrowRight size={14}/></button>;})}</nav>

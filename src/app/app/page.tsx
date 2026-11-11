@@ -8,38 +8,28 @@ import {
  LayoutDashboard,Lightbulb,LoaderCircle,LogOut,Mail,Menu,MessageCircle,Plus,Search,Settings2,ShieldCheck,
  Sparkles,Target,Trash2,UploadCloud,UserRound,WalletCards,WandSparkles,X,Zap
 } from 'lucide-react';
-import {atsScore,jobFit} from '@/lib/ats';
+import {atsScore} from '@/lib/ats';
 import {browserSupabase,configured} from '@/lib/supabase';
-import {emptyResume,sampleResume,sampleResumes,sampleJobs,uid} from '@/lib/types';
-import type {Resume,JobApplication,ApplicationStatus} from '@/lib/types';
+import {emptyResume,sampleResume,sampleResumes,uid} from '@/lib/types';
+import type {Resume} from '@/lib/types';
+import {UNIQUE_RESUME_TEMPLATES,PHOTO_READY_TEMPLATES} from '@/lib/templates';
 import ResumeWizard from '@/components/resume-wizard';
-import JobBoard from '@/components/job-board';
 import InterviewStudio from '@/components/interview-studio';
 import SettingsPanel from '@/components/settings-panel';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
 
-type Section='dashboard'|'builder'|'resumes'|'ats'|'jobs'|'interview'|'tracker'|'letters'|'templates'|'settings';
+type Section='dashboard'|'builder'|'resumes'|'ats'|'interview'|'letters'|'templates'|'settings';
 type AiTask='summary'|'interview'|'coverletter'|'resume';
 const nav:{id:Section;label:string;icon:typeof LayoutDashboard}[]=[
  {id:'dashboard',label:'Dashboard',icon:LayoutDashboard},
  {id:'builder',label:'Build Resume',icon:FilePlus2},
  {id:'ats',label:'ATS Checker',icon:ShieldCheck},
- {id:'jobs',label:'Job Matching',icon:BriefcaseBusiness},
  {id:'interview',label:'Interview Practice',icon:MessageCircle},
  {id:'letters',label:'Cover Letter',icon:Mail},
  {id:'templates',label:'Templates',icon:BookOpen},
- {id:'tracker',label:'Job Tracker',icon:ClipboardCheck},
  {id:'settings',label:'Settings',icon:Settings2}
-];
-const starters:JobApplication[]=[
- {id:'a1111111-1111-4111-8111-111111111111',company:'Abiotiz Tech (sample)',role:'Web Developer',status:'Applied',link:'',appliedAt:'2026-11-08'},
- {id:'a2222222-2222-4222-8222-222222222222',company:'PHINMA (sample)',role:'IT Support Specialist',status:'Applied',link:'',appliedAt:'2026-11-06'},
- {id:'a3333333-3333-4333-8333-333333333333',company:'Globe (sample)',role:'Frontend Developer',status:'Interview',link:'',appliedAt:'2026-11-02'},
- {id:'a4444444-4444-4444-8444-444444444444',company:'PLDT (sample)',role:'Junior IT',status:'Interview',link:'',appliedAt:'2026-10-29'},
- {id:'a5555555-5555-4555-8555-555555555555',company:'Accenture (sample)',role:'IT Associate',status:'Offer',link:'',appliedAt:'2026-10-20'},
- {id:'a6666666-6666-4666-8666-666666666666',company:'Converge (sample)',role:'IT Intern',status:'Rejected',link:'',appliedAt:'2026-10-17'}
 ];
 const questions=[
  'Tell me about yourself and your professional background.',
@@ -67,8 +57,6 @@ export default function Home(){
  },[mobileNav]);
  useEffect(()=>{const initial=new URLSearchParams(window.location.search).get('section');if(initial==='templates')setSection('templates');},[]);
  const [resumes,setResumes]=useState<Resume[]>(sampleResumes);
- const [applications,setApplications]=useState<JobApplication[]>(starters);
- const [jobsData,setJobsData]=useState(sampleJobs);
  const [draft,setDraft]=useState<Resume>(sampleResume);
  const [selectedId,setSelectedId]=useState(sampleResume.id);
  const [user,setUser]=useState<User|null>(null);
@@ -77,7 +65,6 @@ export default function Home(){
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
  const [search,setSearch]=useState('');
- const [jobLimit,setJobLimit]=useState(6);
  const [jobDescription,setJobDescription]=useState('');
  const [letterRole,setLetterRole]=useState('');
  const [letterCompany,setLetterCompany]=useState('');
@@ -92,7 +79,6 @@ export default function Home(){
  const [otp,setOtp]=useState('');
  const [sentOtp,setSentOtp]=useState(false);
  const [showAuth,setShowAuth]=useState(false);
- const [newApp,setNewApp]=useState({company:'',role:'',status:'Applied' as ApplicationStatus,link:''});
  const sb=useMemo(()=>browserSupabase(),[]);
  const activeResume=resumes.find(r=>r.id===selectedId)||resumes[0]||draft;
  const results=atsScore(activeResume,jobDescription);
@@ -103,14 +89,14 @@ export default function Home(){
  const init=useCallback(async(u:User|null)=>{
   try{
    if(sb&&u){
-    const [rr,aa,jj]=await Promise.all([(sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false}),(sb as any).from('job_applications').select('content').eq('user_id',u.id).order('created_at',{ascending:false}),(sb as any).from('job_posts').select('id,role,company,location,type,keywords').eq('is_active',true)]);setJobsData(jj.error?[]:jj.data||[]);const role=await (sb as any).from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();setIsAdmin(!!role.data);
-    if(rr.error)throw rr.error;if(aa.error)throw aa.error;
+    const rr=await (sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false});const role=await (sb as any).from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();setIsAdmin(!!role.data);
+    if(rr.error)throw rr.error;
     const r=(rr.data||[]).map((x:{content:Resume})=>x.content);
-    setResumes(r);setApplications((aa.data||[]).map((x:{content:JobApplication})=>x.content));
+    setResumes(r);
     if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}else{const blank=emptyResume();setDraft(blank);setSelectedId(blank.id);}
    }else{
-    const r=loadDemo('resumebuilder_resumes',sampleResumes);const a=loadDemo('resumebuilder_apps',starters);
-    setResumes(r);setApplications(a);const adminPreview=loadDemo<{jobs:(typeof sampleJobs[number]&{is_active:boolean})[]}|null>('resume_admin_preview',null);setJobsData(adminPreview?.jobs?adminPreview.jobs.filter(j=>j.is_active):sampleJobs);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
+    const r=loadDemo('resumebuilder_resumes',sampleResumes);
+    setResumes(r);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
    }
   }catch(e){setError(e instanceof Error?e.message:'Unable to load saved data.');}
   finally{setReady(true);}
@@ -122,7 +108,7 @@ export default function Home(){
   const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION')return;setTimeout(()=>{if(!active)return;setUser(session?.user||null);void init(session?.user||null);},0);});
   return ()=>{active=false;subscription.unsubscribe();};
  },[sb,init]);
- useEffect(()=>{if(ready&&!user){localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));localStorage.setItem('resumebuilder_apps',JSON.stringify(applications));}},[ready,user,resumes,applications]);
+ useEffect(()=>{if(ready&&!user)localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));},[ready,user,resumes]);
  const flash=(text:string)=>{setNotice(text);setError('');};
  const auditUser=(action:string,detail:string)=>{if(sb&&user)void fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,detail})}).catch(()=>{});};
  async function saveResume(r:Resume){
@@ -134,14 +120,6 @@ export default function Home(){
   if(!window.confirm('Delete this resume?'))return;
   if(sb&&user){const {error:e}=await (sb as any).from('resumes').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
   const remaining=resumes.filter(x=>x.id!==id);setResumes(remaining);if(selectedId===id){const other=remaining[0]||emptyResume();setSelectedId(other.id);setDraft(other);}flash('Resume deleted.');auditUser('resume_deleted',id);
- }
- async function saveApp(a:JobApplication){
-  if(sb&&user){const {error:e}=await (sb as any).from('job_applications').upsert({id:a.id,user_id:user.id,content:a});if(e){setError(e.message);return;}}
-  setApplications(prev=>[a,...prev.filter(x=>x.id!==a.id)]);flash('Application updated.');auditUser('application_saved',a.company+' · '+a.role+' · '+a.status);
- }
- async function removeApp(id:string){
-  if(sb&&user){const {error:e}=await (sb as any).from('job_applications').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
-  setApplications(prev=>prev.filter(x=>x.id!==id));flash('Application removed.');auditUser('application_deleted',id);
  }
  function startNew(){const r=emptyResume();setDraft(r);setSelectedId(r.id);go('builder');}
  function editResume(r:Resume){setDraft(structuredClone(r));setSelectedId(r.id);go('builder');}
@@ -168,7 +146,7 @@ export default function Home(){
   if(e)setError(e.message);else{setShowAuth(false);flash('You are signed in.');}
  }
  async function signOut(){if(sb){const {error:e}=await sb.auth.signOut();if(e){setError(e.message);return;}}setUser(null);await init(null);flash('Signed out.');}
- const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',jobs:'Job Matching',interview:'Interview Practice',tracker:'Job Tracker',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
+ const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',interview:'Interview Practice',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
  const filteredResumes=resumes.filter(r=>(r.title+' '+r.targetRole).toLowerCase().includes(search.toLowerCase()));
  return <div className="app-shell resume-client-shell">
   {mobileNav&&<button className="workspace-scrim" aria-label="Close sidebar navigation" onClick={()=>setMobileNav(false)}/>}
@@ -202,11 +180,11 @@ export default function Home(){
     {!!error&&<div role="alert" className="alert alert-error">{error}<button onClick={()=>setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
     {!!notice&&<div role="status" className="alert alert-success"><CheckCircle2 size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
     {isDemo&&ready&&<div className="demo-notice"><Sparkles size={16}/><span>Preview mode: sample content and local browser storage. Connect a new Supabase project for private account storage and AI features.</span><button onClick={()=>window.location.assign('/signup')}>Connect account <ArrowRight size={14}/></button></div>}
-    {section==='dashboard'&&<div className="client-dashboard"><div className="client-dashboard-heading"><div><h1>Welcome back, <span>{cap(formattedName)}!</span> 👋</h1><p>AI Resume Builder &amp; Job Matching</p><small>Automatic resume generation, ATS checking, interview practice, at job recommendations.</small></div><div className="dashboard-main-actions">{(!configured||isAdmin)&&<a className="dashboard-admin-link" href="/admin/login"><ShieldCheck size={16}/> {configured?'Admin Login':'Admin Login / Preview'} <ArrowRight size={15}/></a>}<button className="purple-button" onClick={startNew}><Plus size={17}/> Create New Resume</button></div></div>
-<div className="client-stat-grid">{[{label:'My Resumes',value:resumes.length,icon:FileText,go:'resumes' as Section},{label:'ATS Score (Latest)',value:currentScore+'%',icon:ShieldCheck,go:'ats' as Section},{label:'Job Matches',value:jobsData.length,icon:BriefcaseBusiness,go:'jobs' as Section},{label:'Applications',value:applications.length,icon:Mail,go:'tracker' as Section}].map(stat=>{const Icon=stat.icon;return <button key={stat.label} className="client-stat" onClick={()=>go(stat.go)}><span className="client-stat-icon"><Icon size={23}/></span><div><small>{stat.label}</small><strong>{stat.value}</strong></div></button>})}</div>
-<div className="client-feature-row"><section className="client-purple-hero"><div><h2>Create a Professional<br/> Resume with AI ✨</h2><p>Build an ATS-friendly resume in minutes with the power of AI.</p><button onClick={startNew}>Create Resume <ArrowRight size={17}/></button></div><div className="client-resume-graphic"><div><span className="mock-avatar">{formattedName.slice(0,1)}</span><strong>{user?.user_metadata?.full_name||'Christian B. Aring'}</strong><small>IT Professional</small><i/><i/><i/><i/></div><span><CheckCircle2 size={15}/> ATS Ready</span></div></section><section className="client-progress"><h3>Your Progress</h3><div className="client-progress-ring" style={{'--progress':currentScore+'%'} as React.CSSProperties}><strong>{currentScore}%</strong></div><div className="client-check"><CheckCircle2/> Build a Resume</div><div className="client-check"><CheckCircle2/> Run ATS Check</div><div className="client-check"><span/> Practice Interview</div><div className="client-check"><span/> Apply for Jobs</div></section></div>
-<div className="client-shortcuts"><h2>Quick Actions</h2><div>{([{id:'builder',label:'Build Resume',desc:'Generate with AI',icon:FileText},{id:'ats',label:'ATS Checker',desc:'Improve your score',icon:ShieldCheck},{id:'jobs',label:'Job Matching',desc:'Find relevant jobs',icon:BriefcaseBusiness},{id:'interview',label:'Interview Practice',desc:'AI mock interview',icon:MessageCircle},{id:'letters',label:'Cover Letter',desc:'Create in seconds',icon:Mail}] as const).map(a=>{const Icon=a.icon;return <button key={a.id} onClick={()=>go(a.id)}><span><Icon size={22}/></span><span><strong>{a.label}</strong><small>{a.desc}</small></span></button>})}</div></div>
-<div className="client-bottom-row"><section className="panel"><div className="panel-head"><div><FolderOpen size={18}/><strong>Recent Resumes</strong></div><button onClick={()=>go('resumes')}>View all <ArrowRight size={14}/></button></div>{resumes.slice(0,3).map(r=><button className="doc-row" key={r.id} onClick={()=>editResume(r)}><span className="doc-icon"><FileText size={18}/></span><span className="doc-name"><strong>{r.title}</strong><small>Resume · Edited {new Date(r.updatedAt).toLocaleDateString()}</small></span><span className="doc-score">ATS: {atsScore(r).score}%</span></button>)}{!resumes.length&&<p className="empty-small">Create your first resume</p>}</section><section className="panel client-next-steps"><div className="panel-head"><div><Flag size={18}/><strong>Next Steps</strong></div></div><button onClick={()=>go('interview')}><CheckCircle2 size={18}/><span><strong>Prepare for interview</strong><small>Practice with AI based on your target role.</small></span></button><button onClick={()=>go('ats')}><Target size={18}/><span><strong>Optimize resume keywords</strong><small>Improve your ATS score (current: {currentScore}%).</small></span></button><button onClick={()=>go('jobs')}><BriefcaseBusiness size={18}/><span><strong>Apply to matched jobs</strong><small>{jobsData.length} {isDemo?'sample':'published'} opportunities.</small></span></button></section></div>
+    {section==='dashboard'&&<div className="client-dashboard"><div className="client-dashboard-heading"><div><h1>Welcome back, <span>{cap(formattedName)}!</span> 👋</h1><p>AI Resume Builder &amp; Career Tools</p><small>Professional resumes, ATS checks, interview practice, at modern photo-ready templates.</small></div><div className="dashboard-main-actions">{(!configured||isAdmin)&&<a className="dashboard-admin-link" href="/admin/login"><ShieldCheck size={16}/> {configured?'Admin Login':'Admin Login / Preview'} <ArrowRight size={15}/></a>}<button className="purple-button" onClick={startNew}><Plus size={17}/> Create New Resume</button></div></div>
+<div className="client-stat-grid">{[{label:'My Resumes',value:resumes.length,icon:FileText,go:'resumes' as Section},{label:'ATS Score (Latest)',value:currentScore+'%',icon:ShieldCheck,go:'ats' as Section},{label:'Templates',value:UNIQUE_RESUME_TEMPLATES.length,icon:BookOpen,go:'templates' as Section},{label:'Photo Layouts',value:UNIQUE_RESUME_TEMPLATES.filter(t=>PHOTO_READY_TEMPLATES.has(t.id)).length,icon:UserRound,go:'templates' as Section}].map(stat=>{const Icon=stat.icon;return <button key={stat.label} className="client-stat" onClick={()=>go(stat.go)}><span className="client-stat-icon"><Icon size={23}/></span><div><small>{stat.label}</small><strong>{stat.value}</strong></div></button>})}</div>
+<div className="client-feature-row"><section className="client-purple-hero"><div><h2>Create a Professional<br/> Resume with AI ✨</h2><p>Build an ATS-friendly resume in minutes with the power of AI.</p><button onClick={startNew}>Create Resume <ArrowRight size={17}/></button></div><div className="client-resume-graphic"><div><span className="mock-avatar">{formattedName.slice(0,1)}</span><strong>{user?.user_metadata?.full_name||'Christian B. Aring'}</strong><small>IT Professional</small><i/><i/><i/><i/></div><span><CheckCircle2 size={15}/> ATS Ready</span></div></section><section className="client-progress"><h3>Your Progress</h3><div className="client-progress-ring" style={{'--progress':currentScore+'%'} as React.CSSProperties}><strong>{currentScore}%</strong></div><div className="client-check"><CheckCircle2/> Build a Resume</div><div className="client-check"><CheckCircle2/> Run ATS Check</div><div className="client-check"><span/> Practice Interview</div><div className="client-check"><span/> Choose a Template</div></section></div>
+<div className="client-shortcuts"><h2>Quick Actions</h2><div>{([{id:'builder',label:'Build Resume',desc:'Generate with AI',icon:FileText},{id:'ats',label:'ATS Checker',desc:'Improve your score',icon:ShieldCheck},{id:'templates',label:'Templates',desc:'Photo-ready designs',icon:BookOpen},{id:'interview',label:'Interview Practice',desc:'AI mock interview',icon:MessageCircle},{id:'letters',label:'Cover Letter',desc:'Create in seconds',icon:Mail}] as const).map(a=>{const Icon=a.icon;return <button key={a.id} onClick={()=>go(a.id)}><span><Icon size={22}/></span><span><strong>{a.label}</strong><small>{a.desc}</small></span></button>})}</div></div>
+<div className="client-bottom-row"><section className="panel"><div className="panel-head"><div><FolderOpen size={18}/><strong>Recent Resumes</strong></div><button onClick={()=>go('resumes')}>View all <ArrowRight size={14}/></button></div>{resumes.slice(0,3).map(r=><button className="doc-row" key={r.id} onClick={()=>editResume(r)}><span className="doc-icon"><FileText size={18}/></span><span className="doc-name"><strong>{r.title}</strong><small>Resume · Edited {new Date(r.updatedAt).toLocaleDateString()}</small></span><span className="doc-score">ATS: {atsScore(r).score}%</span></button>)}{!resumes.length&&<p className="empty-small">Create your first resume</p>}</section><section className="panel client-next-steps"><div className="panel-head"><div><Flag size={18}/><strong>Next Steps</strong></div></div><button onClick={()=>go('interview')}><CheckCircle2 size={18}/><span><strong>Prepare for interview</strong><small>Practice with AI based on your target role.</small></span></button><button onClick={()=>go('ats')}><Target size={18}/><span><strong>Optimize resume keywords</strong><small>Improve your ATS score (current: {currentScore}%).</small></span></button><button onClick={()=>go('templates')}><BookOpen size={18}/><span><strong>Explore resume templates</strong><small>Choose a professional layout with an optional photo.</small></span></button></section></div>
 </div>}
 {section==='builder'&&<ResumeWizard draft={draft} setDraft={setDraft} save={saveResume} runAI={requestAI} busy={busy} preview={<ResumeDocument resume={draft}/>} onBack={()=>go('resumes')}/>}
 {section==='templates'&&<TemplateGallery resume={(draft.name||draft.summary||draft.skills)?draft:sampleResume} onUse={(id,accentColor,backgroundColor)=>{setDraft(old=>({...old,template:id,accentColor,backgroundColor}));go('builder');flash('Layout and colors selected. You can change them before saving.');}}/>}
@@ -218,14 +196,13 @@ export default function Home(){
     {section==='ats'&&<><div className="page-heading"><div><div className="eyebrow">SMART RESUME ANALYSIS</div><h1>ATS Resume Checker</h1><p>Understand your resume’s completeness and its keywords relative to a job description.</p></div></div><div className="two-column"><div className="panel padded"><h2 className="card-heading"><FileCheck2 size={20}/> Scan your resume</h2><label className="field"><span>Select resume</span><select value={activeResume.id} onChange={e=>setSelectedId(e.target.value)}>{resumes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}{resumes.length===0&&<option value={draft.id}>Unsaved resume</option>}</select></label><label className="field"><span>Paste job description (optional)</span><textarea rows={13} value={jobDescription} onChange={e=>setJobDescription(e.target.value)} placeholder="Paste a job description to compare relevant keywords against your resume..."/></label><div className="inline-info"><Lightbulb size={17}/> This is a heuristic readiness score, not an official ATS pass probability.</div><button className="black-button" onClick={()=>void logATS()}>Analyze Resume <ArrowRight size={16}/></button></div>
      <div className="panel padded"><h2 className="card-heading"><BarChart3 size={20}/> Your Analysis</h2><div className="ats-summary"><div className="ats-circle" style={{'--score':results.score+'%'} as React.CSSProperties}><strong>{results.score}<small>/100</small></strong></div><div><h3>{results.score>=80?'Looking good!':results.score>=55?'Good progress':'Room to improve'}</h3><p>Estimated content and keyword readiness based on your entered information.</p></div></div><h3 className="minor-title">Recommendations</h3><div className="tips">{results.suggestions.map((s,i)=><div key={i}><CheckCircle2 size={18}/><p>{s}</p></div>)}</div>{jobDescription&&<><h3 className="minor-title">Keywords found</h3><div className="tag-list">{results.matched.length?results.matched.map(x=><span className="tag tag-green" key={x}>{x}</span>):<small>No matching terms yet.</small>}</div><h3 className="minor-title">Potential missing keywords</h3><div className="tag-list">{results.missing.map(x=><span className="tag" key={x}>{x}</span>)}</div></>}<button className="outline-button" onClick={()=>editResume(activeResume)}>Improve Resume <ArrowRight size={16}/></button></div></div>
     </>}
-    {section==='jobs'&&<><div className="page-heading"><div><div className="eyebrow">EXPLORE OPPORTUNITIES</div><h1>Job Recommendations</h1><p>Compare your skills with {isDemo?'sample roles':'published job listings'}.</p></div><button className="outline-button" onClick={()=>go('tracker')}><BriefcaseBusiness size={16}/> My applications</button></div><div className="jobs-top panel"><div><Target size={18}/><strong>Matching with: {activeResume.title}</strong></div><span>Skills-based estimates · {isDemo?'Sample roles':'Published jobs'}</span></div><div className="job-list">{jobsData.length===0&&<div className="panel padded">No job posts have been published yet.</div>}{[...jobsData].sort((a,b)=>jobFit(activeResume,b)-jobFit(activeResume,a)).slice(0,jobLimit).map(j=><div className="panel job-card" key={j.id}><div className="job-company"><span className="company-mark">{j.company.slice(0,1)}</span><div><h3>{j.role}</h3><p>{j.company} · {j.location} · {j.type}</p></div></div><div className="tag-list">{j.keywords.slice(0,4).map(k=><span className="tag" key={k}>{cap(k)}</span>)}</div><div className="job-card-right"><span className="job-match">{jobFit(activeResume,j)}% skill match</span><button className="outline-button compact" onClick={()=>void saveApp({id:uid(),company:isDemo?j.company+' (sample)':j.company,role:j.role,status:'Applied',link:'',appliedAt:new Date().toISOString().slice(0,10)})}>Track job <Plus size={15}/></button></div></div>)}</div>{jobsData.length>jobLimit&&<button className="outline-button show-more-jobs" onClick={()=>setJobLimit(v=>v+6)}>Show More Jobs <ArrowRight size={16}/></button>}<p className="muted-copy">{isDemo?'These are samples, not live vacancies.':'Published jobs should be verified directly with the employer.'}</p></>}
     {section==='interview'&&<InterviewStudio targetRole={activeResume.targetRole} runAI={requestAI} busy={busy}/>}
-{section==='tracker'&&<JobBoard applications={applications} save={saveApp} remove={removeApp}/>}
+
 {section==='letters'&&<><div className="page-heading"><div><div className="eyebrow">CREATE TAILORED LETTERS</div><h1>Cover Letter</h1><p>Generate a tailored cover letter for your job application.</p></div></div><div className="two-column cover-letter-layout">
  <section className="panel padded"><h2 className="card-heading"><Mail size={19}/> Job Details</h2><Field label="Job Title" value={letterRole} onChange={setLetterRole} placeholder="e.g. Web Developer"/><Field label="Company (Optional)" value={letterCompany} onChange={setLetterCompany} placeholder="e.g. Abiotiz Tech"/><label className="field"><span>Choose Your Resume</span><select value={activeResume.id} onChange={e=>setSelectedId(e.target.value)}>{resumes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}{!resumes.length&&<option value={draft.id}>{draft.title}</option>}</select></label><label className="field"><span>Tone</span><select value={letterTone} onChange={e=>setLetterTone(e.target.value)}>{['Professional','Confident','Friendly','Concise','Formal'].map(x=><option key={x}>{x}</option>)}</select></label><button className="purple-button cover-generate-button" disabled={!letterRole.trim()||busy} onClick={async()=>{const out=await requestAI('coverletter',JSON.stringify({targetRole:letterRole,company:letterCompany,tone:letterTone,resume:activeResume}));if(out)setLetterOutput(out);}}><Sparkles size={17}/>{busy?'Generating...':'Generate with AI'} <ArrowRight size={16}/></button><p className="muted-copy">AI uses your resume information. Always proofread the final letter for accuracy.</p></section>
  <section className="panel padded cover-letter-preview"><div className="panel-head"><div><FileText size={18}/><strong>Generated Cover Letter</strong></div><div>{letterOutput&&<><button onClick={()=>{void navigator.clipboard.writeText(letterOutput).then(()=>flash('Cover letter copied.')).catch(()=>setError('Clipboard access unavailable.'));}}><Copy size={15}/> Copy</button><button onClick={()=>{const file=new Blob([letterOutput],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download='resumebuilder-cover-letter.txt';a.click();URL.revokeObjectURL(url);}}><ArrowDownToLine size={15}/> Download</button></>}</div></div>{letterOutput?<textarea aria-label="Editable generated cover letter" rows={17} className="cover-letter-text" value={letterOutput} onChange={e=>setLetterOutput(e.target.value)}/>:<div className="cover-letter-placeholder"><span>Dear Hiring Manager,</span><p>I am writing to express my interest in the position. My experience and relevant skills would make me a strong candidate for this opportunity.</p><i/><i/><i/><p>Sincerely,<br/>{activeResume.name||'Your Name'}</p></div>}</section></div></>}
 
-{section==='settings'&&<SettingsPanel user={user} resumes={resumes} applications={applications} signOut={signOut}/>}
+{section==='settings'&&<SettingsPanel user={user} resumes={resumes} signOut={signOut}/>}
    </main>
   </div>
   {showAuth&&<div className="modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setShowAuth(false);}}><div className="auth-modal" role="dialog" aria-modal="true" aria-label="Sign in"><button className="modal-close icon-button" onClick={()=>setShowAuth(false)}><X size={19}/></button><span className="brand-icon"><FileText size={21}/></span><h2>Welcome to ResumeBuilder</h2><p>Sign in to keep resumes private and unlock AI-powered tools.</p>{!configured&&<div className="inline-info">No Supabase project is connected yet. You can continue using the demo.</div>}
