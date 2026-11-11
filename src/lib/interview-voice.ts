@@ -27,7 +27,7 @@ export function applyInterviewerVoice(
  utterance.rate=0.98;
  utterance.pitch=1;
  utterance.volume=1;
- const choices=engine.getVoices()||[];
+ const choices=typeof engine.getVoices==='function'?engine.getVoices()||[]:[];
  if(!locked.chosen){
   locked.chosen=true;
   locked.current=selectInterviewerVoice(choices)?.voiceURI||null;
