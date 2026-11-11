@@ -106,6 +106,15 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await speechPage.waitForFunction(()=>window.__resumeSpeechMock.spoken.length===2);
   await speechPage.waitForFunction(()=>!!window.__resumeSpeechMock.recognizer&&window.__resumeSpeechMock.recognizer.lang==='fil-PH');
   await speechPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value==='');
+  // Voice controls should be discoverable without searching for the small robot icon.
+  await speechPage.getByRole('button',{name:'Start speaking'}).waitFor({state:'visible'});
+  await speechPage.getByRole('button',{name:'Record with AI backup'}).click();
+  await speechPage.getByText('Sign in to your ResumeBuilder account').waitFor({state:'visible'});
+  await speechPage.getByRole('button',{name:'Start speaking'}).click();
+  await speechPage.waitForFunction(()=>window.__resumeSpeechMock.recognizer!==null);
+  await speechPage.getByRole('button',{name:'Stop speaking'}).click();
+  await speechPage.getByText('Microphone paused. Your transcript has been kept.').waitFor({state:'visible'});
+  console.log('PASS discoverable voice controls, stop & retry, authenticated AI fallback notice');
   console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
   await speechContext.close();
 
