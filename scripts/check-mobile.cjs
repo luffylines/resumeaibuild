@@ -113,10 +113,11 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const adminPage=await adminContext.newPage();
   await open(adminPage,'/admin/preview');
   await adminPage.getByRole('heading',{name:'Admin Dashboard'}).waitFor({state:'visible'});
-  await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Job Posts'}).click();
-  await adminPage.getByRole('button',{name:'Add Job Post'}).click();
-  await adminPage.getByRole('dialog',{name:'Job editor'}).waitFor({state:'visible'});
-  await adminPage.getByRole('button',{name:'Close'}).click();
+  // Job Matching, Job Tracker and Job Posts were intentionally removed.
+  if(await adminPage.getByText('Job Posts',{exact:true}).count())throw Error('Legacy Job Posts menu must not be visible');
+  await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Users'}).click();
+  await adminPage.getByRole('heading',{name:'Admin Dashboard'}).count(); // page retains the admin app shell
+  await adminPage.getByRole('button',{name:'Download Excel'}).waitFor({state:'visible'});
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Activity Logs'}).click();
   await adminPage.locator('.admin-table-scroll th').filter({hasText:/^IP Address$/}).waitFor({state:'visible'});
   await adminPage.locator('.admin-table-scroll th').filter({hasText:/^Device \/ Browser$/}).waitFor({state:'visible'});
@@ -176,6 +177,8 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.getByRole('button',{name:'Save Draft'}).click();
   await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Generate'}).click();
   await photoPage.locator('.rt-wizard-template-grid button').last().waitFor({state:'visible'});
+  if(await photoPage.locator('.rt-wizard-template-grid > button').first().locator('.rd-portrait').count()!==1)throw Error('Photo-ready designs must be listed first in builder');
+
   await photoPage.locator('.rt-wizard-template-grid').getByRole('button',{name:/Creative Sidebar/}).click();
   for(const name of requiredSections){
    const visible=await photoPage.locator('.wizard-preview .resume-document .rd-section h3').getByText(name,{exact:true}).count();
@@ -238,10 +241,15 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await canvaTab.close();
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
-  if(count!==20)throw Error('Expected 20 unique resume layout cards, found '+count);
+  const photoFirst=await photoPage.locator('.rt-template-card').first().locator('.rd-portrait').count();
+  if(photoFirst!==1)throw Error('Photo-ready resume layouts must appear first in the gallery');
+  const pageText=await photoPage.locator('.side-nav').innerText();
+  if(pageText.includes('Job Matching')||pageText.includes('Job Tracker'))throw Error('Removed user menu items reappeared');
+
+  if(count!==32)throw Error('Expected 32 unique resume layout cards, found '+count);
   await photoContext.close();
-  console.log('PASS photo upload/remove, dynamic CV sections, template switching and 20 unique resume layout cards');
-  console.log('PASS Admin Dashboard preview, navigation and job post editor');
+  console.log('PASS photo upload/remove, dynamic CV sections, template switching and 32 unique resume layout cards');
+  console.log('PASS Admin Dashboard preview, navigation and reports (without Job Posts)');
 
   console.log('PASS: '+checked+' responsive viewport suites');
  }finally{await browser.close();}
