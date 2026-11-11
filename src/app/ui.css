@@ -824,3 +824,14 @@
  .resume-client-shell .workspace-brand-home .brand-icon{width:45px!important;height:45px!important;min-width:45px}
  .resume-client-shell .workspace-brand-home .brand-icon img{width:43px!important;height:43px!important}
 }
+
+/* Clear distinction: enrollment is NOT enabled until Supabase accepts a TOTP. */
+.mfa-status-pending{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #e1cff7;border-radius:9px;background:#f8f2ff;color:#6841ad;font-size:11px;font-weight:800}
+.mfa-manual-key{display:flex;align-items:center;gap:10px;max-width:100%;flex-wrap:wrap}
+.mfa-manual-key code{letter-spacing:1px;font-weight:750;user-select:all}
+.mfa-manual-key button{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #d7c6e9;border-radius:8px;color:#6032c8;padding:8px 10px;font-size:12px;font-weight:750}
+.mfa-verify input{font-variant-numeric:tabular-nums;transition:border-color .18s,box-shadow .18s,background .18s}
+.mfa-verify input:focus{outline:none;border-color:#7949e3;box-shadow:0 0 0 3px #9256ff25}
+.mfa-verify input.mfa-code-invalid,.mfa-verify input.mfa-code-invalid:focus{border-color:#ed536b!important;background:#fff5f6!important;color:#b92943!important;box-shadow:0 0 0 3px #f64a6422!important}
+.mfa-verify input.mfa-code-verified{border-color:#20a36b!important;background:#f2fcf6!important;color:#0f774d!important;box-shadow:0 0 0 3px #32bf7525!important}
+@media(max-width:520px){.mfa-manual-key{width:100%}.mfa-manual-key code{font-size:11px;word-break:break-word}}
