@@ -118,3 +118,21 @@ Color-only variations are grouped so the gallery shows **20 distinct layout card
 Under **Build Resume → Generate**, the four aligned export buttons are: **Download PDF** (selectable text, no browser URL/date/footer), **Download DOCX** (editable paragraphs/headings for Word and Canva import), **Download PNG** (high-resolution image of the resume), and **Print** (native browser dialog). Browser print headers and footers are controlled by the browser: choose A4 and turn OFF 'Headers and footers' if your print preview displays a localhost URL, date or page counter. The page CSS also requests zero printer margins, but some browsers/printers can override this. The PDF and DOCX files are generated from the resume data rather than a screenshot, to keep the text editable. Fonts and complex layout may reflow when importing DOCX or PDF into Canva; verify the design after importing.
 
 PNG is a flattened image, so Canva cannot edit its resume text. For Canva, upload the PDF (select text if Canva makes the elements editable) or DOCX, then adjust elements in Canva. No direct Canva API account connection is configured.
+
+
+## Optional CV sections and template-aware content (2026-11-11)
+
+In **Build Resume → Skills** add and edit content beyond the standard name, profile summary, work experience, education and skills:
+
+- Certifications & Training (title, issuer, year, details)
+- Professional References (name, role, company, contact — only with permission)
+- Languages and proficiency
+- Projects / portfolio
+- Awards & achievements
+- Volunteer experience
+- Additional Information
+- Any custom section (your own title and editable content)
+
+Templates suggest sections in a different order based on their design (for example, graduate layouts lead with education, creative sidebars can put skills/languages in the side column, and editorial layouts emphasize experience). These are **suggestions, not restrictions**. If you enter information that a template does not normally include, the populated section appears automatically in the live preview and **PDF, editable DOCX, PNG and Print** exports. If no information is entered, that section is hidden from the final resume; blank placeholders are not exported. Changing templates does not delete section data. The same shared section registry drives HTML previews and document exports, preventing mismatched missing content.
+
+Existing JSON resumes remain valid: all extra arrays and the Additional Information text are optional. Both demo browser storage and the dedicated Supabase \`resumes.content\` JSONB field persist the extra sections without a database schema migration. All details are user-provided; nothing is invented as qualifications or references. Review your resume before applying.
