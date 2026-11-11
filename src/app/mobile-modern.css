@@ -310,3 +310,34 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:840px){.dashboard-main-actions{width:100%;justify-content:flex-start}.dashboard-main-actions a,.dashboard-main-actions button{min-height:44px}}
 @media(max-width:700px){.sidebar-admin-area{margin-top:15px}.resume-client-shell .sidebar{overflow-y:auto;overscroll-behavior:contain}.resume-client-shell .sidebar-bottom{margin-top:auto}}
 @media(max-width:460px){.dashboard-main-actions{flex-direction:column;align-items:stretch}.dashboard-main-actions>a,.dashboard-main-actions>button{width:100%}}
+
+
+/* Interview studio voice controls: live transcript, language selection, speaking cues. */
+.interview-language-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-1px 0 13px}
+.interview-language-row>label{display:inline-flex;align-items:center;gap:7px;color:#5d4c79;font-size:11px;font-weight:800}
+.interview-language-row>label svg{color:#7539e9}
+.interview-language-row select{color:#3d3156;border:1px solid #e5dbf7;border-radius:9px;background:#fcfaff;min-height:40px;font-size:12px;padding:9px 12px;max-width:100%}
+.interview-live-status{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;color:#92869c;background:#f4f1f7;padding:8px 11px;border:1px solid #ede8f3;border-radius:22px;white-space:nowrap}
+.interview-live-status.active{color:#098b4b;background:#ecfff3;border-color:#bceacb}
+.interview-live-status.active svg{animation:voice-pulse 1.5s ease-in-out infinite}
+.interview-bot.bot-talking .bot-screen i{animation:bot-speech .38s ease-in-out infinite alternate}
+.interview-bot.bot-talking .bot-screen span{animation-duration:.65s}
+.interview-stage-top>span:last-child{transition:background .2s}
+.interview-answer-card>textarea{min-height:165px;display:block;overflow-wrap:break-word;font-family:inherit}
+.interview-answer-card>textarea:focus{outline:3px solid #a68bff33;outline-offset:1px}
+.interview-inline-message{line-height:1.65;background:#f5f0ff;border:1px solid #e9dcff;padding:11px 13px;border-radius:9px;color:#6f519d}
+.interview-stage-actions>button{touch-action:manipulation}
+@keyframes voice-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(1.14)}}
+@keyframes bot-speech{from{height:7px;border-radius:50%;}to{height:19px;border-radius:9px;}}
+@media(max-width:620px){
+ .interview-language-row{align-items:stretch}
+ .interview-language-row>label{width:100%}
+ .interview-language-row select{flex:1;min-width:0}
+ .interview-live-status{margin-left:0}
+ .interview-stage-top,.interview-answer-card{padding-inline:15px}
+ .interview-bot{transform:translateY(16px) scale(.9)}
+}
+@media(prefers-reduced-motion:reduce){
+ .interview-bot.bot-talking .bot-screen i,
+ .interview-live-status.active svg{animation:none!important}
+}
