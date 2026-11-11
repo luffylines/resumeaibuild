@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
-import {ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LoaderCircle,Lock,LogIn,UserRoundPlus,Mail,ShieldCheck,Sparkles,Clock3,RefreshCw} from 'lucide-react';
+import {useEffect,useRef,useState} from 'react';
+import {ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LoaderCircle,Lock,LogIn,UserRoundPlus,Mail,ShieldCheck,Sparkles,Clock3,RefreshCw,ClipboardPaste} from 'lucide-react';
 import {browserSupabase,configured} from '@/lib/supabase';
 import {authReturnUrl} from '@/lib/auth-return-url';
 import {BrandMark,GoogleIcon} from '@/components/brand-icons';
@@ -46,7 +46,11 @@ export default function AuthForm({mode}:{mode:Mode}){
  // OTP is available, but the built-in Supabase mail quota is extremely low.
  const [otpMode,setOtpMode]=useState(false);
  const [code,setCode]=useState('');
+ const [otpState,setOtpState]=useState<'idle'|'invalid'|'verified'>('idle');
+ const [pasteNotice,setPasteNotice]=useState('');
+ const otpInputRef=useRef<HTMLInputElement|null>(null);
  const [sent,setSent]=useState(false);
+ const waitingForCode=sent&&(otpMode||mode==='signup');
  const [remaining,setRemaining]=useState(0);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
@@ -97,7 +101,7 @@ export default function AuthForm({mode}:{mode:Mode}){
       ...(mode==='signup'?{data:{full_name:name.trim()}}:{})}
    });
    if(e)throw e;
-   startCooldown();setRemaining(readCooldown());setSent(true);setCode('');
+   startCooldown();setRemaining(readCooldown());setSent(true);setCode('');setOtpState('idle');
    setMessage('Email code requested. Check your inbox or spam folder. If no email arrives, the Supabase Auth SMTP service may still need configuration.');
    return;
   }
@@ -110,7 +114,8 @@ export default function AuthForm({mode}:{mode:Mode}){
    if(data.session){
     await logLogin();window.location.assign('/app');
    }else{
-    setMessage('Registration submitted. Please check your email for the confirmation link before signing in. If no email arrives, your Supabase SMTP sender needs to be configured.');
+    startCooldown();setRemaining(readCooldown());setSent(true);setCode('');setOtpState('idle');
+    setMessage('We sent a verification message to your email. Enter the 6-digit code to activate your account. Your ResumeBuilder Supabase Confirm Sign Up template must include the six-digit {{ .Token }} variable.');
    }
   }else{
    const {error:e}=await sb.auth.signInWithPassword({email:normalized,password});
@@ -120,14 +125,36 @@ export default function AuthForm({mode}:{mode:Mode}){
  });
  const verify=()=>run(async()=>{
   if(!sb)throw Error('Supabase is not connected.');
-  const {error:e}=await sb.auth.verifyOtp({email:email.trim().toLowerCase(),token:code.trim(),type:'email'});
-  if(e)throw e;
-  await logLogin();window.location.assign('/app');
+  if(!/^\\d{6}$/.test(code))throw Error('Enter a six-digit verification code.');
+  try{
+   const {error:e}=await sb.auth.verifyOtp({email:email.trim().toLowerCase(),token:code.trim(),type:'email'});
+   if(e)throw e;
+   setOtpState('verified');
+   setMessage('Email verified! Opening your ResumeBuilder dashboard…');
+   await logLogin();
+   await new Promise(resolve=>setTimeout(resolve,700));
+   window.location.assign('/app');
+  }catch(e){
+   setOtpState('invalid');
+   throw e;
+  }
  });
  function switchMethod(){
-  setOtpMode(v=>!v);setSent(false);setCode('');setPassword('');
+  setOtpMode(v=>!v);setSent(false);setCode('');setPassword('');setOtpState('idle');
   setError('');setMessage('');
  }
+ const pasteCode=async()=>{
+  try{
+   if(!navigator.clipboard?.readText)throw Error('Clipboard access is unavailable.');
+   const text=await navigator.clipboard.readText();
+   const found=text.match(/(?:^|\\D)(\\d{6})(?=\\D|$)/)?.[1]||text.replace(/\\D/g,'').slice(0,6);
+   if(found.length!==6){setPasteNotice('The clipboard does not contain a six-digit code. Copy the digits from your email, then paste.');otpInputRef.current?.focus();return;}
+   setCode(found);setOtpState('idle');setError('');setPasteNotice('Code pasted. Select Verify Code to continue.');
+  }catch{
+   setPasteNotice('Your browser blocked reading the clipboard. Long-press the code box, then choose Paste.');
+   otpInputRef.current?.focus();
+  }
+ };
  return <main className="auth-screen">
   <Link className="auth-back-brand" href="/"><span className="public-logo-mark"><BrandMark size={18}/></span> ResumeBuilder</Link>
   <section className="auth-story">
@@ -158,26 +185,46 @@ export default function AuthForm({mode}:{mode:Mode}){
      <button type="button" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?'Hide password':'Show password'}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button>
     </div>
    </label>}
-   {otpMode&&sent&&<label className="auth-input">6-digit verification code
-    <div className="otp-code-box">
-     <input id="resume-otp" inputMode="numeric" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} autoComplete="one-time-code" aria-label="Six-digit email verification code"/>
-     <div aria-hidden="true" className="otp-six">{Array.from({length:6},(_,i)=><span key={i}>{code[i]||'·'}</span>)}</div>
+   {waitingForCode&&<div className="auth-otp-field">
+    <div className="auth-otp-heading"><label htmlFor="resume-otp">6-digit email verification code</label><span>{otpState==='verified'?'Verified':otpState==='invalid'?'Try again':'Secure verification'}</span></div>
+    <div className={'otp-code-box otp-state-'+otpState}>
+     <input id="resume-otp" ref={otpInputRef} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
+      value={code} onChange={e=>{setCode(e.target.value.replace(/\\D/g,'').slice(0,6));setOtpState('idle');setError('');setPasteNotice('');}}
+      onPaste={e=>{const value=e.clipboardData.getData('text');const digits=value.match(/(?:^|\\D)(\\d{6})(?=\\D|$)/)?.[1]||value.replace(/\\D/g,'').slice(0,6);if(digits){e.preventDefault();setCode(digits);setOtpState('idle');setError('');setPasteNotice('Code pasted.');}}}
+      autoComplete="one-time-code" aria-label="Six-digit email verification code" aria-invalid={otpState==='invalid'} aria-describedby="otp-help"/>
+     <div aria-hidden="true" className="otp-six">{Array.from({length:6},(_,i)=><span className={code[i]?'filled':''} key={i}>{code[i]||'·'}</span>)}</div>
     </div>
-   </label>}
+    <div className="auth-otp-assist"><p id="otp-help">{otpState==='invalid'?'That code was not accepted. Check your email and try again.':otpState==='verified'?'The code was confirmed by Supabase.':'Copy the code from your email and paste it here, or type all six digits.'}</p>
+     <button type="button" className="auth-otp-paste" disabled={busy||otpState==='verified'} onClick={()=>void pasteCode()}><ClipboardPaste size={16}/> Paste code</button>
+    </div>
+    {pasteNotice&&<div className="auth-otp-paste-notice" role="status">{pasteNotice}</div>}
+   </div>}
    {!otpMode&&mode==='login'&&<div className="auth-forgot-link"><Link href="/forgot-password">Forgot password?</Link></div>}
    {error&&<div role="alert" className="auth-error">{error}</div>}
    {message&&<div role="status" className="auth-success">{message}</div>}
-   {otpMode&&remaining>0&&<div className="auth-cooldown" role="status"><Clock3 size={15}/> New email code available in {remaining}s. You can still enter a code already received.</div>}
-   <button className="public-primary auth-submit" disabled={busy||!configured||!email.trim()||(!otpMode&&password.length<8)||(otpMode&&sent&&code.length!==6)||(otpMode&&!sent&&remaining>0)}
-    onClick={()=>void(otpMode&&sent?verify():submit())}>
-    {busy?<LoaderCircle size={18} className="spin"/>:otpMode&&sent?<ShieldCheck size={17}/>:mode==='signup'?<Mail size={17}/>:<KeyRound size={17}/>}
-    {busy?'Working…':otpMode?(sent?'Verify OTP':remaining>0?'Wait '+remaining+'s':'Send OTP Code'):mode==='signup'?'Create Account':'Log In'}
+   {waitingForCode&&remaining>0&&<div className="auth-cooldown" role="status"><Clock3 size={15}/> New email code available in {remaining}s. You can still enter a code already received.</div>}
+   <button className="public-primary auth-submit" disabled={busy||!configured||!email.trim()||(!waitingForCode&&!otpMode&&password.length<8)||(waitingForCode&&code.length!==6)||(otpMode&&!sent&&remaining>0)}
+    onClick={()=>void(waitingForCode?verify():submit())}>
+    {busy?<LoaderCircle size={18} className="spin"/>:waitingForCode?<ShieldCheck size={17}/>:mode==='signup'?<Mail size={17}/>:<KeyRound size={17}/>}
+    {busy?'Working…':waitingForCode?'Verify Code':otpMode?(remaining>0?'Wait '+remaining+'s':'Send OTP Code'):mode==='signup'?'Create Account':'Log In'}
     <ArrowRight size={17}/>
    </button>
-   {otpMode&&sent&&<button type="button" className="auth-resend" disabled={busy||remaining>0} onClick={()=>{setSent(false);setCode('');setMessage('Enter your email and request a new code.');}}>
-    <RefreshCw size={15}/>{remaining>0?'Resend code in '+remaining+'s':'Request another code'}
+   {waitingForCode&&<button type="button" className="auth-resend" disabled={busy||remaining>0} onClick={()=>void run(async()=>{
+    if(!sb)throw Error('Supabase is not connected.');
+    const address=email.trim().toLowerCase();
+    if(otpMode){
+     const {error:e}=await sb.auth.signInWithOtp({email:address,options:{shouldCreateUser:mode==='signup',emailRedirectTo:authReturnUrl('/auth/callback')}});
+     if(e)throw e;
+    }else{
+     const {error:e}=await sb.auth.resend({type:'signup',email:address,options:{emailRedirectTo:authReturnUrl('/auth/callback')}});
+     if(e)throw e;
+    }
+    setCode('');setOtpState('idle');startCooldown();setRemaining(readCooldown());
+    setMessage('A new code has been requested. Check your inbox and spam folder.');
+   })}>
+    <RefreshCw size={15}/>{remaining>0?'Resend code in '+remaining+'s':'Resend verification code'}
    </button>}
-   <button type="button" className="auth-mode-switch" disabled={busy} onClick={switchMethod}>{otpMode?'Use email and password instead':'Use an email OTP instead'}</button>
+   {!waitingForCode&&<button type="button" className="auth-mode-switch" disabled={busy} onClick={switchMethod}>{otpMode?'Use email and password instead':'Use an email OTP instead'}</button>}
    <div className="auth-switch">{mode==='signup'?<>Already have an account? <Link href="/login">Log In</Link></>:<>New to ResumeBuilder? <Link href="/signup">Create an account</Link></>}</div>
    <p className="auth-help"><ShieldCheck size={14}/> Confirmation and OTP emails are sent through Supabase Auth. Connect Resend as custom SMTP to deliver them.</p>
    <Link className="auth-demo-link" href="/app">Explore demo workspace <ArrowRight size={14}/></Link>
