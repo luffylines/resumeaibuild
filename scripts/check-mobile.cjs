@@ -362,6 +362,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await draftPage.reload({waitUntil:'networkidle'});
   await draftPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
   await draftPage.getByText('Current Question (1/10)').waitFor({state:'visible'});
+  await draftPage.waitForFunction(()=>document.querySelector('textarea[aria-label="Your Answer"]')?.value.includes('incident management'),{timeout:8000});
   if(!(await draftPage.getByLabel('Your Answer').inputValue()).includes('incident management'))throw Error('Interview transcript lost after page reload');
   await draftContext.close();
   console.log('PASS autosave: resume input, wizard stage/prompt and interview transcript persist on navigation and refresh');
