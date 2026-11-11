@@ -53,6 +53,8 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [interim,setInterim]=useState(false);
  const [cloudRecording,setCloudRecording]=useState(false);
  const [cloudBusy,setCloudBusy]=useState(false);
+ const [mobileVoice,setMobileVoice]=useState(false);
+ const audioUploadRef=useRef<HTMLInputElement|null>(null);
  const recognitionRef=useRef<BrowserRecognition|null>(null);
  const cloudRecorderRef=useRef<MediaRecorder|null>(null);
  const cloudStreamRef=useRef<MediaStream|null>(null);
@@ -125,6 +127,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  useEffect(()=>{
   const browser=window as RecognitionBrowser;
   setSupported(!!(browser.SpeechRecognition||browser.webkitSpeechRecognition));
+  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||
+   (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  setMobileVoice(mobile);
  },[]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
  useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
@@ -143,7 +148,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   if(recognitionRef.current)return;
   const browser=window as RecognitionBrowser;
   const Ctor=browser.SpeechRecognition||browser.webkitSpeechRecognition;
-  if(!Ctor){listeningWanted.current=false;setSupported(false);setMessage('Speech-to-text is unavailable in this browser. Try an updated Chrome browser or type your answer.');return;}
+  if(!Ctor){listeningWanted.current=false;setSupported(false);setMessage('Browser dictation is unavailable. Use Record Answer (AI) or Upload Audio on your phone.');return;}
   const base=answerRef.current.trim();
   try{
    const rec=new Ctor();
@@ -225,18 +230,72 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   cloudStreamRef.current=null;cloudChunksRef.current=[];
   setCloudRecording(false);
  }
+
+ const mobileVoiceHelp='On Android/iPhone, use Record Answer (AI) for reliable transcription. Audio is sent to your configured AI provider only after you tap Stop & Transcribe.';
+ function getAudioMime(file:File|Blob):string{
+  const mime=(file.type||'').split(';')[0].toLowerCase();
+  if(mime)return mime;
+  if(file instanceof File){
+   const ext=file.name.split('.').pop()?.toLowerCase();
+   if(ext==='m4a')return 'audio/x-m4a';
+   if(ext==='mp4')return 'audio/mp4';
+   if(ext==='webm')return 'audio/webm';
+   if(ext==='ogg')return 'audio/ogg';
+   if(ext==='mp3')return 'audio/mpeg';
+   if(ext==='wav')return 'audio/wav';
+  }
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)?'audio/mp4':'audio/webm';
+ }
+ async function transcribeAudio(file:File|Blob,version:number){
+  if(version!==cloudVersionRef.current)return;
+  if(file.size<800){setMessage('Audio recording was empty. Check your mobile microphone permission and try again.');return;}
+  if(file.size>2_500_000){setMessage('Recording is too large (max 2.5 MB). Record a shorter answer.');return;}
+  setCloudBusy(true);
+  setMessage('Uploading recorded audio securely for transcription…');
+  try{
+   const mime=getAudioMime(file);
+   const ext=mime.includes('mp4')?'mp4':mime.includes('m4a')?'m4a':mime.includes('ogg')?'ogg':mime.includes('wav')?'wav':mime.includes('mpeg')||mime.includes('mp3')?'mp3':'webm';
+   const data=new FormData();
+   // Browser recordings may include codec parameters; File preserves its MIME type.
+   data.append('audio',new File([file],'interview.'+ext,{type:mime}), 'interview.'+ext);
+   data.append('language',languageRef.current);
+   const response=await fetch('/api/transcribe',{method:'POST',body:data,credentials:'same-origin'});
+   const json=await response.json().catch(()=>({error:'Invalid transcription response.'}));
+   if(!response.ok)throw Error(json.error||'Transcription is unavailable.');
+   if(version!==cloudVersionRef.current)return;
+   const text=String(json.transcript||'').trim();
+   if(!text)throw Error('No speech detected. Try again in a quieter place.');
+   setAnswerText([answerRef.current.trim(),text].filter(Boolean).join(' '));
+   setMessage('Transcription added to Your Answer. Review the words for accuracy before continuing.');
+  }catch(error){
+   if(version===cloudVersionRef.current)setMessage(error instanceof Error?error.message:'Transcription failed. Check your connection.');
+  }finally{
+   if(version===cloudVersionRef.current)setCloudBusy(false);
+  }
+ }
+ function uploadRecordedAudio(file:File|undefined){
+  if(!file)return;
+  if(!signedIn){setMessage('Sign in before uploading an audio answer for AI transcription.');return;}
+  cancelCloud();stopMic();
+  void transcribeAudio(file,cloudVersionRef.current);
+  if(audioUploadRef.current)audioUploadRef.current.value='';
+ }
  async function toggleCloud(){
   if(cloudRecording){
-   if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);
-   if(cloudRecorderRef.current?.state==='recording')cloudRecorderRef.current.stop();
+   if(cloudTimeoutRef.current){clearTimeout(cloudTimeoutRef.current);cloudTimeoutRef.current=null;}
+   const recorder=cloudRecorderRef.current;
+   if(recorder?.state==='recording'){
+    try{recorder.stop();}catch{setMessage('Unable to stop recording. Use Upload Audio instead.');}
+   }
    setCloudRecording(false);
-   setMessage('Recording saved. Transcribing with AI…');
+   setMessage('Recording stopped. Transcribing your spoken answer…');
    return;
   }
-  if(!signedIn){setMessage('Sign in to your ResumeBuilder account to use AI audio transcription. Browser microphone transcription remains free.');return;}
+  if(!signedIn){setMessage('Sign in to ResumeBuilder to use voice recording and AI transcription.');return;}
+  if(cloudBusy)return;
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
-   setMessage('Audio recording is unavailable in this browser. Try updated Chrome/Edge or type your answer.');
-   return;
+   setMessage('This mobile browser cannot record audio directly. Choose Upload Audio and select a recording from your phone.');
+   audioUploadRef.current?.click();return;
   }
   cancelCloud();
   stopMic();
@@ -248,48 +307,48 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   try{
    recordingStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
    if(version!==cloudVersionRef.current){recordingStream.getTracks().forEach(t=>t.stop());return;}
-   const options=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m));
-   const recorder=options?new MediaRecorder(recordingStream,{mimeType:options,audioBitsPerSecond:64000}):new MediaRecorder(recordingStream,{audioBitsPerSecond:64000});
-   cloudStreamRef.current=recordingStream;cloudRecorderRef.current=recorder;cloudChunksRef.current=[];
+   const apple=/iPad|iPhone|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+   const candidates=apple?['audio/mp4','audio/webm;codecs=opus','audio/webm']:['audio/webm;codecs=opus','audio/webm','audio/mp4'];
+   const selected=typeof MediaRecorder.isTypeSupported==='function'?candidates.find(m=>MediaRecorder.isTypeSupported(m)):undefined;
+   let recorder:MediaRecorder;
+   try{
+    recorder=new MediaRecorder(recordingStream,selected?{mimeType:selected,audioBitsPerSecond:64000}:{audioBitsPerSecond:64000});
+   }catch{
+    // Some iOS releases reject bitrate/codec options despite supporting recording.
+    recorder=new MediaRecorder(recordingStream);
+   }
+   cloudStreamRef.current=recordingStream;
+   cloudRecorderRef.current=recorder;
+   cloudChunksRef.current=[];
    recorder.ondataavailable=event=>{if(event.data.size>0)cloudChunksRef.current.push(event.data);};
-   recorder.onerror=()=>{cancelCloud();setCloudBusy(false);setMessage('Recording stopped unexpectedly. Check your microphone and try again.');};
+   recorder.onerror=()=>{cancelCloud();setCloudBusy(false);setMessage('Mobile audio recorder failed. Try Upload Audio or enable microphone access in browser settings.');};
    recorder.onstop=()=>{
     if(cloudTimeoutRef.current){clearTimeout(cloudTimeoutRef.current);cloudTimeoutRef.current=null;}
     if(cloudRecorderRef.current!==recorder||version!==cloudVersionRef.current)return;
     cloudRecorderRef.current=null;
-    cloudStreamRef.current?.getTracks().forEach(t=>t.stop());cloudStreamRef.current=null;
+    cloudStreamRef.current?.getTracks().forEach(t=>t.stop());
+    cloudStreamRef.current=null;
     setCloudRecording(false);
-    const blob=new Blob(cloudChunksRef.current,{type:recorder.mimeType||'audio/webm'});
+    const mime=recorder.mimeType||selected||(apple?'audio/mp4':'audio/webm');
+    const blob=new Blob(cloudChunksRef.current,{type:mime});
     cloudChunksRef.current=[];
-    if(blob.size<800){setMessage('No audio was recorded. Check your mic and try again.');return;}
-    if(blob.size>2_500_000){setMessage('Audio was too large. Record a shorter answer.');return;}
-    setCloudBusy(true);
-    const data=new FormData();
-    data.append('audio',blob,'interview.'+(blob.type.includes('mp4')?'mp4':'webm'));
-    data.append('language',languageRef.current);
-    void fetch('/api/transcribe',{method:'POST',body:data})
-     .then(async res=>{const json=await res.json().catch(()=>({error:'Invalid transcription response.'}));if(!res.ok)throw Error(json.error||'Transcription unavailable.');return json.transcript as string;})
-     .then(transcript=>{
-      if(version!==cloudVersionRef.current)return;
-      const words=String(transcript||'').trim();
-      if(!words)throw Error('No words detected. Speak clearly and try again.');
-      setAnswerText([answerRef.current.trim(),words].filter(Boolean).join(' '));
-      setMessage('AI transcription added to Your Answer. Review and correct any errors before requesting feedback.');
-     })
-     .catch(error=>{if(version===cloudVersionRef.current)setMessage(error instanceof Error?error.message:'Could not transcribe audio.');})
-     .finally(()=>{if(version===cloudVersionRef.current)setCloudBusy(false);});
+    void transcribeAudio(blob,version);
    };
-   recorder.start(250);
+   recorder.start();
    setCloudRecording(true);
-   setMessage('Recording privately for up to 40 seconds. Press Stop & transcribe to send audio securely to your configured AI provider.');
-   cloudTimeoutRef.current=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},40000);
+   setMessage('Recording your answer. Tap Stop & Transcribe when finished (maximum 35 seconds).');
+   // Stop automatically so uploads stay small on mobile networks.
+   cloudTimeoutRef.current=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},35000);
   }catch(error){
    recordingStream?.getTracks().forEach(t=>t.stop());
    cancelCloud();
-   setMessage(error instanceof Error&&error.name==='NotAllowedError'?'Microphone permission denied. Allow microphone access in your browser site settings and Windows privacy settings.':'Could not start recording. Check your microphone settings.');
+   setMessage(error instanceof Error&&error.name==='NotAllowedError'
+    ?'Microphone permission denied. On iPhone: Settings → Safari → Microphone; on Android: Chrome site settings → Microphone. Then retry.'
+    :'Audio recording could not start. Try Upload Audio instead, or check browser microphone permission.');
   }
  }
  function toggleMic(){
+  if(mobileVoice){void toggleCloud();return;}
   if(listeningWanted.current){stopMic();setMessage('Microphone paused. Your transcript has been kept.');return;}
   // Do not accidentally transcribe the robot's own voice.
   utteranceVersion.current++;
@@ -418,8 +477,8 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   <div className="interview-studio-grid">
    <section className="interview-stage-panel"><div className="interview-stage-top"><span><span className="live-dot"/> AI Interviewer</span><span>{speaking?'Asking Question':microphone?'Listening':'Practice Mode'}</span></div>
     <div className="interview-visual">{camera?<video ref={video} autoPlay playsInline muted aria-label="Your private camera preview"/>:<div className={'interview-bot '+(speaking?'bot-talking':'')}><div className="bot-antenna"/><div className="bot-head"><div className="bot-screen"><span/><span/><i/></div></div><div className="bot-neck"/><div className="bot-torso"><span/></div><div className="bot-left-arm"/><div className="bot-right-arm"/></div>}</div>
-    <div className="interview-stage-actions"><button className={microphone?'active':''} onClick={toggleMic} aria-label={microphone?'Stop microphone':'Start microphone transcription'} title={microphone?'Pause transcript':'Speak and transcribe your answer'}>{microphone?<MicOff size={19}/>:<Mic size={19}/>}</button><button className="hangup" onClick={reset} aria-label="Reset interview practice" title="Reset practice"><X size={21}/></button><button className={camera?'active':''} onClick={()=>void toggleCamera()} disabled={cameraLoading} aria-label={camera?'Turn off camera':'Turn on local camera preview'} title="Local camera preview only">{camera?<VideoOff size={19}/>:<Video size={19}/>}</button></div>
-    <div className="interview-stage-caption"><ShieldCheck size={14}/> Browser dictation uses your browser's speech service. AI backup uploads audio only after you choose Record with AI.</div>
+    <div className="interview-stage-actions"><button className={microphone||cloudRecording?'active':''} onClick={toggleMic} disabled={cloudBusy||completed} aria-label={mobileVoice?(cloudRecording?'Stop and transcribe recording':'Record answer with AI'):(microphone?'Stop microphone':'Start microphone transcription')} title={mobileVoice?'Record answer then transcribe':'Speak and transcribe your answer'}>{microphone||cloudRecording?<MicOff size={19}/>:<Mic size={19}/>}</button><button className="hangup" onClick={reset} aria-label="Reset interview practice" title="Reset practice"><X size={21}/></button><button className={camera?'active':''} onClick={()=>void toggleCamera()} disabled={cameraLoading} aria-label={camera?'Turn off camera':'Turn on local camera preview'} title="Local camera preview only">{camera?<VideoOff size={19}/>:<Video size={19}/>}</button></div>
+    <div className="interview-stage-caption"><ShieldCheck size={14}/> {mobileVoice?mobileVoiceHelp:'Browser dictation uses your browser\'s speech service. AI backup uploads audio only when you choose to record.'}</div>
    </section>
    <section className="interview-coach-panel"><span className="interview-count">Current Question ({index+1}/{QUESTIONS.length})</span><h2>{QUESTIONS[index]}</h2><div className="interview-resume-selector"><label htmlFor="interview-resume-choice"><BookOpen size={15}/> Practice using resume</label>
     <select id="interview-resume-choice" value={currentResume?.id||''} onChange={e=>changeResume(e.target.value)} disabled={busy||cloudBusy||cloudRecording}>
@@ -442,12 +501,14 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    <div className="interview-autosave-notice" role="status"><CheckCircle2 size={15}/>{sessionSaveFailed?'Could not auto-save on this device. Check browser storage.':sessionSavedAt?'Interview progress auto-saved on this device':'Interview progress saves automatically on this device'}</div>
    <div className="interview-language-row"><label htmlFor="interview-language"><Languages size={16}/> Speech language</label>
     <select id="interview-language" value={language} onChange={e=>{const nextLanguage=e.target.value;languageRef.current=nextLanguage;setLanguage(nextLanguage);if(listeningWanted.current){stopMic();setMessage('Language changed. Tap the microphone button to start again.');}}}><option value="en-US">English (US)</option><option value="fil-PH">Filipino / Tagalog</option><option value="en-PH">English (Philippines)</option></select>
-    <span role="status" className={'interview-live-status '+(microphone?'active':'')}><AudioLines size={15}/>{cloudRecording?'Recording for AI…':cloudBusy?'Transcribing audio…':speaking?'Bot speaking':microphone?(interim?'Transcribing live…':'Listening…'):'Microphone off'}</span>
+    <span role="status" className={'interview-live-status '+(microphone?'active':'')}><AudioLines size={15}/>{cloudRecording?'Recording answer…':cloudBusy?'Transcribing audio…':speaking?'Bot speaking':microphone?(interim?'Transcribing live…':'Listening…'):mobileVoice?'Ready to record':'Microphone off'}</span>
    </div>
    <div className="interview-transcription-tools">
-    <button type="button" className={'interview-voice-primary '+(microphone?'active':'')} onClick={toggleMic} disabled={cloudRecording||cloudBusy} aria-label={microphone?'Stop speaking':'Start speaking'}>{microphone?<MicOff size={17}/>:<Mic size={17}/>} {microphone?'Stop Listening':'Start Speaking'}</button>
-    <button type="button" className={'interview-cloud-button '+(cloudRecording?'active':'')} onClick={()=>void toggleCloud()} disabled={cloudBusy} aria-label={cloudRecording?'Stop and transcribe recording':'Record with AI backup'}><CloudUpload size={17}/>{cloudBusy?'Transcribing…':cloudRecording?'Stop & Transcribe':'Record with AI (backup)'}</button>
-    <span className="interview-voice-help">{signedIn?'AI backup uses your configured Groq/Gemini key and is limited to 15 recordings per day.':'AI backup requires sign-in; browser dictation needs no API key.'}</span>
+    <button type="button" className={'interview-voice-primary '+(microphone||cloudRecording?'active':'')} onClick={toggleMic} disabled={cloudBusy||completed} aria-label={mobileVoice?(cloudRecording?'Stop and transcribe recording':'Record answer with AI'):(microphone?'Stop speaking':'Start speaking')}>{microphone||cloudRecording?<MicOff size={17}/>:<Mic size={17}/>} {mobileVoice?(cloudRecording?'Stop & Transcribe':'Record Answer (AI)'):(microphone?'Stop Listening':'Start Speaking')}</button>
+    {!mobileVoice&&<button type="button" className={'interview-cloud-button '+(cloudRecording?'active':'')} onClick={()=>void toggleCloud()} disabled={cloudBusy||completed} aria-label={cloudRecording?'Stop and transcribe recording':'Record with AI backup'}><CloudUpload size={17}/>{cloudBusy?'Transcribing…':cloudRecording?'Stop & Transcribe':'Record with AI (backup)'}</button>}
+    <input ref={audioUploadRef} className="interview-audio-upload-input" hidden type="file" accept="audio/mp4,audio/x-m4a,audio/m4a,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/webm,.m4a,.mp4,.mp3,.wav,.webm,.ogg" onChange={e=>uploadRecordedAudio(e.target.files?.[0])}/>
+    <button type="button" className="interview-cloud-button" disabled={cloudBusy||cloudRecording||completed} onClick={()=>audioUploadRef.current?.click()}><CloudUpload size={17}/> Upload Audio</button>
+    <span className="interview-voice-help">{mobileVoice?(signedIn?'Tap Record Answer, speak, then Stop & Transcribe. Or upload a recording saved on your phone.':'Sign in to record and transcribe an answer with AI.'):signedIn?'AI recording uses your Groq/Gemini key; 15 recordings per day.':'AI recording requires sign-in; browser dictation needs no key.'}</span>
    </div>
    <textarea aria-label="Your Answer" value={answer} disabled={completed} onChange={e=>{if(listeningWanted.current){stopMic();setMessage('Microphone paused while editing your answer. Tap the mic to continue speaking.');}setAnswerText(e.target.value);}} rows={5} placeholder={microphone?'Listening to your voice…':'Tap the microphone above to speak, or type your answer here.'}/>
    <div className="interview-answer-bottom"><div className="interview-evaluation-note"><ShieldCheck size={16}/>{completed?'All questions completed. Your transcript remains available for review.':'No AI scoring yet. Your responses are collected until Finish & Evaluate on question 10.'}</div><span>{supported?'Speech recognition may make mistakes; review the transcript.':'You can type your answer if speech recognition is unavailable.'}</span></div>
