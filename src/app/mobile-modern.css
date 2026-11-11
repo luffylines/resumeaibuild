@@ -123,7 +123,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .resume-client-shell .sidebar{position:fixed;top:0;bottom:0;left:0;width:min(300px,87vw);height:100dvh;padding-top:calc(22px + env(safe-area-inset-top,0px));padding-bottom:calc(15px + env(safe-area-inset-bottom,0px));transform:translateX(-112%);transition:transform .24s var(--rb-ease);box-shadow:20px 0 45px #170c3e23}
  .resume-client-shell .sidebar.sidebar-open{transform:translateX(0)}
  .resume-client-shell .mobile-menu{display:inline-flex}
- ..resume-client-shell .topbar{height:64px;min-height:64px;padding:0 14px}
+ .resume-client-shell .topbar{height:64px;min-height:64px;padding:0 14px}
  .resume-client-shell .breadcrumbs{font-size:11px;gap:7px;min-width:0}
  .resume-client-shell .breadcrumbs strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:35vw}
  .resume-client-shell .profile-chip{padding:4px;min-width:39px;min-height:39px}
