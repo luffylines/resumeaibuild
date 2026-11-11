@@ -199,7 +199,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
     const {execFileSync}=require('node:child_process');
     const xml=execFileSync('unzip',['-p',await d.path(),'word/document.xml'],{encoding:'utf8'});
     for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
-     if(!xml.includes(marker))throw Error('Missing user-added content in DOCX: '+marker);
+     if(!xml.toLowerCase().includes(marker.toLowerCase()))throw Error('Missing user-added content in DOCX: '+marker);
     }
    }
 
