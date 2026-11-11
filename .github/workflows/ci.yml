@@ -23,6 +23,8 @@ jobs:
         run: npm run typecheck
       - name: AI provider fallback checks (mocked, no secrets)
         run: node scripts/check-ai-fallback.cjs
+      - name: MFA verified vs unverified factor checks
+        run: node scripts/check-mfa-factors.cjs
       - name: Next.js production build
         run: npm run build
       - name: Smoke test website routes (demo mode)
