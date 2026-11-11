@@ -5,7 +5,7 @@ import type {Resume} from '@/lib/types';
 import {ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 import {GoogleIcon} from '@/components/brand-icons';
-import {accountAvatar,clearProfilePhoto,readProfilePhoto,saveProfilePhoto} from '@/lib/profile-photo';
+import {accountAvatar,loadProfilePhoto,readProfilePhoto,removeProfilePhoto,saveProfilePhoto} from '@/lib/profile-photo';
 import MfaPanel from '@/components/mfa-panel';
 
 type Tab='account'|'subscription'|'integrations'|'security'|'notifications';
@@ -37,7 +37,12 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const sb=browserSupabase();
  useEffect(()=>{
   setName(user?.user_metadata?.full_name||'');
-  setPhoto(user?.id?readProfilePhoto(user.id):'');
+  const id=user?.id;
+  setPhoto(id?readProfilePhoto(id):'');
+  if(!id)return;
+  let active=true;
+  void loadProfilePhoto(id).then(image=>{if(active)setPhoto(image);});
+  return()=>{active=false;};
  },[user?.id,user?.user_metadata?.full_name]);
  useEffect(()=>{
   if(tab!=='integrations'||!user)return;
@@ -74,8 +79,9 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
   setBusy(true);setError('');setNotice('');
   try{
    const saved=await saveProfilePhoto(user.id,file);
-   setPhoto(saved);
-   setNotice('Profile photo updated on this device. Cloud sync is not yet connected to your other Supabase project.');
+   setPhoto(saved.image);
+   if(saved.cloudSaved)setNotice(saved.detail);
+   else setError(saved.detail);
   }catch(e){setError(e instanceof Error?e.message:'Could not save profile photo.');}
   finally{setBusy(false);if(photoInput.current)photoInput.current.value='';}
  };
@@ -113,7 +119,11 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
      <div className="settings-photo-tools">
       <input type="file" ref={photoInput} hidden accept="image/jpeg,image/png,image/webp" onChange={e=>void setProfileImage(e.target.files?.[0])}/>
       <button type="button" className="outline-button" disabled={busy||!user} onClick={()=>photoInput.current?.click()}><Camera size={16}/> Upload Profile Photo</button>
-      {photo&&<button type="button" className="outline-button" disabled={busy} onClick={()=>{if(!user)return;clearProfilePhoto(user.id);setPhoto('');setNotice('Local photo removed.');}}><X size={16}/> Remove Photo</button>}
+      {photo&&<button type="button" className="outline-button" disabled={busy} onClick={()=>void (async()=>{
+   if(!user)return;setBusy(true);setError('');setNotice('');
+   try{const result=await removeProfilePhoto(user.id);setPhoto('');if(result.cloudRemoved)setNotice(result.detail);else setError(result.detail);}
+   finally{setBusy(false);}
+  })()}><X size={16}/> Remove Photo</button>}
      </div>
      <label className="settings-input">Full Name<input value={name} onChange={e=>setName(e.target.value)} maxLength={120}/></label>
      <label className="settings-input">Email Address<input disabled value={user?.email||'demo@example.com'} readOnly/></label>
@@ -121,7 +131,7 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
       <button className="purple-button" disabled={busy} onClick={()=>void saveName()}><Check size={16}/> Save Profile</button>
       {user&&<button className="outline-button" onClick={()=>void signOut()}><LogOut size={16}/> Sign Out</button>}
      </div>
-     <p className="settings-footnote">Uploaded profile photos are stored on this browser only for now. Connected Google profile pictures may appear automatically. Cross-device photo syncing needs the Storage bucket in your actual ResumeBuilder Supabase project.</p>
+     <p className="settings-footnote">Profile images sync to your private ResumeBuilder Supabase Storage after that project has its profile-avatars bucket and RLS policies configured. Until then, the app clearly reports local-only saves.</p>
     </>}
     {tab==='subscription'&&<>
      <header><h2>Subscription Plans</h2><p>Choose the tools that fit your career goals. Prices are proposed monthly amounts.</p></header>
