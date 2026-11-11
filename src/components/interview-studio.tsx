@@ -46,6 +46,7 @@ export default function InterviewStudio({targetRole,runAI,busy}:Props){
  const stream=useRef<MediaStream|null>(null);
  const video=useRef<HTMLVideoElement|null>(null);
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const utteranceVersion=useRef(0);
  useEffect(()=>{
   const browser=window as RecognitionBrowser;
   setSupported(!!(browser.SpeechRecognition||browser.webkitSpeechRecognition));
@@ -132,6 +133,7 @@ export default function InterviewStudio({targetRole,runAI,busy}:Props){
  function toggleMic(){
   if(listeningWanted.current){stopMic();setMessage('Microphone paused. Your transcript has been kept.');return;}
   // Do not accidentally transcribe the robot's own voice.
+  utteranceVersion.current++;
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   speakingRef.current=false;
   setSpeaking(false);
@@ -139,6 +141,7 @@ export default function InterviewStudio({targetRole,runAI,busy}:Props){
   beginMic();
  }
  function speakQuestion(question:number,resumeMic:boolean){
+  const version=++utteranceVersion.current;
   speakingRef.current=true;
   setSpeaking(true);
   stopMic(!resumeMic);
@@ -152,6 +155,7 @@ export default function InterviewStudio({targetRole,runAI,busy}:Props){
   const voice=new SpeechSynthesisUtterance(QUESTIONS[question]);
   voice.lang='en-US';voice.rate=.92;voice.pitch=1.02;
   const finished=()=>{
+   if(version!==utteranceVersion.current)return;
    speakingRef.current=false;setSpeaking(false);
    if(resumeMic&&listeningWanted.current){
     beginMic();
@@ -180,6 +184,7 @@ export default function InterviewStudio({targetRole,runAI,busy}:Props){
   speakQuestion(nextIndex,resume);
  }
  function reset(){
+  utteranceVersion.current++;
   stopMic();
   stream.current?.getTracks().forEach(t=>t.stop());
   stream.current=null;setCamera(false);
