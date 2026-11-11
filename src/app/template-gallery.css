@@ -96,3 +96,71 @@
 .public-template-real .public-template-bottom>div{display:flex;flex-direction:column;gap:5px}
 .public-template-real .public-template-bottom small{color:#91889e;font-size:10px}
 .public-template-cta{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin:28px 0 0}
+
+/* Gallery: one layout card per composition; colors live inside the card. */
+.rt-palette-row{display:flex;flex-direction:column;gap:8px;margin:9px 0 10px}
+.rt-palette-row>span{font-size:10px;font-weight:750;color:#5d5274}
+.rt-palette-options,.wizard-color-swatches{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.rt-palette-dot,.wizard-color-swatches>button{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:none;border:2px solid #fff;border-radius:50%;background:var(--swatch);box-shadow:0 0 0 1px #cfc6db;cursor:pointer;color:#fff;outline-offset:3px}
+.rt-palette-dot.active,.wizard-color-swatches>button.active{box-shadow:0 0 0 2px #5e2cda,0 2px 6px #26104d25}
+.rt-palette-dot[style*="#FFFFFF"],.wizard-color-swatches>button[style*="#FFFFFF"]{color:#433b55}
+.rt-modal-palettes{display:grid;gap:13px;padding:17px 25px;border-top:1px solid #ede6f4}
+.rt-modal-palettes .rt-palette-row{margin:0}
+.rt-custom-palette{display:inline-flex;align-items:center;gap:9px;font-size:11px;font-weight:700;color:#63537f}
+.rt-custom-palette input,.wizard-color-swatches input[type=color]{width:36px;height:28px;padding:1px;border:1px solid #e6def1;border-radius:6px;cursor:pointer}
+.rt-card-detail .rt-bestfor{margin-top:7px}
+.rt-card-image{height:365px}
+.rt-template-card{min-width:0}
+.rt-modal-overlay{overflow:auto}
+.rt-dialog-preview .resume-document--mini{box-shadow:none!important}
+.wizard-color-customizer{border:1px solid #e9e1f6;background:linear-gradient(135deg,#fff,#f8f4ff);border-radius:12px;padding:15px;display:grid;gap:13px;margin:14px 0}
+.wizard-color-customizer h3{display:inline-flex;align-items:center;gap:9px;font-size:13px;margin:0;font-weight:800}
+.wizard-color-customizer h3 svg{color:#6834ea}
+.wizard-color-group{display:flex;align-items:flex-start;gap:10px;flex-direction:column}
+.wizard-color-group>strong{font-size:11px;color:#51455d}
+.wizard-color-swatches>button{width:27px;height:27px}
+.wizard-download-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;margin:13px 0}
+.wizard-download-actions button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;min-width:0;background:#fff;border:1px solid #d9c8f5;color:#5630c4;border-radius:11px;padding:9px 12px;font-size:11px;line-height:1.3;font-weight:800;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.wizard-download-actions button:first-child{background:#6935e9;color:white;border-color:#6935e9}
+.wizard-download-actions button:hover{transform:translateY(-1px);border-color:#8459e5;background:#f6f0ff}
+.wizard-download-actions button:first-child:hover{background:#5525cc}
+.wizard-download-actions button:disabled{opacity:.6;cursor:wait}
+.wizard-download-actions button svg{flex:none}
+.wizard-export-area{border:1px solid #ece4f7;border-radius:13px;background:#fff;padding:18px;margin:18px 0}
+.wizard-export-area>h3{font-size:14px;font-weight:850;margin:0}
+.wizard-export-area>p{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:#786e8d;line-height:1.7}
+.wizard-export-area>p svg{color:#6733df;flex:none;margin-top:2px}
+.wizard-export-area>a{display:inline-flex;font-size:11px;font-weight:800;color:#6933da;text-decoration:underline;text-underline-offset:3px}
+.wizard-export-area .wizard-print-tip{color:#6e607f;background:#f8f5ff;border:1px solid #ebe3f7;padding:10px;border-radius:8px}
+.resume-export-host{position:fixed;top:0;left:-12000px;z-index:-1;width:794px;pointer-events:none}
+.resume-export-host .resume-document{min-height:1123px!important;width:794px!important;max-width:794px!important;background:var(--rd-page-bg,#fff)!important}
+/* Background control preserves distinct layout but changes the page color. */
+.resume-document{background:var(--rd-page-bg,#fff)!important}
+.resume-document.rd-style-studio-beige{background:var(--rd-page-bg,#fffdfb)!important}
+.resume-document.rd-style-editorial-beige{background:var(--rd-page-bg,#fffaf3)!important}
+.resume-document.rd-layout-band .rd-header{background:var(--rd-accent)}
+.resume-document.rd-style-studio-beige .rd-secondary{background:color-mix(in srgb,var(--rd-accent) 29%,#fff)}
+.resume-document.rd-style-studio-beige .rd-secondary .rd-section h3,.resume-document.rd-style-studio-beige .rd-secondary .rd-skills>span,.resume-document.rd-style-studio-beige .rd-secondary .rd-entry-title strong{color:#2b2236}
+.resume-document.rd-style-modern-portrait .rd-secondary,.resume-document.rd-layout-two-column .rd-secondary{background:color-mix(in srgb,var(--rd-accent) 9%,#fff)}
+.resume-document.rd-style-graduate-portrait .rd-header{background:linear-gradient(130deg,color-mix(in srgb,var(--rd-accent) 13%,#fff),#fff)}
+.resume-document.rd-style-creative-sidebar .rd-secondary,.resume-document.rd-style-blue-profile .rd-secondary{background:var(--rd-accent)}
+.resume-document.rd-style-executive-portrait .rd-header{border-bottom-color:var(--rd-accent)}
+.resume-document.rd-style-bold-header .rd-header,.resume-document.rd-style-portrait-navy .rd-header{background:var(--rd-accent)}
+.resume-document .rd-section h3{color:var(--rd-accent)}
+@page{size:A4;margin:0}
+@media print{
+ .resume-export-host,.resume-export-host *{display:none!important;visibility:hidden!important}
+ .resume-client-shell .wizard-preview .resume-document.resume-paper{padding:15mm!important;width:210mm!important;min-height:297mm!important;max-width:none!important;box-sizing:border-box!important}
+ .resume-client-shell .wizard-preview .resume-document.resume-paper.rd-layout-band .rd-header{margin:-15mm -15mm 9mm!important;padding:17mm 15mm 11mm!important}
+ html,body{background:white!important}
+ .resume-document{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+@media(max-width:960px){
+ .wizard-download-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:460px){
+ .wizard-download-actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .wizard-download-actions button{font-size:10px;padding:9px 6px;gap:5px}
+ .wizard-export-area{padding:13px}
+ .rt-modal-palettes{padding:12px 15px}
+}
