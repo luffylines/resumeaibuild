@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCircle2,Headphones,Lightbulb,LoaderCircle,Mic,MicOff,ShieldCheck,Sparkles,Video,VideoOff,Volume2,X,Languages,AudioLines,CloudUpload} from 'lucide-react';
 import type {Resume} from '@/lib/types';
 import {INTERVIEW_COUNT,buildInterviewQuestions,parseInterviewQuestions} from '@/lib/interview-questions';
+import {applyInterviewerVoice} from '@/lib/interview-voice';
 
 type SpeechItem={transcript:string};
 type SpeechResult=ArrayLike<SpeechItem>&{isFinal:boolean};
@@ -81,6 +82,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const utteranceVersion=useRef(0);
  const voiceUtteranceRef=useRef<SpeechSynthesisUtterance|null>(null);
  const voiceStartTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const pinnedVoiceRef=useRef<{current:string|null;chosen:boolean}>({current:null,chosen:false});
+ const recognitionStartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const [iosRecorderMode,setIosRecorderMode]=useState(false);
 
  type Session={v:1|2;resumeId:string;index:number;questions:string[];started:boolean;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
@@ -180,18 +184,24 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
 
  useEffect(()=>{
   const browser=window as RecognitionBrowser&{brave?:{isBrave?:()=>Promise<boolean>}};
+  const ua=navigator.userAgent;
+  const isiOS=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const isAlternateIOS=isiOS&&(/Brave|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA/i.test(ua)||!(/Version\/.*Safari/i.test(ua)));
   const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
-  setSupported(live);
-  setMobileVoice(!live);
-  // Brave can expose SpeechRecognition but disable the remote speech service.
-  // Use the MediaRecorder + authenticated transcription flow instead.
-  const forceRecorder=()=>{
+  // Some iOS browsers surface Web Speech but cannot actually process speech.
+  // Prefer the MediaRecorder path; it works after a direct microphone tap when
+  // recording/AI provider and permission are available.
+  const forceRecorder=(reason:string)=>{
+   setIosRecorderMode(isiOS);
    setMobileVoice(true);
    setSupported(false);
-   setMessage('Brave / private browser detected. Use Record Answer (AI), then Stop & Transcribe. Browser live dictation may not be supported.');
+   setMessage(reason);
   };
-  if(/Brave/i.test(navigator.userAgent))forceRecorder();
-  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder();}).catch(()=>{});}catch{}
+  setSupported(live&&!isAlternateIOS);
+  setMobileVoice(!live||isAlternateIOS);
+  if(isAlternateIOS||/Brave/i.test(ua))forceRecorder('Use Record Answer (AI), then Stop & Transcribe. The recording is sent only after you stop it.');
+  // Brave's iOS User-Agent can be identical to Safari on some versions.
+  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder('Brave detected. Use Record Answer (AI) instead of browser live dictation.');}).catch(()=>{});}catch{}
  },[]);
  // Give the visitor an audible welcome shortly after opening Interview Practice
  // where autoplay is permitted. If iOS/Brave blocks unsolicited sound, the
@@ -204,7 +214,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    const version=++utteranceVersion.current;
    const voice=new SpeechSynthesisUtterance(greeting+' Tap Start Personalized Interview when you are ready.');
    voiceUtteranceRef.current=voice;
-   voice.lang='en-US';voice.rate=.94;
+   applyInterviewerVoice(voice,window.speechSynthesis,pinnedVoiceRef);
    let didStart=false;
    voice.onstart=()=>{
     if(version!==utteranceVersion.current)return;
@@ -481,11 +491,9 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   const text=(intro?greeting+' Let us begin. ':'')+(overrideQuestions?.[question]||questions[question]);
   const utterance=new SpeechSynthesisUtterance(text);
   voiceUtteranceRef.current=utterance; // Safari can drop utterances without a retained reference.
-  utterance.lang='en-US';utterance.rate=.92;utterance.pitch=1.02;
+  applyInterviewerVoice(utterance,window.speechSynthesis,pinnedVoiceRef);
   let didStart=false;
-  const voices=window.speechSynthesis.getVoices?.()||[];
-  const english=voices.find(v=>v.lang.toLowerCase()==='en-us')||voices.find(v=>v.lang.toLowerCase().startsWith('en'));
-  if(english)utterance.voice=english;
+  // Voice selection is locked to one voiceURI for all ten questions.
   const clearTimer=()=>{
    if(voiceStartTimerRef.current){clearTimeout(voiceStartTimerRef.current);voiceStartTimerRef.current=null;}
   };
@@ -545,6 +553,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   stopMic();
   if('speechSynthesis'in window)window.speechSynthesis.cancel();
   speakingRef.current=false;setSpeaking(false);
+  pinnedVoiceRef.current={current:null,chosen:false};
   setIndex(0);setStarted(false);setQuestions(buildInterviewQuestions(currentResume));setAnswers(QUESTIONS.map(()=>''));setAnswerText('');
   setFeedback('');setMessage('');setCompleted(false);
  }
