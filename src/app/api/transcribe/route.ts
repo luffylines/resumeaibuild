@@ -15,7 +15,7 @@ const reply=(error:string,status:number)=>NextResponse.json({error},{status,head
 export async function POST(req:NextRequest){
  const origin=req.headers.get('origin');
  if(origin&&origin!==new URL(req.url).origin)return reply('Cross-site requests are not allowed.',403);
- if(!process.env.GEMINI_API_KEY&&!process.env.OPENAI_API_KEY)return reply('Configure GEMINI_API_KEY or OPENAI_API_KEY in Vercel first.',503);
+ if(!process.env.GROQ_API_KEY&&!process.env.GEMINI_API_KEY&&!process.env.OPENAI_API_KEY)return reply('Configure GROQ_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY in Vercel first.',503);
  const supabase=await serverSupabase();
  if(!supabase)return reply('Configure Supabase before enabling AI transcription.',503);
  const {data:{user},error:authError}=await supabase.auth.getUser();
@@ -45,7 +45,22 @@ export async function POST(req:NextRequest){
  const abort=AbortSignal.timeout(30000);
  let transcript='';
  try{
-  if(process.env.GEMINI_API_KEY){
+  if(process.env.GROQ_API_KEY){
+   // Groq Whisper is optimized for transcription. Do not force an English
+   // locale on mixed Filipino/Taglish answers; auto-detection preserves speech.
+   const upload=new FormData();
+   upload.append('model',process.env.GROQ_TRANSCRIPTION_MODEL||'whisper-large-v3-turbo');
+   const ext=mime==='audio/mp4'?'.mp4':mime==='audio/ogg'?'.ogg':mime==='audio/wav'?'.wav':mime==='audio/mpeg'||mime==='audio/mp3'?'.mp3':mime==='audio/x-m4a'||mime==='audio/m4a'?'.m4a':'.webm';
+   upload.append('file',audio,'interview'+ext);
+   upload.append('response_format','json');
+   if(lang==='en-US'||lang==='en-PH')upload.append('language','en');
+   const res=await fetch('https://api.groq.com/openai/v1/audio/transcriptions',{
+    method:'POST',headers:{Authorization:'Bearer '+process.env.GROQ_API_KEY},
+    body:upload,signal:abort
+   });
+   const json=await res.json();if(!res.ok)throw Error(json.error?.message||'Groq speech recognition is unavailable.');
+   transcript=typeof json.text==='string'?json.text.trim():'';
+  }else if(process.env.GEMINI_API_KEY){
    const data=Buffer.from(await audio.arrayBuffer()).toString('base64');
    const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
