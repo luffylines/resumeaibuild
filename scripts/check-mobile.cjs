@@ -111,7 +111,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(await speechPage.getByRole('button',{name:'Stop speaking'}).count())await speechPage.getByRole('button',{name:'Stop speaking'}).click();
   await speechPage.getByRole('button',{name:'Start speaking'}).waitFor({state:'visible'});
   await speechPage.getByRole('button',{name:'Record with AI backup'}).click();
-  await speechPage.getByText('Sign in to your ResumeBuilder account').waitFor({state:'visible'});
+  await speechPage.getByText('Sign in to ResumeBuilder to use voice recording and AI transcription.').waitFor({state:'visible'});
   await speechPage.getByRole('button',{name:'Start speaking'}).click();
   await speechPage.waitForFunction(()=>window.__resumeSpeechMock.recognizer!==null);
   await speechPage.getByRole('button',{name:'Stop speaking'}).click();
