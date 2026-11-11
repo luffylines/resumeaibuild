@@ -13,7 +13,7 @@ async function guarded(){
 }
 const err=(status:number,error:string)=>NextResponse.json({error},{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(){
- const guard=await guarded();if('error'in guard)return err(guard.status,guard.error);
+ const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error);
  const db=guard.admin;
  const [users,resumes,ats,jobs,applications,profiles,events,ai]=await Promise.all([
   db.auth.admin.listUsers({page:1,perPage:200}),
@@ -28,12 +28,12 @@ export async function GET(){
  for(const item of [users,resumes,ats,jobs,applications,profiles,events,ai])if(item.error)return err(500,item.error.message);
  const meta=new Map((profiles.data||[]).map(p=>[p.user_id,p]));
  const people=(users.data?.users||[]).map(u=>({id:u.id,email:u.email||'',name:meta.get(u.id)?.full_name||u.user_metadata?.full_name||'',plan:meta.get(u.id)?.plan||'Free',created_at:u.created_at,last_sign_in_at:u.last_sign_in_at||null}));
- const data={users:people,userTotal:users.data?.total||people.length,resumes:resumes.data||[],resumeCount:resumes.count||0,ats:ats.data||[],atsCount:ats.count||0,jobs:jobs.data||[],applicationCount:applications.count||0,activities:events.data||[],aiEvents:ai.data||[],aiCount:ai.count||0,plans:{free:people.filter(p=>p.plan==='Free').length,pro:people.filter(p=>p.plan==='Pro').length,team:people.filter(p=>p.plan==='Team').length},limitedUsers:people.length===200};
+ const data={users:people,userTotal:(users.data as any)?.total||people.length,resumes:resumes.data||[],resumeCount:resumes.count||0,ats:ats.data||[],atsCount:ats.count||0,jobs:jobs.data||[],applicationCount:applications.count||0,activities:events.data||[],aiEvents:ai.data||[],aiCount:ai.count||0,plans:{free:people.filter(p=>p.plan==='Free').length,pro:people.filter(p=>p.plan==='Pro').length,team:people.filter(p=>p.plan==='Team').length},limitedUsers:people.length===200};
  return NextResponse.json(data,{headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(req:NextRequest){
  const origin=req.headers.get('origin');if(origin&&origin!==req.nextUrl.origin)return err(403,'Invalid request origin.');
- const guard=await guarded();if('error'in guard)return err(guard.status,guard.error);
+ const guard=await guarded();if('error'in guard)return err(guard.status??500,guard.error);
  let body:Record<string,unknown>;try{body=await req.json();}catch{return err(400,'Invalid JSON.');}
  if(!body||typeof body!=='object')return err(400,'Invalid request.');
  const db=guard.admin;
