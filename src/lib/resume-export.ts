@@ -133,11 +133,62 @@ export async function exportResumeDOCX(resume:Resume){
  const bytes=await Packer.toBlob(doc);
  download(bytes,cleanName(resume)+'.docx');
 }
+
+/**
+ * Render the actual resume on a temporary A4-sized surface in the viewport.
+ * Avoid capturing the offscreen wrapper: its negative coordinates and inherited
+ * clipping can produce an empty/partially drawn PNG on some browsers.
+ */
 export async function exportResumePNG(resume:Resume,element:HTMLElement|null){
  if(!element)throw Error('Resume preview is not ready for PNG export.');
+ const source=(element.matches('.resume-document')?element:element.querySelector('.resume-document')) as HTMLElement|null;
+ if(!source)throw Error('Resume document could not be found for export.');
  const {toBlob}=await import('html-to-image');
- await document.fonts.ready;
- const blob=await toBlob(element,{pixelRatio:2,backgroundColor:safeHex(resume.backgroundColor,'#FFFFFF'),cacheBust:false,filter:node=>!(node instanceof HTMLElement&&node.dataset.exportIgnore==='true')});
- if(!blob)throw Error('Could not render PNG.');
- download(blob,cleanName(resume)+'.png');
+ const background=safeHex(resume.backgroundColor,'#FFFFFF');
+ const mount=document.createElement('div');
+ mount.className='resume-png-capture-stage';
+ mount.setAttribute('aria-hidden','true');
+ mount.style.cssText=[
+  'position:fixed','left:0','top:0','width:794px','height:auto',
+  'z-index:-100','pointer-events:none','opacity:1','overflow:visible',
+  'background:'+background
+ ].join(';');
+ const cloned=source.cloneNode(true) as HTMLElement;
+ cloned.style.setProperty('width','794px','important');
+ cloned.style.setProperty('max-width','none','important');
+ cloned.style.setProperty('min-width','794px','important');
+ cloned.style.setProperty('min-height','1123px','important');
+ cloned.style.setProperty('height','auto','important');
+ cloned.style.setProperty('margin','0','important');
+ cloned.style.setProperty('box-shadow','none','important');
+ cloned.style.setProperty('transform','none','important');
+ cloned.style.setProperty('overflow','visible','important');
+ cloned.style.setProperty('--rd-page-bg',background);
+ mount.appendChild(cloned);
+ document.body.appendChild(mount);
+ try{
+  await document.fonts.ready;
+  // Give layout and any optional portrait image a chance to settle before
+  // html-to-image serializes the full document into its SVG foreignObject.
+  await Promise.all([...cloned.querySelectorAll('img')].map(img=>{
+   if(img.complete)return Promise.resolve();
+   return new Promise<void>(resolve=>{
+    img.addEventListener('load',()=>resolve(),{once:true});
+    img.addEventListener('error',()=>resolve(),{once:true});
+   });
+  }));
+  await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+  const width=794;
+  const height=Math.max(1123,Math.ceil(cloned.scrollHeight),Math.ceil(cloned.getBoundingClientRect().height));
+  if(height>14000)throw Error('This resume is too long for one PNG. Use Download PDF for a multi-page version.');
+  const blob=await toBlob(cloned,{
+   pixelRatio:2,width,height,backgroundColor:background,
+   cacheBust:false,
+   filter:node=>!(node instanceof HTMLElement&&node.dataset.exportIgnore==='true')
+  });
+  if(!blob||blob.size<1200)throw Error('PNG rendering was incomplete. Try again or use PDF.');
+  download(blob,cleanName(resume)+'.png');
+ }finally{
+  mount.remove();
+ }
 }
