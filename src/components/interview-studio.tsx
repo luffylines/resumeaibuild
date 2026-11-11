@@ -79,6 +79,9 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
   }catch{setSessionSaveFailed(true);}
  }
  useEffect(()=>{
+  setIndex(0);setAnswers(QUESTIONS.map(()=>''));
+  setAnswerText('');setFeedback('');setCompleted(false);setResumeId(activeResumeId);
+  setSessionSavedAt(null);setSessionSaveFailed(false);
   try{
    const raw=localStorage.getItem(sessionKey);
    if(raw){
