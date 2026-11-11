@@ -139,6 +139,45 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
   return()=>{flush();window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hidden);};
  },[sessionLoadedFor,sessionKey]);
 
+ // Prepare AI questions while the user reviews the interview screen, BEFORE
+ // the Start click. Mobile Safari needs speech synthesis inside that click;
+ // awaiting an AI response first loses the browser's user activation.
+ useEffect(()=>{
+  if(sessionLoadedFor!==sessionKey||started||completed||!signedIn||!currentResume)return;
+  const resume=currentResume;
+  const key=sessionKey+':'+resume.id+':'+(resume.updatedAt||'');
+  if(questionPrefetchRef.current===key)return;
+  questionPrefetchRef.current=key;
+  let cancelled=false;
+  const context=JSON.stringify({
+   type:'generate_ten_questions',
+   variationSeed:crypto.randomUUID(),
+   name:resume.name||userName,
+   summary:(resume.summary||'').slice(0,850),
+   skills:(resume.skills||'').slice(0,600),
+   experience:(resume.experience||[]).slice(0,5).map(x=>({role:x.role,company:x.company,details:(x.details||'').slice(0,270)})),
+   education:(resume.education||[]).slice(0,4).map(x=>({degree:x.degree,school:x.school})),
+   projects:(resume.projects||[]).slice(0,5).map(x=>({name:x.name,role:x.role,details:(x.details||'').slice(0,240)})),
+   certifications:(resume.certifications||[]).slice(0,4).map(x=>({title:x.title,issuer:x.issuer})),
+   volunteer:(resume.volunteer||[]).slice(0,3).map(x=>({role:x.role,organization:x.organization})),
+   awards:(resume.awards||[]).slice(0,3).map(x=>({title:x.title}))
+  });
+  void (async()=>{
+   try{
+    const response=await fetch('/api/ai',{
+     method:'POST',credentials:'same-origin',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({task:'interview_questions',context})
+    });
+    if(!response.ok)return;
+    const data=await response.json() as {output?:string};
+    const parsed=parseInterviewQuestions(data.output||'');
+    if(parsed&&!cancelled)setQuestions(parsed);
+   }catch{/* Resume-derived question fallback is already available. */}
+  })();
+  return()=>{cancelled=true;};
+ },[sessionLoadedFor,sessionKey,started,completed,signedIn,resumeId,currentResume?.id,currentResume?.updatedAt,userName]);
+
  useEffect(()=>{
   const browser=window as RecognitionBrowser&{brave?:{isBrave?:()=>Promise<boolean>}};
   const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
@@ -422,43 +461,23 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    setMessage(resumeMic?'Bot is reading the question. Your microphone will resume afterward.':'Bot is reading the question aloud.');
   }catch{finished();}
  }
- async function beginInterview(){
+ function beginInterview(){
   if(started||questionLoading||completed)return;
-  setQuestionLoading(true);
-  const version=++generationRef.current;
-  const resume=currentResume;
-  // Always prepare a distinct ten-question fallback, even without an AI key.
-  let generated=buildInterviewQuestions(resume);
-  if(signedIn&&resume){
-   const context=JSON.stringify({
-    type:'generate_ten_questions',
-    variationSeed:crypto.randomUUID(),
-    name:resume.name||userName,
-    summary:(resume.summary||'').slice(0,850),
-    skills:(resume.skills||'').slice(0,600),
-    experience:(resume.experience||[]).slice(0,5).map(x=>({role:x.role,company:x.company,details:x.details.slice(0,270)})),
-    education:(resume.education||[]).slice(0,4).map(x=>({degree:x.degree,school:x.school})),
-    projects:(resume.projects||[]).slice(0,5).map(x=>({name:x.name,role:x.role,details:x.details.slice(0,240)})),
-    certifications:(resume.certifications||[]).slice(0,4).map(x=>({title:x.title,issuer:x.issuer})),
-    volunteer:(resume.volunteer||[]).slice(0,3).map(x=>({role:x.role,organization:x.organization})),
-    awards:(resume.awards||[]).slice(0,3).map(x=>({title:x.title}))
-   });
-   const output=await runAI('interview_questions',context);
-   if(output){const parsed=parseInterviewQuestions(output);if(parsed)generated=parsed;}
-  }
-  if(version!==generationRef.current)return;
-  setQuestions(generated);
+  // Do NOT await network work before speech. Safari/iOS and Brave may require
+  // the first speechSynthesis.speak() to run synchronously inside a user tap.
+  const prepared=questions.length===INTERVIEW_COUNT?questions:buildInterviewQuestions(currentResume);
+  setQuestions(prepared);
   setIndex(0);
   setAnswerText('');
   setAnswers(Array.from({length:INTERVIEW_COUNT},()=>''));
   setStarted(true);
-  setQuestionLoading(false);
-  setMessage('Your personalized ten-question interview is ready. Speak or type your answer; feedback comes after all ten questions.');
-  speakQuestion(0,false,true,generated);
+  setMessage('Your personalized interview is starting. Voice playback may require tapping Read Question Aloud if the browser blocks sound.');
+  speakQuestion(0,false,true,prepared);
  }
  function clearInterview(){
   cancelCloud();
   generationRef.current++;
+  questionPrefetchRef.current='';
   setQuestionLoading(false);
   utteranceVersion.current++;
   stopMic();
