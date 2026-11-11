@@ -66,7 +66,7 @@ const duplicateToCanonical:Record<string,string>={
 export function canonicalTemplateId(id?:string):ResumeTemplateId {
  return (duplicateToCanonical[id||'']||getResumeTemplate(id).id) as ResumeTemplateId;
 }
-export const UNIQUE_RESUME_TEMPLATES=RESUME_TEMPLATES.filter(t=>!duplicateToCanonical[t.id]).sort((a,b)=>Number(PHOTO_READY_TEMPLATES.has(b.id))-Number(PHOTO_READY_TEMPLATES.has(a.id)));
+export const UNIQUE_RESUME_TEMPLATES=RESUME_TEMPLATES.filter(t=>!duplicateToCanonical[t.id]).sort((a,b)=>Number(b.tag==='Photo optional')-Number(a.tag==='Photo optional'));
 export const DESIGN_COLOR_OPTIONS=[
  {name:'Violet',hex:'#6736EC'},
  {name:'Navy',hex:'#243C63'},
