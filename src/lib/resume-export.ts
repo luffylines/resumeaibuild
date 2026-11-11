@@ -34,7 +34,7 @@ function breakText(text:string,width:number,measure:(text:string)=>number){
   lines.push(line);
  }return lines;
 }
-export async function exportResumePDF(resume:Resume){
+export async function exportResumePDFText(resume:Resume){
  const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
  const doc=await PDFDocument.create();
  doc.setTitle((resume.name||'Resume')+' - Resume');
@@ -97,7 +97,7 @@ export async function exportResumePDF(resume:Resume){
  const bytes=await doc.save();
  download(new Blob([new Uint8Array(bytes).buffer as ArrayBuffer],{type:'application/pdf'}),cleanName(resume)+'.pdf');
 }
-export async function exportResumeDOCX(resume:Resume){
+export async function exportResumeDOCXEditable(resume:Resume){
  const {
   Document,Packer,Paragraph,TextRun,AlignmentType,BorderStyle,HeadingLevel,ImageRun
  }=await import('docx');
@@ -189,4 +189,119 @@ export async function exportResumePNG(resume:Resume,element:HTMLElement|null){
  }finally{
   mount.remove();
  }
+}
+
+
+/**
+ * Pixel-faithful export of the live ResumeDocument, including the selected
+ * template, color, photo and two-column / sidebar decorations. Unlike the
+ * separate editable formats, these visual exports intentionally rasterize
+ * the template to guarantee an identical appearance.
+ */
+async function renderResumeArtwork(resume:Resume,element:HTMLElement|null):Promise<Blob>{
+ if(!element)throw Error('Open the resume preview before exporting.');
+ const source=(element.matches('.resume-document')?element:element.querySelector('.resume-document')) as HTMLElement|null;
+ if(!source)throw Error('Resume document was not found.');
+ const {toBlob}=await import('html-to-image');
+ const background=safeHex(resume.backgroundColor,'#FFFFFF');
+ const stage=document.createElement('div');
+ stage.style.cssText=[
+  'position:fixed','left:0','top:0','width:794px',
+  'z-index:-100','pointer-events:none','opacity:1','overflow:visible',
+  'background:'+background
+ ].join(';');
+ stage.className='resume-png-capture-stage';
+ const clone=source.cloneNode(true) as HTMLElement;
+ // The preview is scaled in the wizard. Render the SAME design at A4 width
+ // rather than resizing a small screenshot.
+ Object.assign(clone.style,{width:'794px',maxWidth:'none',minWidth:'794px',minHeight:'1123px',height:'auto',margin:'0',boxShadow:'none',transform:'none',overflow:'visible'});
+ clone.style.setProperty('--rd-page-bg',background);
+ stage.appendChild(clone);
+ document.body.appendChild(stage);
+ try{
+  await document.fonts.ready;
+  await Promise.all([...clone.querySelectorAll('img')].map(img=>{
+   if(img.complete)return Promise.resolve();
+   return new Promise<void>(resolve=>{
+    img.addEventListener('load',()=>resolve(),{once:true});
+    img.addEventListener('error',()=>resolve(),{once:true});
+   });
+  }));
+  await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+  const height=Math.max(1123,Math.ceil(clone.scrollHeight),Math.ceil(clone.getBoundingClientRect().height));
+  if(height>12500)throw Error('This resume is too long for a single image render. Reduce its length and retry.');
+  const blob=await toBlob(clone,{
+   pixelRatio:2,width:794,height,backgroundColor:background,
+   cacheBust:false,
+   filter:node=>!(node instanceof HTMLElement&&node.dataset.exportIgnore==='true')
+  });
+  if(!blob||blob.size<1200)throw Error('Could not render the selected template. Please retry.');
+  return blob;
+ }finally{stage.remove();}
+}
+
+async function visualA4Pages(resume:Resume,element:HTMLElement|null):Promise<Uint8Array[]>{
+ const artwork=await renderResumeArtwork(resume,element);
+ const bitmap=await createImageBitmap(artwork);
+ try{
+  const width=bitmap.width;
+  const pageHeight=Math.round(width*1123/794);
+  const count=Math.ceil(bitmap.height/pageHeight);
+  const pages:Uint8Array[]=[];
+  for(let i=0;i<count;i++){
+   const canvas=document.createElement('canvas');
+   canvas.width=width;canvas.height=pageHeight;
+   const ctx=canvas.getContext('2d');
+   if(!ctx)throw Error('Image export is not supported by this browser.');
+   ctx.fillStyle=safeHex(resume.backgroundColor,'#FFFFFF');
+   ctx.fillRect(0,0,width,pageHeight);
+   const top=i*pageHeight;
+   const crop=Math.min(pageHeight,bitmap.height-top);
+   ctx.drawImage(bitmap,0,top,width,crop,0,0,width,crop);
+   const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('Unable to render document page.')),'image/png'));
+   pages.push(new Uint8Array(await blob.arrayBuffer()));
+   canvas.width=0;canvas.height=0;
+  }
+  return pages;
+ }finally{bitmap.close();}
+}
+
+/** The normal PDF export is visually identical to the chosen design. */
+export async function exportResumePDF(resume:Resume,preview:HTMLElement|null){
+ const {PDFDocument}=await import('pdf-lib');
+ const doc=await PDFDocument.create();
+ doc.setTitle((resume.name||'Resume')+' - Resume');
+ doc.setAuthor(resume.name||'ResumeBuilder');
+ const pages=await visualA4Pages(resume,preview);
+ for(const bytes of pages){
+  const image=await doc.embedPng(bytes);
+  const page=doc.addPage([595.28,841.89]);
+  page.drawImage(image,{x:0,y:0,width:595.28,height:841.89});
+ }
+ const pdf=await doc.save();
+ download(new Blob([new Uint8Array(pdf).buffer as ArrayBuffer],{type:'application/pdf'}),cleanName(resume)+'.pdf');
+}
+
+/**
+ * Visually matched Word export. Artwork is inserted as full-page images,
+ * so unlike the alternative editable DOCX export its resume text is not
+ * individually editable. Users can choose either format explicitly.
+ */
+export async function exportResumeDOCX(resume:Resume,preview:HTMLElement|null){
+ const {Document,Packer,Paragraph,ImageRun,AlignmentType}=await import('docx');
+ const pages=await visualA4Pages(resume,preview);
+ const paragraphs=pages.map((data,index)=>new Paragraph({
+  alignment:AlignmentType.CENTER,
+  pageBreakBefore:index>0,
+  spacing:{before:0,after:0},
+  children:[new ImageRun({data,type:'png',transformation:{width:770,height:1089}})]
+ }));
+ const doc=new Document({
+  creator:'ResumeBuilder',title:(resume.name||'Resume')+' - Visual Resume',
+  sections:[{
+   properties:{page:{size:{width:11906,height:16838},margin:{top:100,bottom:100,left:100,right:100}}},
+   children:paragraphs
+  }]
+ });
+ download(await Packer.toBlob(doc),cleanName(resume)+'.docx');
 }
