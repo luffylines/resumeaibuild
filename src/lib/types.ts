@@ -1,6 +1,6 @@
 export type Experience = { id:string; role:string; company:string; dates:string; details:string };
 export type Education = { id:string; school:string; degree:string; dates:string };
-export type Resume = { id:string; title:string; name:string; email:string; phone:string; location:string; portfolio:string; targetRole:string; summary:string; skills:string; experience:Experience[]; education:Education[]; updatedAt:string };
+export type Resume = { id:string; title:string; name:string; email:string; phone:string; location:string; portfolio:string; targetRole:string; summary:string; skills:string; experience:Experience[]; education:Education[]; updatedAt:string; template?:'modern'|'professional'|'minimal' };
 export type ApplicationStatus = 'Applied'|'Interview'|'Offer'|'Rejected';
 export type JobApplication = {id:string;company:string;role:string;status:ApplicationStatus;link:string;appliedAt:string};
 export type SampleJob = {id:string;role:string;company:string;location:string;type:string;keywords:string[]};

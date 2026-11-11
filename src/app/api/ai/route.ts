@@ -2,6 +2,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {serverSupabase} from '@/lib/supabase-server';
 export const runtime='nodejs';
 const guides:Record<string,string>={
+ resume:'Return ONLY a valid JSON object with keys summary, targetRole and skills (comma-separated). Use only user-supplied facts. No Markdown. Never invent education, employers, expertise, experience or numbers.',
  summary:'Improve this resume summary for the target role. Output only a 55–85 word ATS-friendly summary. Never invent experience, metrics, skills, employers or qualifications.',
  coverletter:'Write a concise tailored cover letter based ONLY on the supplied resume and job description. Never invent credentials. Where information is unavailable, use generic professional wording.',
  interview:'Act as an interview coach. Evaluate the submitted answer with headings Strengths, Suggestions, and Better example. Do not invent past experience.',
