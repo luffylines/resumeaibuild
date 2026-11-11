@@ -85,7 +85,8 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
     const data=JSON.parse(raw) as Partial<Session>;
     if(data.v===1&&typeof data.resumeId==='string'&&resumes.some(r=>r.id===data.resumeId)){
      const restored=Array.from({length:QUESTIONS.length},(_,i)=>typeof data.answers?.[i]==='string'?data.answers[i].slice(0,5000):'');
-     const restoredIndex=Number.isInteger(data.index)&&data.index!>=0&&data.index!<QUESTIONS.length?data.index!:0;
+     const candidate=typeof data.index==='number'?data.index:-1;
+     const restoredIndex=Number.isInteger(candidate)&&candidate>=0&&candidate<QUESTIONS.length?candidate:0;
      const currentAnswer=typeof data.answer==='string'?data.answer.slice(0,5000):restored[restoredIndex];
      setResumeId(data.resumeId);
      setIndex(restoredIndex);

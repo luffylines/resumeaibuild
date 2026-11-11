@@ -206,7 +206,7 @@ export default function Home(){
   discardCachedResumeDraft(scope,id);
   const remaining=resumes.filter(x=>x.id!==id);setResumes(remaining);if(selectedId===id){const other=remaining[0]||emptyResume();setSelectedId(other.id);setDraft(other);}flash('Resume deleted.');auditUser('resume_deleted',id);
  }
- function startNew(){const r=emptyResume();setDraft(r);setSelectedId(r.id);go('builder');}
+ function startNew(){const r=emptyResume();setDraft(r);setSelectedId(r.id);setAutosaveStatus('idle');go('builder');}
  function editResume(r:Resume){const saved=cachedResumeDraft(scope,r.id);setDraft(structuredClone(saved&&isCacheNewer(saved,r)?saved:r));setSelectedId(r.id);go('builder');}
  function setDraftKey<K extends keyof Resume>(k:K,v:Resume[K]){setDraft(old=>({...old,[k]:v}));}
  async function logATS(){if(sb&&user){const {error:e}=await (sb as any).from('ats_scans').insert({id:uid(),user_id:user.id,resume_id:resumes.some(r=>r.id===activeResume.id)?activeResume.id:null,score:results.score});if(e){setError(e.message);return;}}flash('Resume analysis updated.');auditUser('ats_checked',activeResume.title+' — '+results.score+'%');}

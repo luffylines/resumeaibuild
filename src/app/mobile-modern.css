@@ -506,3 +506,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .resume-autosave-status{display:inline-flex;align-items:center;gap:9px;border:1px solid #d7ebdd;border-radius:10px;background:#f0fbf3;color:#24734d;padding:10px 14px;margin:0 0 14px;font-size:11px;font-weight:750;line-height:1.55}
 .resume-autosave-status svg{flex:none}
 @media(max-width:550px){.resume-autosave-status{width:100%;font-size:11px;line-height:1.6}}
+
+
+.interview-autosave-notice{display:flex;align-items:center;gap:8px;color:#237b55;background:#f1faf4;border:1px solid #d9efdf;border-radius:9px;padding:10px 12px;margin:8px 0 13px;font-size:11px;font-weight:700;line-height:1.5}
+.interview-autosave-notice svg{flex:none}
