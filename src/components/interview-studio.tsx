@@ -36,6 +36,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [started,setStarted]=useState(false);
  const [questionLoading,setQuestionLoading]=useState(false);
  const generationRef=useRef(0);
+ const questionPrefetchRef=useRef('');
  const [completed,setCompleted]=useState(false);
  const [practiceFocus,setPracticeFocus]=useState('');
  const sessionKey='resumebuilder:interview:v1:'+userId;
@@ -54,6 +55,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const [language,setLanguage]=useState('en-US');
  const [microphone,setMicrophone]=useState(false);
  const [speaking,setSpeaking]=useState(false);
+ const [voiceNeedsTap,setVoiceNeedsTap]=useState(false);
  const [camera,setCamera]=useState(false);
  const [cameraLoading,setCameraLoading]=useState(false);
  const [supported,setSupported]=useState(true);
@@ -77,6 +79,8 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const video=useRef<HTMLVideoElement|null>(null);
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const utteranceVersion=useRef(0);
+ const voiceUtteranceRef=useRef<SpeechSynthesisUtterance|null>(null);
+ const voiceStartTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
 
  type Session={v:1|2;resumeId:string;index:number;questions:string[];started:boolean;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
@@ -136,15 +140,22 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  },[sessionLoadedFor,sessionKey]);
 
  useEffect(()=>{
-  const browser=window as RecognitionBrowser;
+  const browser=window as RecognitionBrowser&{brave?:{isBrave?:()=>Promise<boolean>}};
   const live=!!(browser.SpeechRecognition||browser.webkitSpeechRecognition);
   setSupported(live);
-  // Attempt live speech recognition on mobile when the browser supports it.
-  // Otherwise fall back to explicit audio recording with server transcription.
   setMobileVoice(!live);
+  // Brave can expose SpeechRecognition but disable the remote speech service.
+  // Use the MediaRecorder + authenticated transcription flow instead.
+  const forceRecorder=()=>{
+   setMobileVoice(true);
+   setSupported(false);
+   setMessage('Brave / private browser detected. Use Record Answer (AI), then Stop & Transcribe. Browser live dictation may not be supported.');
+  };
+  if(/Brave/i.test(navigator.userAgent))forceRecorder();
+  try{void browser.brave?.isBrave?.().then(value=>{if(value)forceRecorder();}).catch(()=>{});}catch{}
  },[]);
  useEffect(()=>{if(video.current&&stream.current)video.current.srcObject=stream.current;},[camera]);
- useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
+ useEffect(()=>()=>{listeningWanted.current=false;if(restartTimer.current)clearTimeout(restartTimer.current);if(voiceStartTimerRef.current)clearTimeout(voiceStartTimerRef.current);voiceUtteranceRef.current=null;recognitionRef.current?.stop();cloudVersionRef.current++;if(cloudTimeoutRef.current)clearTimeout(cloudTimeoutRef.current);const recorder=cloudRecorderRef.current;if(recorder){recorder.onstop=null;try{if(recorder.state!=='inactive')recorder.stop();}catch{}}cloudStreamRef.current?.getTracks().forEach(t=>t.stop());stream.current?.getTracks().forEach(t=>t.stop());if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
  function setAnswerText(text:string){answerRef.current=text;liveAnswerRef.current=text;setAnswer(text);}
  function stopMic(disable=true){
   if(disable)listeningWanted.current=false;
