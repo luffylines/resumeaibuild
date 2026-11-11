@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:responsive": "node scripts/check-mobile.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.6.1",
@@ -23,6 +24,7 @@
     "@types/react-dom": "19.2.0",
     "postcss": "8.5.0",
     "tailwindcss": "4.1.0",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "playwright": "1.55.1"
   }
 }

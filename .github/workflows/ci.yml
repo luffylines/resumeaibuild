@@ -43,3 +43,24 @@ jobs:
               exit 1
             fi
           done
+      - name: Install headless Chromium for responsive UI tests
+        run: npx playwright install --with-deps chromium
+      - name: Responsive navigation and overflow checks
+        shell: bash
+        run: |
+          npm start > /tmp/resume-mobile.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:3000/ > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:responsive
+      - name: Attach browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-screenshots
+          path: test-screenshots
+          if-no-files-found: ignore
+          retention-days: 7
