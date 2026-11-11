@@ -8,7 +8,7 @@ const output=ts.transpileModule(source,{
 }).outputText;
 const moduleRef={exports:{}};
 vm.runInNewContext(output,{module:moduleRef,exports:moduleRef.exports});
-const {classifyFactors,requiresMfaChallenge}=moduleRef.exports;
+const {classifyFactors,requiresMfaChallenge,removeUnverifiedFactors}=moduleRef.exports;
 const stale={id:'unverified-old',factor_type:'totp',status:'unverified',friendly_name:'ResumeBuilder Authenticator'};
 const active={id:'verified-current',factor_type:'totp',status:'verified',friendly_name:'ResumeBuilder Authenticator'};
 const sms={id:'phone-verified',factor_type:'phone',status:'verified'};
@@ -23,4 +23,9 @@ assert.equal(requiresMfaChallenge({all:[stale,active,sms],totp:[active]},'aal1')
 assert.equal(requiresMfaChallenge({all:[stale,active,sms],totp:[active]},'aal2'),false);
 assert.equal(requiresMfaChallenge({all:[sms],totp:[]},'aal1'),false);
 assert.deepEqual([...classifyFactors({totp:[active]}).verified].map(x=>x.id),['verified-current']);
-console.log('PASS verified and unverified MFA factors are distinct, stale setup does not lock users out, only verified TOTP requires challenge');
+(async()=>{
+ const removed=[];
+ await removeUnverifiedFactors([active,stale,sms],async id=>removed.push(id));
+ assert.deepEqual(removed,['unverified-old'],'never delete a verified authenticator while restarting an incomplete setup');
+ console.log('PASS MFA: stale setup stays inactive, 2FA requires real verification, only unverified factors are removed');
+})().catch(e=>{console.error(e);process.exitCode=1;});
