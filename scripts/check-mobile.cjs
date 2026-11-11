@@ -175,6 +175,30 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   console.log('PASS voice interview: next question spoken, interim/final transcript, Filipino language and mic continuation');
   await speechContext.close();
 
+
+  // Settings smoke tests in demo mode: these do not touch Supabase or Vercel.
+  const settingsCtx=await browser.newContext({viewport:{width:1200,height:800}});
+  const settingsPage=await settingsCtx.newPage();
+  await open(settingsPage,'/app');
+  await settingsPage.locator('.side-nav').getByRole('button',{name:'Settings'}).click();
+  await settingsPage.getByRole('heading',{name:'Account Information'}).waitFor({state:'visible'});
+  if(await settingsPage.getByRole('button',{name:'Export my data'}).count())throw Error('Export my data must be removed');
+  const photoButton=settingsPage.getByRole('button',{name:'Upload Profile Photo'});
+  if(await photoButton.isEnabled())throw Error('Demo account must not upload an authenticated profile photo');
+  await settingsPage.getByRole('button',{name:'Subscription'}).click();
+  await settingsPage.getByRole('heading',{name:'Subscription Plans'}).waitFor({state:'visible'});
+  const prices=await settingsPage.locator('.settings-pricing-price').allTextContents();
+  if(prices.length!==3||!prices.some(p=>p.includes('200'))||!prices.some(p=>p.includes('400')))throw Error('Monthly Pro and Ultra pricing missing: '+prices.join(', '));
+  for(const button of await settingsPage.locator('.settings-pricing-card button').all()){
+   if(await button.isEnabled())throw Error('Cannot enable unconfigured billing checkout');
+  }
+  await settingsPage.getByRole('button',{name:'Integrations'}).click();
+  await settingsPage.getByText('Not verified').waitFor({state:'visible'});
+  await settingsPage.getByRole('button',{name:'Security'}).click();
+  await settingsPage.getByText('Sign in to set up two-factor authentication.').waitFor({state:'visible'});
+  await settingsCtx.close();
+  console.log('PASS account/settings: no data export, avatar controls, MFA sign-in requirement, proposed ₱200 / ₱400 plans and safe billing status');
+
   const adminContext=await browser.newContext({viewport:{width:1280,height:800}});
   const adminPage=await adminContext.newPage();
   await open(adminPage,'/admin/preview');
