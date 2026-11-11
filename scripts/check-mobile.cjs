@@ -319,70 +319,35 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.getByRole('button',{name:'Background Soft blue'}).click();
   const customized=await photoPage.locator('.wizard-preview .resume-document').evaluate(el=>[el.style.getPropertyValue('--rd-accent'),el.style.getPropertyValue('--rd-page-bg')]);
   if(customized[0].toLowerCase()!=='#2563eb'||customized[1].toLowerCase()!=='#f2f7fd')throw Error('Live color/background customization did not update the document: '+customized);
-  for(const [label,magic] of [['Download PDF','%PDF'],['Download DOCX','PK'],['Download PNG','PNG']] ){
-   const event=photoPage.waitForEvent('download',{timeout:30000});
-   await photoPage.getByRole('button',{name:label,exact:true}).click();
-   const d=await event;
-   const bytes=fs.readFileSync(await d.path());
-   if(bytes.length<1000)throw Error(label+' file unexpectedly small: '+bytes.length);
-   const valid=label==='Download PNG'?bytes[0]===0x89&&bytes.subarray(1,4).toString()==='PNG':bytes.subarray(0,magic.length).toString()===magic;
-   if(!valid)throw Error(label+' did not return a valid file header');
-   if(label==='Download PNG'){
-    const {PNG}=require('pngjs');
-    const image=PNG.sync.read(bytes);
-    if(image.width<1500||image.height<2200)throw Error('PNG was cropped or too small: '+image.width+'x'+image.height);
-    const colors=new Set(),ink=new Set();
-    let notWhite=0;
-    for(let y=12;y<image.height;y+=17){
-     for(let x=12;x<image.width;x+=17){
-      const i=(y*image.width+x)*4;
-      const r=image.data[i],g=image.data[i+1],b=image.data[i+2];
-      const color=(r<<16)|(g<<8)|b;colors.add(color);
-      if(r<180&&g<180&&b<180)ink.add(color);
-      if(r<240||g<240||b<240)notWhite++;
-     }
-    }
-    if(colors.size<40||ink.size<5||notWhite<80)throw Error('PNG looks blank: unique colors='+colors.size+', dark colors='+ink.size+', non-white samples='+notWhite);
-    console.log('PASS PNG visual content: '+image.width+'x'+image.height+', '+colors.size+' colors and '+notWhite+' non-white samples');
-   }
-   console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
-   if(label==='Download DOCX'){
-    const {execFileSync}=require('node:child_process');
-    const files=execFileSync('unzip',['-Z','-1',await d.path()],{encoding:'utf8'});
-    if(!files.includes('word/media/image'))throw Error('Design-accurate DOCX did not include rendered resume page artwork');
-   }
-
+  // Demo accounts can edit and view a watermarked resume, but must not have
+  // active PDF / DOCX / PNG / Print / Canva / clipboard export controls.
+  await photoPage.getByText('Exports are locked in demo mode').waitFor({state:'visible'});
+  for(const label of ['Download PDF','Download DOCX','Download PNG','Print','Editable DOCX (simple layout)','Text-based PDF (ATS)','Edit in Canva']){
+   if(await photoPage.getByRole('button',{name:label,exact:true}).count())throw Error('Demo can still export: '+label);
   }
-
-
-  // The separate editable export must preserve all entered text. The visual
-  // DOCX above deliberately uses rasterized artwork to match the live preview.
-  const editableEvent=photoPage.waitForEvent('download',{timeout:30000});
-  await photoPage.getByRole('button',{name:'Editable DOCX (simple layout)'}).click();
-  const editable=await editableEvent;
-  const {execFileSync}=require('node:child_process');
-  const editableXml=execFileSync('unzip',['-p',await editable.path(),'word/document.xml'],{encoding:'utf8'});
-  for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
-   if(!editableXml.toLowerCase().includes(marker.toLowerCase()))throw Error('Editable DOCX missing user-added content: '+marker);
-  }
-  const atsEvent=photoPage.waitForEvent('download',{timeout:30000});
-  await photoPage.getByRole('button',{name:'Text-based PDF (ATS)'}).click();
-  const atsPdf=await atsEvent;
-  if(fs.readFileSync(await atsPdf.path()).subarray(0,4).toString()!=='%PDF')throw Error('Text-based PDF was not generated');
-  console.log('PASS visual DOCX artwork plus separately editable DOCX and text PDF');
-
-  // Check Canva handoff independently of Canva's external network response.
-  await photoContext.route('https://www.canva.com/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<html><body>Canva PDF Editor (test stub)</body></html>'}));
-  const canvaTabWait=photoContext.waitForEvent('page');
-  const canvaPdfWait=photoPage.waitForEvent('download');
-  await photoPage.getByRole('button',{name:'Edit in Canva'}).click();
-  const canvaTab=await canvaTabWait;
-  const canvaPdf=await canvaPdfWait;
-  if(!canvaPdf.suggestedFilename().endsWith('.pdf'))throw Error('Canva handoff did not download a PDF');
-  await canvaTab.waitForURL('https://www.canva.com/pdf-editor/',{timeout:15000});
-  await photoPage.getByText('Upload the downloaded PDF').first().waitFor({state:'visible'});
-  console.log('PASS Canva handoff: downloads PDF, opens Canva import page and explains manual upload');
-  await canvaTab.close();
+  if(await photoPage.locator('.resume-export-host .resume-document').count())throw Error('Demo exposed a clean offscreen export document');
+  if(await photoPage.locator('.wizard-watermark span').count()!==3)throw Error('Demo resume watermark was not rendered');
+  if(await photoPage.getByRole('link',{name:/Create Free Account/}).count()!==1)throw Error('Demo export lock must invite sign-up');
+  const preview=photoPage.locator('.wizard-preview .resume-document');
+  await preview.waitFor({state:'visible'});
+  await photoPage.emulateMedia({media:'print'});
+  const printVisibility=await preview.evaluate(el=>({display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility}));
+  await photoPage.emulateMedia({media:'screen'});
+  if(printVisibility.display!=='none'&&printVisibility.visibility!=='hidden')throw Error('Browser Print still exposes an unwatermarked demo resume: '+JSON.stringify(printVisibility));
+  console.log('PASS demo resume: edits and watermark, no download/print/Canva buttons or clean export target');
+  await open(photoPage,'/app?section=letters');
+  await photoPage.getByRole('heading',{name:'Cover Letter'}).waitFor({state:'visible'});
+  await photoPage.getByText('AI generation is locked in Demo Mode').waitFor({state:'visible'});
+  if(await photoPage.getByRole('button',{name:'Copy'}).count()||await photoPage.getByRole('button',{name:'Download'}).count())throw Error('Demo cover letter exposes copy/download');
+  if(await photoPage.getByRole('button',{name:'Generate with AI'}).count())throw Error('Demo cover letter exposes AI generation');
+  if(await photoPage.locator('.cover-demo-watermark span').count()!==2)throw Error('Demo cover-letter watermark missing');
+  const demoCover=photoPage.getByRole('textbox',{name:'Editable demo cover letter'});
+  await demoCover.fill('Dear Hiring Manager,\\nDemo cover letter saved locally.\\nSincerely, Test Applicant');
+  await photoPage.waitForFunction(()=>localStorage.getItem('resumebuilder:demo-cover-letter:v1')?.includes('Demo cover letter saved locally'));
+  await photoPage.reload({waitUntil:'networkidle'});
+  await photoPage.locator('.side-nav').getByRole('button',{name:'Cover Letter'}).click();
+  if(!(await photoPage.getByRole('textbox',{name:'Editable demo cover letter'}).inputValue()).includes('Demo cover letter saved locally'))throw Error('Demo cover letter draft lost after refresh');
+  console.log('PASS demo cover letter: editable, locally saved, watermarked and no AI/copy/download controls');
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
   const photoFirst=await photoPage.locator('.rt-template-card').first().locator('.rd-portrait').count();
