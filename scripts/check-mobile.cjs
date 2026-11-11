@@ -280,6 +280,23 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   console.log('PASS Admin Dashboard preview, navigation and reports (without Job Posts)');
 
 
+
+  // Auth UX smoke: password-first signup, optional OTP, and readable errors.
+  // No real auth email/OAuth requests are sent by these tests.
+  const authCtx=await browser.newContext({viewport:{width:390,height:844}});
+  const authPage=await authCtx.newPage();
+  await open(authPage,'/signup');
+  await authPage.getByRole('heading',{name:'Create an Account'}).waitFor({state:'visible'});
+  await authPage.getByPlaceholder('At least 8 characters').waitFor({state:'visible'});
+  await authPage.getByRole('button',{name:/Use an email OTP instead/}).click();
+  if(await authPage.getByPlaceholder('At least 8 characters').count())throw Error('OTP mode should not request a password');
+  await authPage.getByRole('button',{name:/Use email and password instead/}).click();
+  await authPage.getByPlaceholder('At least 8 characters').waitFor({state:'visible'});
+  await open(authPage,'/login?error=oauth_provider');
+  await authPage.getByRole('alert').getByText('Google sign-in is not enabled or configured correctly in the ResumeBuilder Supabase project.').waitFor({state:'visible'});
+  await authCtx.close();
+  console.log('PASS password-first signup, OTP alternative and actionable Google OAuth error messages');
+
   // Autosave regression: typing, navigating away, returning and hard reload
   // must preserve a new resume, wizard stage, AI prompt and interview answers.
   const draftContext=await browser.newContext({viewport:{width:1280,height:850}});

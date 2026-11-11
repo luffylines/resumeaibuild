@@ -86,7 +86,10 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
    const raw=localStorage.getItem(sessionKey);
    if(raw){
     const data=JSON.parse(raw) as Partial<Session>;
-    if(data.v===1&&typeof data.resumeId==='string'&&resumes.some(r=>r.id===data.resumeId)){
+    if(data.v===1&&typeof data.resumeId==='string'){
+     // Restore session before the initial cloud resume query finishes.
+     // If the original resume is unavailable, the selector falls back to a
+     // current resume without discarding the applicant's prior answers.
      const restored=Array.from({length:QUESTIONS.length},(_,i)=>typeof data.answers?.[i]==='string'?data.answers[i].slice(0,5000):'');
      const candidate=typeof data.index==='number'?data.index:-1;
      const restoredIndex=Number.isInteger(candidate)&&candidate>=0&&candidate<QUESTIONS.length?candidate:0;
