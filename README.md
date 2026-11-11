@@ -1,6 +1,6 @@
 # ResumeBuilder
 
-**AI Resume Builder & Job Matching** — a clean, responsive career dashboard inspired by modern mint-and-white SaaS layouts.
+**AI Resume Builder & Job Matching** — a clean, responsive career dashboard with a modern responsive purple-and-white SaaS interface.
 
 ## Screens and routes
 
@@ -12,7 +12,9 @@
 | `/signup` | Google or email/password registration | Everyone |
 | `/login` | Google, email/password, email OTP | Everyone |
 | `/app` | Career dashboard, resume editor, ATS checker, job matching, interview practice | Demo or signed-in |
-| `/admin` | User, resume, job and usage management | Preview without Supabase; restricted admin with Supabase |
+| `/admin/login` | Dedicated administrator email/password login | Public (requires separate Supabase for live sign-in) |
+| `/admin` | Admin Dashboard, reporting, Excel downloads and audit logs | Server-verified administrator only; redirects to `/admin/login` otherwise |
+| `/admin/preview` | Sample-only Admin Dashboard | Public demo ONLY when Supabase is not configured |
 
 ## Features
 - **Resume Builder:** add personal details, experience, education, and skills; live resume preview; browser Print → Save as PDF.
@@ -67,7 +69,7 @@ Not deployed by design. The code can later be hosted with Vercel or another Next
 
 ## Preview vs live functionality
 
-- **Demo (no database):** homepage, how-to guide, editable resume, template selection, printable PDF, local ATS scoring, demo sample jobs and tracking. The admin panel is a sample preview; the figures (e.g. 1,248 users) are NOT real. Demo jobs are locally editable only.
+- **Demo (no database):** homepage, how-to guide, editable resume, template selection, printable PDF, local ATS scoring, demo sample jobs and tracking. the `/admin/login` page links to `/admin/preview`, which is sample-only and not protected by a password; the live `/admin` is protected by real Supabase authentication and the dedicated admin role; the figures (e.g. 1,248 users) are NOT real. Demo jobs are locally editable only.
 - **After setting up a NEW Supabase project:** real Google/email authentication, secure per-user resumes and applications, admin-published jobs, user plan labels, ATS reports and activity logs. The live admin panel requires a manually approved user ID plus a private server secret.
 - **After adding Gemini or OpenAI:** resume draft suggestions, cover letters and interview response feedback. AI-generated claims must be reviewed by users.
 - **Not yet integrated:** external live vacancy feeds, video/voice avatar interviewer, actual subscription billing, AI provider cost metering, and production-grade per-user rate limiting. The app does not fake live employer vacancies or bill users.
@@ -76,19 +78,34 @@ Do not deploy publicly until the production auth redirects, project secrets, usa
 
 ## 2026 reference-image UI update
 
-The purple-and-white layouts follow the supplied homepage, user dashboard, admin dashboard and feature-panel references. Included are the five-step Resume Builder wizard, live resume preview, three styles, editable AI cover letters (tone/copy/download), a color-coded Kanban job tracker with drag-and-drop, AI Interview robot panel with optional local camera and browser voice features, settings tabs, six-digit OTP UI, password recovery, illustrated signup guide, and an interactive product demo.
+The purple-and-white layouts follow the supplied homepage, user dashboard, admin dashboard and feature-panel references. Included are the five-step Resume Builder wizard, live resume preview, 28 professional resume templates, editable AI cover letters (tone/copy/download), a color-coded Kanban job tracker with drag-and-drop, AI Interview robot panel with optional local camera and browser voice features, settings tabs, six-digit OTP UI, password recovery, illustrated signup guide, and an interactive product demo.
 
 **Important:** this is an implemented interpretation of the images, not a verified pixel-for-pixel copy. Third-party fonts, portrait photographs, live employer feeds, payments, avatar video calls, and other concepts in the artwork cannot be assumed to be available. A separate ResumeBuilder Supabase project and AI API key are required for real account persistence and AI responses. Production deployment has not been performed.
 
 The GitHub Actions workflow runs TypeScript, a production build, and HTTP smoke tests for the public pages, preview dashboard, and preview admin route. It does not test live OAuth, Supabase emails, or AI provider requests without the required private credentials.
 
 
-## Resume template library (20 designs)
+## Resume template library (28 designs)
 
-Templates are visible on the public homepage and in Dashboard → Templates. The designs include Modern Violet, Modern Blue, Modern Teal, Modern Coral, Modern Slate, Modern Sky, Modern Emerald, Modern Plum, Professional Indigo, Executive Navy, Executive Charcoal, Classic Professional, Minimal ATS, Clean Gray, Graduate Fresh, Timeline Pro, Tech Split, Creative Sidebar, Elegant Editorial and Bold Header.
+Templates are visible on the public homepage and in Dashboard → Templates. Upload a portrait only if you choose to: the wizard supports JPEG/PNG/WebP up to 8 MB, resizes to a centered 480 × 480 JPEG before storing the image with the resume content, and supports Remove/Replace. No photo is needed to use any template. The designs include Modern Violet, Modern Blue, Modern Teal, Modern Coral, Modern Slate, Modern Sky, Modern Emerald, Modern Plum, Professional Indigo, Executive Navy, Executive Charcoal, Classic Professional, Minimal ATS, Clean Gray, Graduate Fresh, Timeline Pro, Tech Split, Creative Sidebar, Elegant Editorial and Bold Header, plus eight photo-ready designs: Navy Portrait Pro, Studio Beige CV, Executive Portrait, Blue Profile, Modern Portrait, Editorial Beige, Black & Gold CV, and Graduate Profile.
 
 - Open /app?section=templates to compare scaled document previews, filter by category, search, or inspect a larger preview.
 - Use Template carries the chosen design into the five-step builder without replacing your content.
 - You can change designs on the Generate step, then save to persist the design ID in browser demo storage or the separate Supabase project.
 - Print PDF uses the same document design. Choose browser Save as PDF, A4 paper, 100% scale, and verify pagination before applying.
 - For online applications, start with a single-column template from Modern, Professional or Minimal. Split columns, sidebars and timelines are for visually oriented applications and may parse differently in an ATS. Heuristic ATS scores do not guarantee hiring.
+
+
+## Administrator access, audit logging, and Excel exports
+
+1. Go to **/admin/login**. The screen uses the same Supabase project as ResumeBuilder but checks the server-managed **admin_users** table. Passwords are never kept in this repository. Google/user login does NOT automatically grant admin permission. The real dashboard is /admin, while /admin/preview is sample data only before database setup.
+2. Create your separate ResumeBuilder Supabase project and run **supabase/schema.sql**, then **supabase/admin.sql**, in that project's SQL Editor. Do not run these in SKVASRA. Once you have registered yourself, manually add your own authenticated user UUID:
+   `insert into public.admin_users(user_id) values ('YOUR_RESUMEBUILDER_USER_UUID');`
+3. Set the new project's **NEXT_PUBLIC_SUPABASE_URL**, **NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY**, and private **SUPABASE_SECRET_KEY** only in `.env.local`. Do not share or commit the secret. Restart the dev server.
+4. In the Admin Dashboard, the reporting-period selector belongs on Dashboard, Activity Logs, ATS and Usage, not the global navigation. Choose **Last 7 / 30 / 90 Days / All Time**. Total Users/Resumes are all-time totals while audit, ATS and AI event counts use the selected period.
+5. The **Download Excel** button generates real `.xlsx` files. Authorized live admin exports query the database (capped at 2,000 rows per dataset), and a download event is itself audited. Preview exports contain illustrative data only. Columns include action, actor, date/time, IP (when available), and browser information. Never use an exported spreadsheet as proof of someone's identity.
+6. Activity Logs include server-verified administrative actions (job saves/deletes, plan changes, exports, admin login), plus explicitly labeled *client-reported* user actions such as resume saves, application updates and ATS checks. Client-reported descriptions are not independently verified.
+7. IP addresses can be absent during local development and may depend on trusted hosting proxies. Proxy headers can be incomplete/spoofed; IPs are **not** used as administrator credentials, geolocation, identity verification or access control. Provide an appropriate privacy notice, restrict exports, and set data-retention rules before public launch. Backups and encryption are your own hosting/database responsibilities.
+8. Optional portraits are stored with the resume content as compressed data URLs. Resumes are RLS-protected when using real Supabase. Only upload photos you have permission to use; portraits are not required for ATS-friendly applications.
+
+This code has not been deployed to Vercel or connected to a new Supabase project. Live login, database logging, IP capture and Excel export require your own separate project and keys; the demo paths are only sample screens.
