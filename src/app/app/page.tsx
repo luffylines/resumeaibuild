@@ -104,8 +104,18 @@ export default function Home(){
     const cached=latestCachedResumeDraft(u.id);
     const remote=cached?r.find((x:Resume)=>x.id===cached.id):null;
     const chosen=cached&&isCacheNewer(cached,remote)?cached:r[0]||emptyResume();
-    setResumes(cached&&isCacheNewer(cached,remote)?[chosen,...r.filter((x:Resume)=>x.id!==chosen.id)]:r);
+    const recover=cached&&isCacheNewer(cached,remote);
+    setResumes(recover?[chosen,...r.filter((x:Resume)=>x.id!==chosen.id)]:r);
     setDraft(chosen);setSelectedId(chosen.id);
+    if(recover&&cached){
+     // A browser closed before debounce may leave a newer local copy.
+     // Reconcile it with the authenticated user's private Supabase row.
+     void (sb as any).from('resumes').upsert({
+      id:cached.id,user_id:u.id,title:cached.title,content:cached,updated_at:cached.updatedAt
+     },{onConflict:'id'}).then(({error}:{error:Error|null})=>{
+      if(error)setAutosaveStatus('error');else setAutosaveStatus('synced');
+     });
+    }
    }else{
     const r=loadDemo('resumebuilder_resumes',sampleResumes);
     const cached=latestCachedResumeDraft('demo');
@@ -124,7 +134,7 @@ export default function Home(){
   const {data:{subscription}}=sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')return;setTimeout(()=>{if(!active)return;setUser(session?.user||null);void init(session?.user||null);},0);});
   return ()=>{active=false;subscription.unsubscribe();};
  },[sb,init]);
- useEffect(()=>{if(ready&&!user)localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));},[ready,user,resumes]);
+ useEffect(()=>{if(ready&&!user){try{localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));}catch{setAutosaveStatus('error');}}},[ready,user,resumes]);
 
  function cloudUpsert(item:Resume,owner:string){
   const next=syncQueue.current.then(async()=>{

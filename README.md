@@ -168,3 +168,12 @@ AI transcription requires a signed-in Supabase account plus server-only SUPABASE
 **Email OTP with Resend:** Setting MAIL_MAILER, MAIL_FROM_NAME, MAIL_FROM_ADDRESS or RESEND_API_KEY in Vercel alone does not configure Supabase Auth mail. In the ResumeBuilder Supabase project, navigate to Authentication > SMTP Settings and use Resend host smtp.resend.com, port 465 (SSL), username resend, password = Resend API key, sender email from a verified Resend domain, sender name ResumeBuilder. In Authentication > Email Templates, customize Magic Link / OTP to include the six-digit {{ .Token }}. Configure Site URL and Redirect URLs for your real Vercel address.
 
 Redeploy Vercel when adding/updating environment variables and after code changes. Never put secret API keys in NEXT_PUBLIC_ variables, commits, or frontend JavaScript.
+
+
+## Autosave and recovery
+
+The editor automatically keeps a per-account browser draft while typing; authenticated users' resume drafts are also debounced to their own rows in the separate ResumeBuilder Supabase database (RLS owner policies are required). If navigation occurs before the network write, the newer browser copy is restored and reconciled on next login/open. Status messages distinguish device-only save, syncing, synchronized account save and errors.
+
+The resume wizard restores the selected step (1–5) and "Describe your background" prompt for each resume. ATS job-description and Cover Letter form inputs are restored for the same account and browser. The 10-question Interview Practice restores the selected resume, question index, transcripts, individual answers, completion state and generated feedback. Interview progress is **local to the current browser/device**, not synced to another computer. Uploading a new resume photo can exceed browser storage limits; a quota error is shown rather than claiming success. Avoid using a shared computer for sensitive resume/interview content, and clear browser site data if needed.
+
+**New Resume** starts a new draft with a different ID; prior edited drafts remain listed in My Resumes. **Reset Interview** intentionally starts an empty interview and replaces that browser's saved interview progress. **Delete Resume** removes its autosaved cache as well as its own database record. No new table or migration is needed.
