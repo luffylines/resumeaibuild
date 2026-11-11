@@ -124,28 +124,29 @@ export default function Home(){
  },[sb,init]);
  useEffect(()=>{if(ready&&!user){localStorage.setItem('resumebuilder_resumes',JSON.stringify(resumes));localStorage.setItem('resumebuilder_apps',JSON.stringify(applications));}},[ready,user,resumes,applications]);
  const flash=(text:string)=>{setNotice(text);setError('');};
+ const auditUser=(action:string,detail:string)=>{if(sb&&user)void fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,detail})}).catch(()=>{});};
  async function saveResume(r:Resume){
   setError('');const item={...r,updatedAt:new Date().toISOString()};
   if(sb&&user){const {error:e}=await (sb as any).from('resumes').upsert({id:item.id,user_id:user.id,title:item.title,content:item,updated_at:item.updatedAt});if(e){setError(e.message);return;}}
-  setResumes(prev=>[item,...prev.filter(x=>x.id!==item.id)]);setDraft(item);setSelectedId(item.id);flash('Resume saved successfully.');
+  setResumes(prev=>[item,...prev.filter(x=>x.id!==item.id)]);setDraft(item);setSelectedId(item.id);flash('Resume saved successfully.');auditUser('resume_saved',item.title);
  }
  async function removeResume(id:string){
   if(!window.confirm('Delete this resume?'))return;
   if(sb&&user){const {error:e}=await (sb as any).from('resumes').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
-  const remaining=resumes.filter(x=>x.id!==id);setResumes(remaining);if(selectedId===id){const other=remaining[0]||emptyResume();setSelectedId(other.id);setDraft(other);}flash('Resume deleted.');
+  const remaining=resumes.filter(x=>x.id!==id);setResumes(remaining);if(selectedId===id){const other=remaining[0]||emptyResume();setSelectedId(other.id);setDraft(other);}flash('Resume deleted.');auditUser('resume_deleted',id);
  }
  async function saveApp(a:JobApplication){
   if(sb&&user){const {error:e}=await (sb as any).from('job_applications').upsert({id:a.id,user_id:user.id,content:a});if(e){setError(e.message);return;}}
-  setApplications(prev=>[a,...prev.filter(x=>x.id!==a.id)]);flash('Application updated.');
+  setApplications(prev=>[a,...prev.filter(x=>x.id!==a.id)]);flash('Application updated.');auditUser('application_saved',a.company+' · '+a.role+' · '+a.status);
  }
  async function removeApp(id:string){
   if(sb&&user){const {error:e}=await (sb as any).from('job_applications').delete().eq('id',id).eq('user_id',user.id);if(e){setError(e.message);return;}}
-  setApplications(prev=>prev.filter(x=>x.id!==id));flash('Application removed.');
+  setApplications(prev=>prev.filter(x=>x.id!==id));flash('Application removed.');auditUser('application_deleted',id);
  }
  function startNew(){const r=emptyResume();setDraft(r);setSelectedId(r.id);go('builder');}
  function editResume(r:Resume){setDraft(structuredClone(r));setSelectedId(r.id);go('builder');}
  function setDraftKey<K extends keyof Resume>(k:K,v:Resume[K]){setDraft(old=>({...old,[k]:v}));}
- async function logATS(){if(sb&&user){const {error:e}=await (sb as any).from('ats_scans').insert({id:uid(),user_id:user.id,resume_id:resumes.some(r=>r.id===activeResume.id)?activeResume.id:null,score:results.score});if(e){setError(e.message);return;}}flash('Resume analysis updated.');}
+ async function logATS(){if(sb&&user){const {error:e}=await (sb as any).from('ats_scans').insert({id:uid(),user_id:user.id,resume_id:resumes.some(r=>r.id===activeResume.id)?activeResume.id:null,score:results.score});if(e){setError(e.message);return;}}flash('Resume analysis updated.');auditUser('ats_checked',activeResume.title+' — '+results.score+'%');}
  async function requestAI(task:AiTask,context:string){
   setError('');setNotice('');setBusy(true);
   try{const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,context})});const data=await res.json();if(!res.ok)throw Error(data.error||'AI unavailable.');return data.output as string;}
