@@ -35,7 +35,7 @@ jobs:
             fi
             sleep 1
           done
-          for route in / /guide /signup /login /forgot-password /auth/reset /app /admin; do
+          for route in / /guide /demo /signup /login /forgot-password /auth/reset /app /admin; do
             code=$(curl --silent --show-error --output /tmp/resumebuilder-page.html --write-out "%{http_code}" "http://127.0.0.1:3000$route")
             echo "$route → HTTP $code"
             if [ "$code" != "200" ]; then

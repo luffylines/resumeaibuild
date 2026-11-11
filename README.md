@@ -8,6 +8,7 @@
 |---|---|---|
 | `/` | Public marketing homepage: features, templates, pricing, FAQ | Everyone |
 | `/guide` | Registration, verification, login walkthrough | Everyone |
+| `/demo` | Interactive self-paced product tour | Everyone |
 | `/signup` | Google or email/password registration | Everyone |
 | `/login` | Google, email/password, email OTP | Everyone |
 | `/app` | Career dashboard, resume editor, ATS checker, job matching, interview practice | Demo or signed-in |
@@ -72,3 +73,11 @@ Not deployed by design. The code can later be hosted with Vercel or another Next
 - **Not yet integrated:** external live vacancy feeds, video/voice avatar interviewer, actual subscription billing, AI provider cost metering, and production-grade per-user rate limiting. The app does not fake live employer vacancies or bill users.
 
 Do not deploy publicly until the production auth redirects, project secrets, usage limits and security have been tested.
+
+## 2026 reference-image UI update
+
+The purple-and-white layouts follow the supplied homepage, user dashboard, admin dashboard and feature-panel references. Included are the five-step Resume Builder wizard, live resume preview, three styles, editable AI cover letters (tone/copy/download), a color-coded Kanban job tracker with drag-and-drop, AI Interview robot panel with optional local camera and browser voice features, settings tabs, six-digit OTP UI, password recovery, illustrated signup guide, and an interactive product demo.
+
+**Important:** this is an implemented interpretation of the images, not a verified pixel-for-pixel copy. Third-party fonts, portrait photographs, live employer feeds, payments, avatar video calls, and other concepts in the artwork cannot be assumed to be available. A separate ResumeBuilder Supabase project and AI API key are required for real account persistence and AI responses. Production deployment has not been performed.
+
+The GitHub Actions workflow runs TypeScript, a production build, and HTTP smoke tests for the public pages, preview dashboard, and preview admin route. It does not test live OAuth, Supabase emails, or AI provider requests without the required private credentials.
