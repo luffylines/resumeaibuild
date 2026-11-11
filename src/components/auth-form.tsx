@@ -9,6 +9,7 @@ export default function AuthForm({mode}:{mode:'login'|'signup'}){
  const [showPassword,setShowPassword]=useState(false);const [otpMode,setOtpMode]=useState(mode==='signup');const [code,setCode]=useState('');const [sent,setSent]=useState(false);
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');
  const sb=browserSupabase();
+ const logLogin=()=>fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'user_logged_in',detail:'User signed in to ResumeBuilder'})}).catch(()=>{});
  useEffect(()=>{if(!sb)return;void sb.auth.getUser().then(({data})=>{if(data.user)window.location.assign('/app');});},[sb]);
  const run=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');setMessage('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'Something went wrong.');}finally{setBusy(false);}};
  const google=()=>run(async()=>{if(!sb)throw Error('Please configure a new Supabase project first.');const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+'/auth/callback'}});if(error)throw error;});
@@ -20,10 +21,10 @@ export default function AuthForm({mode}:{mode:'login'|'signup'}){
   if(mode==='signup'){
    const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name.trim()},emailRedirectTo:location.origin+'/auth/callback'}});
    if(error)throw error;
-   if(data.session)window.location.assign('/app');else setMessage('Check your inbox to confirm your email address before logging in.');
-  } else {const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;window.location.assign('/app');}
+   if(data.session){await logLogin();window.location.assign('/app');}else setMessage('Check your inbox to confirm your email address before logging in.');
+  } else {const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;await logLogin();window.location.assign('/app');}
  });
- const verify=()=>run(async()=>{if(!sb)throw Error('Supabase not connected.');const {error}=await sb.auth.verifyOtp({email,token:code,type:'email'});if(error)throw error;window.location.assign('/app');});
+ const verify=()=>run(async()=>{if(!sb)throw Error('Supabase not connected.');const {error}=await sb.auth.verifyOtp({email,token:code,type:'email'});if(error)throw error;await logLogin();window.location.assign('/app');});
  return <main className="auth-screen"><Link className="auth-back-brand" href="/"><span className="public-logo-mark"><BrandMark size={18}/></span> ResumeBuilder</Link>
  <section className="auth-story"><span className="public-pill"><Sparkles size={15}/> Your career starts here</span><h1>Create a professional resume <span>with confidence.</span></h1><p>Everything from building your resume to practicing for interviews, all in one simple workspace.</p><div className="auth-story-preview"><div className="auth-story-paper"><strong>CHRISTIAN B. ARING</strong><small>IT PROFESSIONAL</small><i/><i/><i/><b>EXPERIENCE</b><i/><i/><b>SKILLS</b><i/></div><div className="auth-story-score"><CheckCircle2 size={20}/> ATS-friendly resume</div></div><div className="auth-benefits"><span><CheckCircle2/> Build with AI</span><span><CheckCircle2/> Check ATS readiness</span><span><CheckCircle2/> Track job applications</span></div></section>
  <section className="auth-form-area"><div className="auth-form-card"><div className="auth-form-icon">{mode==='signup'?<UserRoundPlus size={22} strokeWidth={1.9}/>:<LogIn size={22} strokeWidth={1.9}/>}</div><h2>{mode==='signup'?'Create an Account':'Log In to ResumeBuilder'}</h2><p>{mode==='signup'?'Get started with ResumeBuilder':'Welcome back! Sign in to continue your progress.'}</p>{!configured&&<div className="auth-warning">Supabase is not configured yet. You can explore the demo or connect your new project.</div>}

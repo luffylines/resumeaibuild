@@ -3,7 +3,7 @@ import {createClient} from '@supabase/supabase-js';
 import {serverSupabase} from '@/lib/supabase-server';
 import {writeAudit} from '@/lib/audit';
 export const runtime='nodejs';
-const actions=new Set(['resume_saved','resume_deleted','application_saved','application_deleted','ats_checked','ai_generated']);
+const actions=new Set(['resume_saved','resume_deleted','application_saved','application_deleted','ats_checked','ai_generated','user_logged_in']);
 export async function POST(req:NextRequest){
  const origin=req.headers.get('origin');
  if(origin&&origin!==req.nextUrl.origin)return NextResponse.json({error:'Invalid request origin'},{status:403});
