@@ -360,3 +360,6 @@
 .builder-steps>button span{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#f0e7ff;color:#6531df}
 @media(max-width:880px){.guide-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.guide-grid{grid-template-columns:1fr}.guide-card{min-height:240px}.guide-success{flex-direction:column;align-items:flex-start}.guide-nav .public-outline{font-size:11px}}
+
+.admin-account-link{display:flex;align-items:center;gap:9px;text-decoration:none;border:1px solid #e7ddfc;border-radius:9px;background:#f5f0ff;color:#6834df;font-size:11px;font-weight:800;padding:12px;margin-bottom:15px}
+.admin-account-link svg:last-child{margin-left:auto}

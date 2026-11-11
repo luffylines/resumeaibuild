@@ -57,6 +57,7 @@ export default function Home(){
  const [draft,setDraft]=useState<Resume>(sampleResume);
  const [selectedId,setSelectedId]=useState(sampleResume.id);
  const [user,setUser]=useState<User|null>(null);
+ const [isAdmin,setIsAdmin]=useState(false);
  const [ready,setReady]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
@@ -85,14 +86,14 @@ export default function Home(){
  const init=useCallback(async(u:User|null)=>{
   try{
    if(sb&&u){
-    const [rr,aa,jj]=await Promise.all([(sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false}),(sb as any).from('job_applications').select('content').eq('user_id',u.id).order('created_at',{ascending:false}),(sb as any).from('job_posts').select('id,role,company,location,type,keywords').eq('is_active',true)]);setJobsData(jj.error?[]:jj.data||[]);
+    const [rr,aa,jj]=await Promise.all([(sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false}),(sb as any).from('job_applications').select('content').eq('user_id',u.id).order('created_at',{ascending:false}),(sb as any).from('job_posts').select('id,role,company,location,type,keywords').eq('is_active',true)]);setJobsData(jj.error?[]:jj.data||[]);const role=await (sb as any).from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();setIsAdmin(!!role.data);
     if(rr.error)throw rr.error;if(aa.error)throw aa.error;
     const r=(rr.data||[]).map((x:{content:Resume})=>x.content);
     setResumes(r);setApplications((aa.data||[]).map((x:{content:JobApplication})=>x.content));
     if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}else{const blank=emptyResume();setDraft(blank);setSelectedId(blank.id);}
    }else{
     const r=loadDemo('resumebuilder_resumes',[sampleResume]);const a=loadDemo('resumebuilder_apps',starters);
-    setResumes(r);setApplications(a);setJobsData(sampleJobs);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
+    setResumes(r);setApplications(a);setJobsData(sampleJobs);setIsAdmin(false);if(r.length){setSelectedId(r[0].id);setDraft(r[0]);}
    }
   }catch(e){setError(e instanceof Error?e.message:'Unable to load saved data.');}
   finally{setReady(true);}
@@ -159,7 +160,7 @@ export default function Home(){
    <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><Icon size={17}/><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
    <div className="side-label recent-label">RECENT DOCUMENTS</div>
    <div className="sidebar-docs">{resumes.slice(0,3).map(r=><button onClick={()=>editResume(r)} key={r.id}><FileText size={14}/><span>{r.title}</span></button>)}{resumes.length===0&&<p>No saved resumes yet</p>}</div>
-   <div className="sidebar-bottom">
+   <div className="sidebar-bottom">{isAdmin&&<a className="admin-account-link" href="/admin"><ShieldCheck size={16}/> Admin Dashboard <ArrowRight size={15}/></a>}
     <div className="sidebar-tip"><span><Sparkles size={18}/></span><strong>Career toolkit</strong><p>Your next opportunity starts with a stronger resume.</p></div>
     <button className="account-button" onClick={()=>{go('settings');}}><span className="avatar">{formattedName.slice(0,1).toUpperCase()}</span><span className="account-text"><strong>{user?.user_metadata?.full_name|| (isDemo?'Alex Rivera (Demo)':user?.email)}</strong><small>{isDemo?'Demo workspace':'Personal account'}</small></span><Settings2 size={17}/></button>
    </div>

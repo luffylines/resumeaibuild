@@ -2,6 +2,17 @@
 
 **AI Resume Builder & Job Matching** — a clean, responsive career dashboard inspired by modern mint-and-white SaaS layouts.
 
+## Screens and routes
+
+| Path | Screen | Access |
+|---|---|---|
+| `/` | Public marketing homepage: features, templates, pricing, FAQ | Everyone |
+| `/guide` | Registration, verification, login walkthrough | Everyone |
+| `/signup` | Google or email/password registration | Everyone |
+| `/login` | Google, email/password, email OTP | Everyone |
+| `/app` | Career dashboard, resume editor, ATS checker, job matching, interview practice | Demo or signed-in |
+| `/admin` | User, resume, job and usage management | Preview without Supabase; restricted admin with Supabase |
+
 ## Features
 - **Resume Builder:** add personal details, experience, education, and skills; live resume preview; browser Print → Save as PDF.
 - **ATS Checker:** honest, local heuristic scoring based on content completeness and optional job description keyword overlap (not a guarantee of passing a real ATS).
@@ -30,12 +41,13 @@ Next.js 16, TypeScript, React 19, Tailwind CSS 4, Lucide, Supabase Auth/PostgreS
 
 3. Open **http://localhost:3000**. Demo mode runs without API keys. All sample profiles, applications, and jobs are illustrative.
 4. For real accounts, **create a NEW Supabase project specifically for ResumeBuilder**. Do not reuse the SKVASRA project or its keys.
-5. Paste `supabase/schema.sql` into **your new project's SQL Editor** and run it once. The tables use user ownership and RLS.
+5. Run `supabase/schema.sql` and then `supabase/admin.sql` in **the new ResumeBuilder project's SQL Editor only**. Never run these in SKVASRA.
 6. In your new Supabase project, enable **Authentication → Providers → Google** and configure Google OAuth credentials if you want Google login. Add the allowed development origin and callback paths according to your Supabase OAuth guide. Set **Site URL** to `http://localhost:3000` while developing and add **Redirect URLs** for `http://localhost:3000/auth/callback`.
 7. Enable Email provider. For **six-digit email OTP**, customize the email template to display `{{ .Token }}` instead of only a magic link (refer to Supabase Auth docs). Verify rate limits, SMTP quota, and email delivery before public launch.
 8. In `.env.local`, set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from **the new project**. These are intended to be public. Restart the dev server.
-9. For AI, set **either** `GEMINI_API_KEY` or `OPENAI_API_KEY` in `.env.local`. **Never prefix private AI keys with NEXT_PUBLIC_ and never commit .env.local.** AI endpoints require a signed-in Supabase user.
-10. Run `npm run typecheck` and `npm run build` for checks.
+9. Set `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) for server-only admin API access. After creating your own signup account, locate its UUID under **Authentication → Users**, then execute `insert into public.admin_users(user_id) values ('YOUR_AUTH_USER_UUID');` in the new project's SQL editor. Never use user email or editable metadata as proof of admin rights.
+10. For AI, set **either** `GEMINI_API_KEY` or `OPENAI_API_KEY` in `.env.local`. **Never prefix private AI keys with NEXT_PUBLIC_ and never commit .env.local.** AI endpoints require a signed-in Supabase user.
+11. Run `npm run typecheck` and `npm run build` for checks.
 
 ## Security & limitations
 
@@ -51,3 +63,12 @@ Next.js 16, TypeScript, React 19, Tailwind CSS 4, Lucide, Supabase Auth/PostgreS
 ## Deployment
 
 Not deployed by design. The code can later be hosted with Vercel or another Next.js-compatible host **only after you choose to deploy** and provide separate production environment variables and redirect URLs.
+
+## Preview vs live functionality
+
+- **Demo (no database):** homepage, how-to guide, editable resume, template selection, printable PDF, local ATS scoring, demo sample jobs and tracking. The admin panel is a sample preview; the figures (e.g. 1,248 users) are NOT real. Demo jobs are locally editable only.
+- **After setting up a NEW Supabase project:** real Google/email authentication, secure per-user resumes and applications, admin-published jobs, user plan labels, ATS reports and activity logs. The live admin panel requires a manually approved user ID plus a private server secret.
+- **After adding Gemini or OpenAI:** resume draft suggestions, cover letters and interview response feedback. AI-generated claims must be reviewed by users.
+- **Not yet integrated:** external live vacancy feeds, video/voice avatar interviewer, actual subscription billing, AI provider cost metering, and production-grade per-user rate limiting. The app does not fake live employer vacancies or bill users.
+
+Do not deploy publicly until the production auth redirects, project secrets, usage limits and security have been tested.
