@@ -270,3 +270,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
  .resume-client-shell .client-shortcuts button>span:last-child{min-width:0;flex:1}
  .resume-client-shell .client-shortcuts button strong,.resume-client-shell .client-shortcuts button small{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
 }
+
+
+/* At tablet widths the desktop search control crowds breadcrumbs and profile.
+   The resume search is still available inside the My Resumes view. */
+@media screen and (min-width:701px) and (max-width:900px){
+ .resume-client-shell .topbar .searchbox,
+ .resume-client-shell .topbar .top-separator{display:none}
+ .resume-client-shell .topbar .top-actions{flex:none;gap:9px}
+ .resume-client-shell .topbar .breadcrumbs{min-width:0;overflow:hidden}
+ .resume-client-shell .topbar .breadcrumbs strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
