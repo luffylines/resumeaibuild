@@ -9,7 +9,7 @@ import {accountAvatar,clearProfilePhoto,readProfilePhoto,saveProfilePhoto} from 
 import MfaPanel from '@/components/mfa-panel';
 
 type Tab='account'|'subscription'|'integrations'|'security'|'notifications';
-type Props={user:User|null;resumes:Resume[];signOut:()=>Promise<void>};
+type Props={user:User|null;resumes:Resume[];signOut:()=>Promise<void>;initialTab?:Tab};
 type Provider={name:'Gemini'|'OpenAI'|'Groq';status:'connected'|'unavailable'|'not_configured';model:string;message:string};
 const menu:{id:Tab;label:string;icon:typeof UserRound}[]=[
  {id:'account',label:'Account',icon:UserRound},
@@ -19,8 +19,8 @@ const menu:{id:Tab;label:string;icon:typeof UserRound}[]=[
  {id:'notifications',label:'Notifications',icon:Bell}
 ];
 
-export default function SettingsPanel({user,resumes,signOut}:Props){
- const [tab,setTab]=useState<Tab>('account');
+export default function SettingsPanel({user,resumes,signOut,initialTab='account'}:Props){
+ const [tab,setTab]=useState<Tab>(initialTab);
  const [name,setName]=useState(user?.user_metadata?.full_name||'');
  const [notice,setNotice]=useState('');
  const [error,setError]=useState('');
