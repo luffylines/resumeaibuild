@@ -20,6 +20,7 @@ import {authReturnUrl} from '@/lib/auth-return-url';
 import SettingsPanel from '@/components/settings-panel';
 import MfaPanel from '@/components/mfa-panel';
 import {accountAvatar,loadProfilePhoto,readProfilePhoto} from '@/lib/profile-photo';
+import {requiresMfaChallenge} from '@/lib/mfa-factors';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
@@ -134,9 +135,8 @@ export default function Home(){
    // Never demand a 2FA login challenge for an enrollment that was started
    // but never verified. AAL2 authentication is only required after a factor
    // is VERIFIED by Supabase, not after QR generation or QR scanning.
-   const verified=(listed.data.all||listed.data.totp)
-    .some(f=>f.factor_type==='totp'&&f.status==='verified');
-   setMfaState(verified&&assurance.data.currentLevel!=='aal2'?'required':'verified');
+   const required=requiresMfaChallenge(listed.data,assurance.data.currentLevel);
+   setMfaState(required?'required':'verified');
   }catch(error){
    setMfaState('error');
    setMfaError(error instanceof Error?error.message:'Could not confirm two-factor security state.');
