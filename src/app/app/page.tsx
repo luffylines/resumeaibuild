@@ -16,6 +16,7 @@ import {UNIQUE_RESUME_TEMPLATES,PHOTO_READY_TEMPLATES} from '@/lib/templates';
 import {cacheResumeDraft,cachedResumeDraft,discardCachedResumeDraft,isCacheNewer,latestCachedResumeDraft} from '@/lib/resume-autosave';
 import ResumeWizard from '@/components/resume-wizard';
 import InterviewStudio from '@/components/interview-studio';
+import {authReturnUrl} from '@/lib/auth-return-url';
 import SettingsPanel from '@/components/settings-panel';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
@@ -230,7 +231,7 @@ export default function Home(){
  }
  async function loginGoogle(){
   if(!sb){setError('Create and connect your new Supabase project to enable login.');return;}
-  const {error:e}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/auth/callback'}});
+  const {error:e}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:authReturnUrl('/auth/callback')}});
   if(e)setError(e.message);
  }
  async function sendEmailOtp(){

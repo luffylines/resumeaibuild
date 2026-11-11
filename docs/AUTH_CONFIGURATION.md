@@ -75,3 +75,19 @@ References:
 - https://supabase.com/docs/guides/auth/social-sign-in/auth-google
 - https://supabase.com/docs/guides/auth/redirect-urls
 - https://resend.com/changelog/smtp-service
+
+## Verification email opens Vercel login instead of ResumeBuilder
+
+Vercel Authentication (Deployment Protection) is separate from ResumeBuilder authentication and may protect preview/deployment URLs.
+
+1. Open Vercel → Project → Settings (or Security) → Deployment Protection. Use Standard Protection for a public production domain; preview builds can remain protected.
+2. Copy your real production domain from Vercel → Project → Settings → Domains. Avoid the long randomly generated individual deployment hostname.
+3. Set NEXT_PUBLIC_SITE_URL under Vercel → Environment Variables → Production to that public production origin without an /auth path. Redeploy after editing.
+4. Set Supabase → Authentication → URL Configuration → Site URL to that production origin. Allow that host's /auth/callback and /auth/reset paths.
+5. The Confirm Sign Up email template should use {{ .ConfirmationURL }} unless a custom token_hash confirmation route is deliberately implemented. Do not hardcode preview URLs in email HTML.
+6. First verify the production hostname loads in an incognito window without a Vercel login. Then request a fresh confirmation email and open it once.
+
+The code uses src/lib/auth-return-url.ts for OAuth, signup, email OTP and password recovery. NEXT_PUBLIC_SITE_URL must be a public origin; without it, the browser's current origin is used.
+
+https://vercel.com/docs/deployment-protection
+https://supabase.com/docs/guides/auth/redirect-urls

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LoaderCircle,Lock,LogIn,UserRoundPlus,Mail,ShieldCheck,Sparkles,Clock3,RefreshCw} from 'lucide-react';
 import {browserSupabase,configured} from '@/lib/supabase';
+import {authReturnUrl} from '@/lib/auth-return-url';
 import {BrandMark,GoogleIcon} from '@/components/brand-icons';
 
 type Mode='login'|'signup';
@@ -79,7 +80,7 @@ export default function AuthForm({mode}:{mode:Mode}){
   if(!sb)throw Error('Supabase is not connected to this website.');
   const {error:e}=await sb.auth.signInWithOAuth({
    provider:'google',
-   options:{redirectTo:window.location.origin+'/auth/callback',queryParams:{prompt:'select_account'}}
+   options:{redirectTo:authReturnUrl('/auth/callback'),queryParams:{prompt:'select_account'}}
   });
   if(e)throw e;
  });
@@ -92,7 +93,7 @@ export default function AuthForm({mode}:{mode:Mode}){
    if(remaining>0)throw Error('Please wait '+remaining+' seconds before requesting another email code.');
    const {error:e}=await sb.auth.signInWithOtp({
     email:normalized,
-    options:{shouldCreateUser:mode==='signup',emailRedirectTo:window.location.origin+'/auth/callback',
+    options:{shouldCreateUser:mode==='signup',emailRedirectTo:authReturnUrl('/auth/callback'),
       ...(mode==='signup'?{data:{full_name:name.trim()}}:{})}
    });
    if(e)throw e;
@@ -103,7 +104,7 @@ export default function AuthForm({mode}:{mode:Mode}){
   if(password.length<8)throw Error('Use a password with at least 8 characters.');
   if(mode==='signup'){
    const {data,error:e}=await sb.auth.signUp({
-    email:normalized,password,options:{data:{full_name:name.trim()},emailRedirectTo:window.location.origin+'/auth/callback'}
+    email:normalized,password,options:{data:{full_name:name.trim()},emailRedirectTo:authReturnUrl('/auth/callback')}
    });
    if(e)throw e;
    if(data.session){
