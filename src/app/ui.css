@@ -785,3 +785,42 @@
 .resume-client-shell .avatar img,.settings-v2 .settings-avatar img{
  object-fit:cover!important;object-position:center!important;
 }
+
+/* Accessible, high-visibility shared logo across public and signed-in views. */
+.public-logo-mark{
+ width:56px!important;height:56px!important;
+ min-width:56px;min-height:56px;
+ background:transparent!important;box-shadow:none!important;border:none!important;
+ overflow:visible!important;padding:0!important;
+}
+.public-logo-mark img{display:block;width:52px!important;height:52px!important;max-width:none!important;max-height:none!important;object-fit:contain!important;}
+.resume-client-shell .workspace-brand-home{
+ display:inline-flex;align-items:center;gap:10px;min-width:0;padding:0;margin:0;border:0;
+ background:transparent;color:inherit;font:inherit;text-align:left;font-weight:500;letter-spacing:inherit;
+ text-decoration:none;cursor:pointer;
+}
+.resume-client-shell .workspace-brand-home:hover,.public-logo:hover{color:#5f2be3}
+.resume-client-shell .workspace-brand-home:focus-visible,.public-logo:focus-visible{outline:3px solid #956bfe;outline-offset:4px;border-radius:8px}
+.resume-client-shell .workspace-brand-home .brand-icon{
+ width:52px!important;height:52px!important;min-width:52px;min-height:52px;
+ background:transparent!important;box-shadow:none!important;padding:0!important;border:0!important;
+}
+.resume-client-shell .workspace-brand-home .brand-icon img{width:49px!important;height:49px!important;max-width:none!important;max-height:none!important;object-fit:contain}
+.resume-client-shell .brand{gap:6px;padding:0 2px;}
+/* Consistent Settings icons on phones, even when right-hand chevrons are hidden. */
+@media(max-width:780px){
+ .settings-v2-nav .settings-tab-icon{display:inline-flex!important;align-items:center;justify-content:center;
+  width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;
+  background:#f2edff;color:#6935d8;border-radius:10px;flex:0 0 32px!important;}
+ .settings-v2-nav button.selected .settings-tab-icon{background:#ded0ff;color:#5222c2}
+ .settings-v2-nav .settings-tab-icon>svg{display:block!important;width:19px!important;height:19px!important;opacity:1!important;visibility:visible!important;flex:none}
+ .settings-v2-nav button>svg:last-child{display:none!important}
+ .settings-v2-nav button{display:inline-flex;align-items:center;gap:8px}
+}
+@media(max-width:480px){
+ .public-logo-mark{width:44px!important;height:44px!important;min-width:44px;min-height:44px}
+ .public-logo-mark img{width:42px!important;height:42px!important}
+ .public-logo{font-size:17px}
+ .resume-client-shell .workspace-brand-home .brand-icon{width:45px!important;height:45px!important;min-width:45px}
+ .resume-client-shell .workspace-brand-home .brand-icon img{width:43px!important;height:43px!important}
+}
