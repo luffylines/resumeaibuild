@@ -17,28 +17,29 @@ type RecognitionBrowser=Window&{SpeechRecognition?:new()=>BrowserRecognition;web
 const QUESTIONS=[
  'Tell me about yourself and your professional background.',
  'Describe a challenging project and how you handled it.',
- 'Why are you interested in this position?',
+ 'What kinds of work or opportunities interest you, and why?',
  'What is your greatest professional strength?',
  'How do you prioritize multiple deadlines?',
  'Describe a time you learned a new skill quickly.',
  'Tell me about a time you worked on a team.',
- 'What can you contribute to this company?',
+ 'What strengths and skills would you bring to a new team?',
  'Describe a time you received critical feedback.',
  'Where do you see your career in five years?'
 ];
-type Props={targetRole:string;resumes:Resume[];activeResumeId:string;onEditResume?:(resume:Resume)=>void;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean;userId:string};
-export default function InterviewStudio({targetRole,resumes,activeResumeId,onEditResume,runAI,busy,signedIn,userId}:Props){
+type Props={resumes:Resume[];activeResumeId:string;runAI:(task:'interview',context:string)=>Promise<string|null>;busy:boolean;signedIn:boolean;userId:string};
+export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signedIn,userId}:Props){
  const [index,setIndex]=useState(0);
  const [resumeId,setResumeId]=useState(activeResumeId);
  const [answers,setAnswers]=useState<string[]>(()=>QUESTIONS.map(()=>''));
  const [completed,setCompleted]=useState(false);
+ const [practiceFocus,setPracticeFocus]=useState('');
  const sessionKey='resumebuilder:interview:v1:'+userId;
  const [sessionLoadedFor,setSessionLoadedFor]=useState('');
  const [sessionSavedAt,setSessionSavedAt]=useState<number|null>(null);
  const [sessionSaveFailed,setSessionSaveFailed]=useState(false);
  const currentResume=resumes.find(r=>r.id===resumeId)||resumes.find(r=>r.id===activeResumeId)||resumes[0];
- const role=(currentResume?.targetRole||targetRole||'').trim();
- const targetLabel=role&&role.toLowerCase()!=='general'?role:'Not set in resume';
+ const role=practiceFocus.trim()||'General interview';
+ const targetLabel=practiceFocus.trim()||'General interview — suitable for any job';
  const [answer,setAnswer]=useState('');
  const answeredCount=answers.filter((x,i)=>i!==index&&!!x.trim()).length+(answer.trim()?1:0);
  const [feedback,setFeedback]=useState('');
@@ -67,9 +68,9 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  const restartTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const utteranceVersion=useRef(0);
 
- type Session={v:1;resumeId:string;index:number;answers:string[];answer:string;completed:boolean;feedback:string;savedAt:number};
+ type Session={v:1;resumeId:string;index:number;answers:string[];answer:string;completed:boolean;feedback:string;focus:string;savedAt:number};
  const currentSessionRef=useRef<Session|null>(null);
- currentSessionRef.current={v:1,resumeId,index,answers,answer,completed,feedback,savedAt:Date.now()};
+ currentSessionRef.current={v:1,resumeId,index,answers,answer,completed,feedback,focus:practiceFocus,savedAt:Date.now()};
  function flushSession(){
   if(sessionLoadedFor!==sessionKey||!currentSessionRef.current)return;
   try{
@@ -80,7 +81,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  }
  useEffect(()=>{
   setIndex(0);setAnswers(QUESTIONS.map(()=>''));
-  setAnswerText('');setFeedback('');setCompleted(false);setResumeId(activeResumeId);
+  setAnswerText('');setFeedback('');setCompleted(false);setResumeId(activeResumeId);setPracticeFocus('');
   setSessionSavedAt(null);setSessionSaveFailed(false);
   try{
    const raw=localStorage.getItem(sessionKey);
@@ -100,6 +101,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
      setAnswerText(currentAnswer);
      setCompleted(data.completed===true);
      setFeedback(typeof data.feedback==='string'?data.feedback:'');
+     setPracticeFocus(typeof data.focus==='string'?data.focus.slice(0,100):'');
      if(typeof data.savedAt==='number')setSessionSavedAt(data.savedAt);
      setMessage('Interview progress restored. Your previous answers are still here.');
     }
@@ -110,7 +112,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  useEffect(()=>{
   if(sessionLoadedFor!==sessionKey)return;
   flushSession();
- },[sessionLoadedFor,sessionKey,resumeId,index,answers,answer,completed,feedback]);
+ },[sessionLoadedFor,sessionKey,resumeId,index,answers,answer,completed,feedback,practiceFocus]);
  useEffect(()=>{
   if(sessionLoadedFor!==sessionKey)return;
   const flush=()=>{if(currentSessionRef.current)try{localStorage.setItem(sessionKey,JSON.stringify(currentSessionRef.current));}catch{}};
@@ -338,10 +340,6 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
   setFeedback('');setMessage('');setCompleted(false);
  }
  async function evaluateSession(completedAnswers:string[]){
-  if(!role||role.toLowerCase()==='general'){
-   setMessage('Your selected resume has no target job title. Update the Target Job Title in Build Resume before requesting a role-specific evaluation.');
-   return;
-  }
   if(!completedAnswers.some(x=>x.trim())){
    setMessage('Answer at least one interview question before finishing. You can go back to add your responses.');
    return;
@@ -353,7 +351,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
    role,
    resume:{
     title:currentResume?.title||'',
-    targetRole:role,
+    interviewFocus:practiceFocus.trim()||null,
     summary:(currentResume?.summary||'').slice(0,550),
     skills:(currentResume?.skills||'').slice(0,400),
     experience:(currentResume?.experience||[]).slice(0,3).map(e=>({role:e.role,company:e.company,details:e.details.slice(0,200)})),
@@ -400,7 +398,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
  function changeResume(id:string){
   if(id===resumeId)return;
   if((answers.some(a=>a.trim())||answerRef.current.trim())&&!window.confirm('Switching resumes will restart this interview. Continue?'))return;
-  clearInterview();setResumeId(id);
+  clearInterview();setResumeId(id);setPracticeFocus('');
  }
  function reset(){
   clearInterview();
@@ -416,7 +414,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
   finally{setCameraLoading(false);}
  }
  return <div className="interview-studio">
-  <div className="page-heading"><div><div className="eyebrow">PRACTICE WITH AI</div><h1>Interview Practice</h1><p>Practice for a role from your saved resume. Complete all 10 questions, then receive one AI assessment.</p></div><span className="interview-session-label"><Headphones size={17}/> Interview Session</span></div>
+  <div className="page-heading"><div><div className="eyebrow">PRACTICE WITH AI</div><h1>Interview Practice</h1><p>Practice using any resume, without limiting it to one job. Complete all 10 questions for your overall AI feedback.</p></div><span className="interview-session-label"><Headphones size={17}/> Interview Session</span></div>
   <div className="interview-studio-grid">
    <section className="interview-stage-panel"><div className="interview-stage-top"><span><span className="live-dot"/> AI Interviewer</span><span>{speaking?'Asking Question':microphone?'Listening':'Practice Mode'}</span></div>
     <div className="interview-visual">{camera?<video ref={video} autoPlay playsInline muted aria-label="Your private camera preview"/>:<div className={'interview-bot '+(speaking?'bot-talking':'')}><div className="bot-antenna"/><div className="bot-head"><div className="bot-screen"><span/><span/><i/></div></div><div className="bot-neck"/><div className="bot-torso"><span/></div><div className="bot-left-arm"/><div className="bot-right-arm"/></div>}</div>
@@ -425,9 +423,12 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
    </section>
    <section className="interview-coach-panel"><span className="interview-count">Current Question ({index+1}/{QUESTIONS.length})</span><h2>{QUESTIONS[index]}</h2><div className="interview-resume-selector"><label htmlFor="interview-resume-choice"><BookOpen size={15}/> Practice using resume</label>
     <select id="interview-resume-choice" value={currentResume?.id||''} onChange={e=>changeResume(e.target.value)} disabled={busy||cloudBusy||cloudRecording}>
-     {resumes.map(r=><option key={r.id} value={r.id}>{r.title||'Untitled Resume'} — {r.targetRole?.trim()||'Target role missing'}</option>)}
+     {resumes.map(r=><option key={r.id} value={r.id}>{r.title||'Untitled Resume'}</option>)}
     </select></div>
-    <div className="interview-role">Target role: <strong>{targetLabel}</strong>{targetLabel==='Not set in resume'&&currentResume&&onEditResume&&<button type="button" className="interview-edit-role" onClick={()=>onEditResume(currentResume)}>Set job title in resume</button>}</div>
+    <div className="interview-role"><strong>{targetLabel}</strong></div>
+    <label className="interview-focus-field" htmlFor="interview-focus">Interview focus (optional — separate from your resume)
+     <input id="interview-focus" value={practiceFocus} maxLength={100} onChange={e=>setPracticeFocus(e.target.value)} disabled={completed||busy} placeholder="Leave blank for a general interview"/>
+    </label>
     <div className="interview-progress-text"><CheckCircle2 size={14}/> {answeredCount}/{QUESTIONS.length} answered · AI evaluates after the final question</div>
     <button className="interview-read-aloud" onClick={()=>speakQuestion(index,listeningWanted.current)}><Volume2 size={17}/> {speaking?'Reading question…':'Read Question Aloud'}</button>
     <div className="interview-coach-tips"><h3><Lightbulb size={17}/> Tips</h3><p><Check size={15}/> Be concise and relevant.</p><p><Check size={15}/> Highlight your actual skills.</p><p><Check size={15}/> Mention notable achievements.</p></div>
@@ -451,7 +452,7 @@ export default function InterviewStudio({targetRole,resumes,activeResumeId,onEdi
    <textarea aria-label="Your Answer" value={answer} disabled={completed} onChange={e=>{if(listeningWanted.current){stopMic();setMessage('Microphone paused while editing your answer. Tap the mic to continue speaking.');}setAnswerText(e.target.value);}} rows={5} placeholder={microphone?'Listening to your voice…':'Tap the microphone above to speak, or type your answer here.'}/>
    <div className="interview-answer-bottom"><div className="interview-evaluation-note"><ShieldCheck size={16}/>{completed?'All questions completed. Your transcript remains available for review.':'No AI scoring yet. Your responses are collected until Finish & Evaluate on question 10.'}</div><span>{supported?'Speech recognition may make mistakes; review the transcript.':'You can type your answer if speech recognition is unavailable.'}</span></div>
    {message&&<p className="interview-inline-message" role="status">{message}</p>}
-   {completed&&<div className="interview-results-panel"><h3><CheckCircle2 size={19}/> Interview Complete — {targetLabel}</h3><p>{answers.filter(x=>x.trim()).length} answered, {QUESTIONS.length-answers.filter(x=>x.trim()).length} skipped. The AI evaluates your actual responses against the selected resume and role.</p>
+   {completed&&<div className="interview-results-panel"><h3><CheckCircle2 size={19}/> Interview Complete — {targetLabel}</h3><p>{answers.filter(x=>x.trim()).length} answered, {QUESTIONS.length-answers.filter(x=>x.trim()).length} skipped. The AI evaluates your responses against your resume and optional interview focus.</p>
     {busy&&<p className="interview-evaluating" role="status"><LoaderCircle className="spin" size={17}/> Evaluating your entire interview…</p>}
     {feedback?<div className="interview-feedback"><h3><Sparkles size={18}/> Overall AI Evaluation</h3><div className="interview-feedback-body">{feedback}</div></div>:!busy&&<button className="purple-button" type="button" onClick={()=>void evaluateSession(answers)}><Sparkles size={17}/> Retry Evaluation</button>}
     <details className="interview-review-answers"><summary>Review saved answers ({QUESTIONS.length} questions)</summary>
