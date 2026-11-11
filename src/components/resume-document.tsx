@@ -6,6 +6,8 @@ type Props={resume:Resume;miniature?:boolean};
 function Block({name,children}:{name:string;children:ReactNode}){return <section className="rd-section"><h3>{name}</h3>{children}</section>;}
 export default function ResumeDocument({resume:r,miniature=false}:Props){
  const template=getResumeTemplate(r.template);
+ const accent=/^#[0-9a-fA-F]{6}$/.test(r.accentColor||'')?r.accentColor!:template.accent;
+ const pageBackground=/^#[0-9a-fA-F]{6}$/.test(r.backgroundColor||'')?r.backgroundColor:undefined;
  const experience=(r.experience||[]).filter(e=>e.role||e.company||e.dates||e.details);
  const education=(r.education||[]).filter(e=>e.school||e.degree||e.dates);
  const skills=(r.skills||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -21,7 +23,7 @@ export default function ResumeDocument({resume:r,miniature=false}:Props){
  const columns=template.layout==='two-column'||template.layout==='sidebar';
  return <article
   className={'resume-document '+(miniature?'resume-document--mini':'resume-paper')+' rd-style-'+template.id+' rd-layout-'+template.layout+(hasPortraitTemplate?' rd-photo-layout':'')+(validPhoto?' rd-has-photo':' rd-no-photo')}
-  style={{'--rd-accent':template.accent,'--rd-ink':template.ink} as CSSProperties}
+  style={{'--rd-accent':accent,'--rd-ink':template.ink,'--rd-page-bg':pageBackground} as CSSProperties}
   aria-label={miniature?template.name+' template preview':'Resume preview: '+template.name}
  >
   <div className="rd-accent-bar" aria-hidden="true"/>
