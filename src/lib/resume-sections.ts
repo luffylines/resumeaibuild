@@ -55,6 +55,57 @@ const templateSets:{
   order:['summary','experience','education','awards','projects','references','skills'],
   sidebar:[]
  },
+
+ 'sapphire-columns':{
+  suggested:['summary','experience','skills','education','certifications','projects'],
+  order:['summary','experience','projects','education','certifications','skills','languages'],
+  sidebar:['skills','education','certifications','languages']
+ },
+ 'lilac-portfolio':{
+  suggested:['summary','projects','experience','skills','education','languages'],
+  order:['summary','projects','experience','awards','skills','education','languages','references'],
+  sidebar:['skills','education','languages','certifications','awards']
+ },
+ 'nordic-photo':{
+  suggested:['summary','experience','skills','education','languages','certifications'],
+  order:['summary','experience','education','skills','languages','certifications','references'],
+  sidebar:['skills','languages','certifications']
+ },
+ 'emerald-ledger':{
+  suggested:['summary','experience','education','skills','certifications','references'],
+  order:['summary','experience','projects','skills','education','certifications','references','languages'],
+  sidebar:['skills','education','certifications','languages','references']
+ },
+ 'coastal-architect':{
+  suggested:['summary','projects','experience','education','skills','languages'],
+  order:['summary','projects','experience','education','skills','languages','certifications','references'],
+  sidebar:['skills','education','languages','certifications']
+ },
+ 'graphite-graduate':{
+  suggested:['summary','education','skills','projects','certifications','experience'],
+  order:['summary','education','projects','skills','certifications','experience','languages'],
+  sidebar:[]
+ },
+ 'charcoal-timeline-photo':{
+  suggested:['summary','experience','education','skills','certifications'],
+  order:['summary','experience','projects','education','skills','certifications'],
+  sidebar:[]
+ },
+ 'horizon-photo':{
+  suggested:['summary','experience','education','skills','certifications'],
+  order:['summary','experience','education','certifications','skills','projects'],
+  sidebar:[]
+ },
+ 'warm-editorial-photo':{
+  suggested:['summary','experience','education','awards','projects','references'],
+  order:['summary','experience','projects','education','awards','references','skills'],
+  sidebar:[]
+ },
+ 'burgundy-portfolio':{
+  suggested:['summary','projects','experience','education','skills'],
+  order:['summary','projects','experience','awards','education','skills','references'],
+  sidebar:[]
+ },
  'minimal':{
   suggested:['summary','experience','education','skills'],
   order:['summary','experience','education','skills'],
