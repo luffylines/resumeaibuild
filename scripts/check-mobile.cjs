@@ -162,7 +162,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.locator('.wizard-extra-pick').filter({hasText:'Awards & Achievements'}).click();
   await photoPage.getByLabel('Award / Achievement').fill('Demo Merit Award');
   await photoPage.locator('.wizard-extra-pick').filter({hasText:'Volunteer Experience'}).click();
-  await photoPage.getByLabel('Volunteer Role').fill('Community Volunteer');
+  await photoPage.getByRole('textbox',{name:'Volunteer Role',exact:true}).fill('Community Volunteer');
   await photoPage.locator('.wizard-extra-pick').filter({hasText:'Custom Sections'}).click();
   await photoPage.getByLabel('Section Title').fill('Professional Memberships');
   await photoPage.getByLabel('Content',{exact:true}).fill('Demo technology association');
