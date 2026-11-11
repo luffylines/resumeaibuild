@@ -243,19 +243,15 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Users'}).click();
   await adminPage.getByRole('heading',{name:'Admin Dashboard'}).count(); // page retains the admin app shell
-  await adminPage.getByRole('button',{name:'Download Excel'}).waitFor({state:'visible'});
+  await adminPage.getByText('Demo export locked').first().waitFor({state:'visible'});
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Activity Logs'}).click();
   await adminPage.locator('.admin-table-scroll th').filter({hasText:/^IP Address$/}).waitFor({state:'visible'});
   await adminPage.locator('.admin-table-scroll th').filter({hasText:/^Device \/ Browser$/}).waitFor({state:'visible'});
   await adminPage.getByLabel('Reporting period').selectOption('all');
-  const downloadWait=adminPage.waitForEvent('download',{timeout:30000});
-  await adminPage.getByRole('button',{name:'Download Excel'}).click();
-  const excelDownload=await downloadWait;
-  if(!excelDownload.suggestedFilename().endsWith('.xlsx'))throw Error('Expected real Excel xlsx export');
-  const bytes=fs.readFileSync(await excelDownload.path());
-  if(bytes.subarray(0,2).toString()!=='PK')throw Error('Export was not a valid ZIP-based XLSX file');
+  if(await adminPage.getByRole('button',{name:'Download Excel'}).count())throw Error('Admin demo should not offer Excel downloads');
+  await adminPage.getByText('Demo export locked').first().waitFor({state:'visible'});
   await adminContext.close();
-  console.log('PASS admin activity table, date picker and demo XLSX export');
+  console.log('PASS admin activity table, date picker and disabled demo Excel export');
 
   const loginContext=await browser.newContext({viewport:{width:390,height:844}});
   const loginPage=await loginContext.newPage();
