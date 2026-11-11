@@ -149,6 +149,21 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.locator('.wizard-photo-thumb img').waitFor({state:'hidden'});
   await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Generate'}).click();
   await photoPage.locator('.rt-wizard-template-grid button').last().waitFor({state:'visible'});
+  await photoPage.getByRole('button',{name:'Accent Blue'}).click();
+  await photoPage.getByRole('button',{name:'Background Soft blue'}).click();
+  const customized=await photoPage.locator('.wizard-preview .resume-document').evaluate(el=>[el.style.getPropertyValue('--rd-accent'),el.style.getPropertyValue('--rd-page-bg')]);
+  if(customized[0].toLowerCase()!=='#2563eb'||customized[1].toLowerCase()!=='#f2f7fd')throw Error('Live color/background customization did not update the document: '+customized);
+  for(const [label,magic] of [['Download PDF','%PDF'],['Download DOCX','PK'],['Download PNG','PNG']] ){
+   const event=photoPage.waitForEvent('download',{timeout:30000});
+   await photoPage.getByRole('button',{name:label,exact:true}).click();
+   const d=await event;
+   const bytes=fs.readFileSync(await d.path());
+   if(bytes.length<1000)throw Error(label+' file unexpectedly small: '+bytes.length);
+   const valid=label==='Download PNG'?bytes[0]===0x89&&bytes.subarray(1,4).toString()==='PNG':bytes.subarray(0,magic.length).toString()===magic;
+   if(!valid)throw Error(label+' did not return a valid file header');
+   console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
+  }
+
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
   if(count!==20)throw Error('Expected 20 unique resume layout cards, found '+count);
