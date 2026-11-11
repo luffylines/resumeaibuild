@@ -125,7 +125,7 @@ export default function AuthForm({mode}:{mode:Mode}){
  });
  const verify=()=>run(async()=>{
   if(!sb)throw Error('Supabase is not connected.');
-  if(!/^\\d{6}$/.test(code))throw Error('Enter a six-digit verification code.');
+  if(!/^\d{6}$/.test(code))throw Error('Enter a six-digit verification code.');
   try{
    const {error:e}=await sb.auth.verifyOtp({email:email.trim().toLowerCase(),token:code.trim(),type:'email'});
    if(e)throw e;
@@ -147,7 +147,7 @@ export default function AuthForm({mode}:{mode:Mode}){
   try{
    if(!navigator.clipboard?.readText)throw Error('Clipboard access is unavailable.');
    const text=await navigator.clipboard.readText();
-   const found=text.match(/(?:^|\\D)(\\d{6})(?=\\D|$)/)?.[1]||text.replace(/\\D/g,'').slice(0,6);
+   const found=text.match(/(?:^|\D)(\d{6})(?=\D|$)/)?.[1]||text.replace(/\D/g,'').slice(0,6);
    if(found.length!==6){setPasteNotice('The clipboard does not contain a six-digit code. Copy the digits from your email, then paste.');otpInputRef.current?.focus();return;}
    setCode(found);setOtpState('idle');setError('');setPasteNotice('Code pasted. Select Verify Code to continue.');
   }catch{
@@ -189,8 +189,8 @@ export default function AuthForm({mode}:{mode:Mode}){
     <div className="auth-otp-heading"><label htmlFor="resume-otp">6-digit email verification code</label><span>{otpState==='verified'?'Verified':otpState==='invalid'?'Try again':'Secure verification'}</span></div>
     <div className={'otp-code-box otp-state-'+otpState}>
      <input id="resume-otp" ref={otpInputRef} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6}
-      value={code} onChange={e=>{setCode(e.target.value.replace(/\\D/g,'').slice(0,6));setOtpState('idle');setError('');setPasteNotice('');}}
-      onPaste={e=>{const value=e.clipboardData.getData('text');const digits=value.match(/(?:^|\\D)(\\d{6})(?=\\D|$)/)?.[1]||value.replace(/\\D/g,'').slice(0,6);if(digits){e.preventDefault();setCode(digits);setOtpState('idle');setError('');setPasteNotice('Code pasted.');}}}
+      value={code} onChange={e=>{setCode(e.target.value.replace(/\D/g,'').slice(0,6));setOtpState('idle');setError('');setPasteNotice('');}}
+      onPaste={e=>{const value=e.clipboardData.getData('text');const digits=value.match(/(?:^|\D)(\d{6})(?=\D|$)/)?.[1]||value.replace(/\D/g,'').slice(0,6);if(digits){e.preventDefault();setCode(digits);setOtpState('idle');setError('');setPasteNotice('Code pasted.');}}}
       autoComplete="one-time-code" aria-label="Six-digit email verification code" aria-invalid={otpState==='invalid'} aria-describedby="otp-help"/>
      <div aria-hidden="true" className="otp-six">{Array.from({length:6},(_,i)=><span className={code[i]?'filled':''} key={i}>{code[i]||'·'}</span>)}</div>
     </div>
