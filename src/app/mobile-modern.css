@@ -510,3 +510,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 
 .interview-autosave-notice{display:flex;align-items:center;gap:8px;color:#237b55;background:#f1faf4;border:1px solid #d9efdf;border-radius:9px;padding:10px 12px;margin:8px 0 13px;font-size:11px;font-weight:700;line-height:1.5}
 .interview-autosave-notice svg{flex:none}
+
+
+/* Authentication rate-limit guidance, visible cooldowns and safe resend controls. */
+.auth-cooldown{display:flex;align-items:center;gap:8px;padding:10px 12px;margin:10px 0;background:#f6f3ff;border:1px solid #e4d9ff;border-radius:10px;color:#655092;font-size:11px;line-height:1.6;font-weight:650}
+.auth-cooldown svg{flex:none;color:#7741df}
+.auth-resend{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;margin:8px 0 0;color:#6535cc;background:transparent;border:1px solid #e6daf8;border-radius:9px;cursor:pointer;font-size:11px;font-weight:750}
+.auth-resend:disabled{opacity:.58;cursor:not-allowed}
+.auth-resend:not(:disabled):hover{background:#f8f4ff}
+.auth-submit:disabled{opacity:.5;cursor:not-allowed}
