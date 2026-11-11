@@ -115,6 +115,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await adminPage.getByRole('heading',{name:'Admin Dashboard'}).waitFor({state:'visible'});
   // Job Matching, Job Tracker and Job Posts were intentionally removed.
   if(await adminPage.getByText('Job Posts',{exact:true}).count())throw Error('Legacy Job Posts menu must not be visible');
+  const adminMenu=await adminPage.locator('.admin-sidebar').innerText();
+  if(adminMenu.includes('Job Posts')||adminMenu.includes('Job Matching')||adminMenu.includes('Job Tracker'))throw Error('Job-related admin navigation must not exist');
+
   await adminPage.locator('.admin-sidebar').getByRole('button',{name:'Users'}).click();
   await adminPage.getByRole('heading',{name:'Admin Dashboard'}).count(); // page retains the admin app shell
   await adminPage.getByRole('button',{name:'Download Excel'}).waitFor({state:'visible'});
@@ -178,6 +181,10 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Generate'}).click();
   await photoPage.locator('.rt-wizard-template-grid button').last().waitFor({state:'visible'});
   if(await photoPage.locator('.rt-wizard-template-grid > button').first().locator('.rd-portrait').count()!==1)throw Error('Photo-ready designs must be listed first in builder');
+  await photoPage.locator('.rt-wizard-filters').getByRole('button',{name:'With Photo'}).click();
+  if(await photoPage.locator('.rt-wizard-template-grid > button').count()!==20)throw Error('Photo-only wizard filter should show 20 photo templates');
+  await photoPage.locator('.rt-wizard-filters').getByRole('button',{name:'With Photo'}).click();
+
 
   await photoPage.locator('.rt-wizard-template-grid').getByRole('button',{name:/Creative Sidebar/}).click();
   for(const name of requiredSections){
@@ -243,6 +250,16 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   const count=await photoPage.locator('.rt-template-card').count();
   const photoFirst=await photoPage.locator('.rt-template-card').first().locator('.rd-portrait').count();
   if(photoFirst!==1)throw Error('Photo-ready resume layouts must appear first in the gallery');
+  const examplePortrait=photoPage.locator('.rt-template-card').first().locator('.rd-portrait img');
+  await examplePortrait.waitFor({state:'visible'});
+  const naturalWidth=await examplePortrait.evaluate(el=>el.naturalWidth);
+  if(naturalWidth<100)throw Error('Portrait preview illustration failed to load: '+naturalWidth);
+  await photoPage.getByRole('button',{name:/With Photo 20/}).click();
+  if(await photoPage.locator('.rt-template-card').count()!==20)throw Error('Photo-only gallery filter should show 20 photo-ready layouts');
+  await photoPage.getByRole('button',{name:/With Photo 20/}).click();
+  if(await photoPage.locator('.rt-template-card').count()!==32)throw Error('All layouts should return after disabling photo-only filter');
+  console.log('PASS all 32 unique layout cards, 20 photo-ready templates ordered first and rendered sample portrait');
+
   const pageText=await photoPage.locator('.side-nav').innerText();
   if(pageText.includes('Job Matching')||pageText.includes('Job Tracker'))throw Error('Removed user menu items reappeared');
 
