@@ -17,7 +17,7 @@ export default function Guide(){return <main className="public-site guide-page">
  </div>
  <div className="guide-two-grid">
  <section className="guide-explain-card">{number(4)}<div className="guide-step-copy"><h2>Log In to Your Account</h2><p>After registration, click “Log In” and use Google or your email credentials.</p></div><MiniLogin/></section>
- <section className="guide-ready-card"><span className="guide-ready-icon"><Check size={32}/></span><h2>You're Ready!</h2><p>Once logged in, you can now build your resume, review your ATS score, find job matches, and access all AI career tools.</p><Link href="/app" className="public-primary">Go to Dashboard <ArrowRight size={16}/></Link></section>
+ <section className="guide-ready-card"><span className="guide-ready-icon"><Check size={32}/></span><h2>You're Ready!</h2><p>Once logged in, you can now build your resume, review your ATS score, choose photo-ready templates, and access resume career tools.</p><Link href="/app" className="public-primary">Go to Dashboard <ArrowRight size={16}/></Link></section>
  </div>
  </div>
  <p className="guide-disclaimer"><ShieldCheck size={15}/> The smaller form previews are illustrations. Use the linked real forms to register, verify or sign in. Authentication requires your separate ResumeBuilder Supabase project.</p>
