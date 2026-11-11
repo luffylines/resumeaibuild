@@ -891,3 +891,49 @@
  body:has(.cover-letter-preview--demo) .cover-demo-editor,
  body:has(.cover-letter-preview--demo) .cover-demo-editor *{visibility:hidden!important;display:none!important}
 }
+
+
+/* Two-factor security screen: legible, mobile-first and native-OTP-friendly. */
+.mfa-auth-page{background:radial-gradient(circle at 50% 10%,#ece3ff 0,#f6f1ff 45%,#fcfaff 100%);min-height:100dvh}
+.mfa-auth-card{width:min(100%,520px)!important;border-radius:22px!important;padding:28px!important;box-shadow:0 24px 70px #2c16551d!important}
+.mfa-auth-brand{gap:11px;font-size:17px;letter-spacing:-.3px;margin-bottom:22px}
+.mfa-auth-brand .brand-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px}
+.mfa-auth-brand .brand-icon img{width:40px!important;height:40px!important;object-fit:contain}
+.mfa-auth-card .mfa-panel{border:1px solid #e6dcf5;border-radius:16px;background:#fcfaff;padding:22px;width:100%;gap:17px}
+.mfa-auth-card .mfa-panel-heading{align-items:flex-start;gap:12px}
+.mfa-auth-card .mfa-panel-heading>svg{color:#6837d7;min-width:28px;width:28px;height:28px;padding:4px;background:#efe7ff;border-radius:9px}
+.mfa-auth-card .mfa-panel-heading strong{font-size:17px;color:#271a48;line-height:1.4}
+.mfa-auth-card .mfa-panel-heading small{font-size:12px;line-height:1.65;color:#70637e}
+.mfa-auth-card .mfa-note{font-size:12px;line-height:1.65;color:#6f6580}
+.mfa-verify{width:100%!important;gap:12px!important;align-items:stretch!important}
+.mfa-otp-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mfa-otp-heading label{color:#33264c;font-size:12px;font-weight:800}
+.mfa-otp-heading span{font-size:11px;font-weight:750;color:#8259ad}
+.mfa-otp-box{width:100%;position:relative;isolation:isolate;min-width:0}
+.mfa-otp-box>input{position:absolute;inset:0;height:62px;width:100%;z-index:2;opacity:0;cursor:text;font-size:16px!important;letter-spacing:3px}
+.mfa-otp-digits{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;pointer-events:none}
+.mfa-otp-digits span{display:flex;align-items:center;justify-content:center;height:60px;min-width:0;border:1.5px solid #dcd1ed;border-radius:11px;background:#fff;box-shadow:0 2px 7px #3113440a;color:#6a40a6;font-weight:850;font-size:25px;line-height:1;font-variant-numeric:tabular-nums;transition:background .18s,border-color .18s,box-shadow .18s,color .18s}
+.mfa-otp-digits span.filled{color:#362056;border-color:#bca5ef;background:#fcfaff}
+.mfa-otp-box:focus-within .mfa-otp-digits span{border-color:#8c64e9;box-shadow:0 0 0 3px #8b5cf61a}
+.mfa-otp-box.mfa-otp-invalid .mfa-otp-digits span,.mfa-otp-box.mfa-otp-invalid:focus-within .mfa-otp-digits span{background:#fff5f6;color:#a52040;border-color:#e95873;box-shadow:0 0 0 3px #f251671c}
+.mfa-otp-box.mfa-otp-verified .mfa-otp-digits span,.mfa-otp-box.mfa-otp-verified:focus-within .mfa-otp-digits span{background:#f0fcf5;color:#137d4d;border-color:#2cad75;box-shadow:0 0 0 3px #15b56a1b}
+.mfa-otp-box.mfa-otp-invalid+.mfa-auto-hint{color:#a92842}
+.mfa-otp-box.mfa-otp-verified+.mfa-auto-hint{color:#12784a}
+.mfa-auto-hint{margin:0;font-size:11px;color:#827491;line-height:1.55}
+.mfa-verify-button{display:flex!important;align-items:center;justify-content:center;gap:9px;width:100%!important;min-height:51px!important;padding:13px 17px!important;background:#6e39e8!important;color:#fff!important;border:1px solid #6e39e8!important;border-radius:11px!important;font-size:13px!important;font-weight:850!important;line-height:1.35!important;box-shadow:0 8px 19px #6b39e82e!important;cursor:pointer!important;opacity:1!important;visibility:visible!important;transition:background .16s,box-shadow .16s,transform .16s}
+.mfa-verify-button:not(:disabled):hover{background:#5124c7!important;box-shadow:0 9px 22px #6e38e83b!important;transform:translateY(-1px)}
+.mfa-verify-button:disabled{background:#8e70c9!important;border-color:#8e70c9!important;color:#fff!important;box-shadow:none!important;cursor:not-allowed!important;opacity:.85!important}
+.mfa-verify-button:focus-visible{outline:3px solid #4f25b6;outline-offset:3px}
+.mfa-panel>.outline-button{min-height:40px;color:#5e3374;font-weight:750;border-color:#e7dcee}
+.mfa-panel .settings-v2-error{border-radius:9px;background:#fff0f2;color:#a52443;border:1px solid #f4bdca;font-size:12px;line-height:1.5;padding:11px}
+.mfa-panel .settings-v2-notice{background:#eefaf2;color:#137c4e;border:1px solid #c3e9d1;border-radius:9px;font-size:12px;line-height:1.5;padding:11px}
+@media(max-width:520px){
+ .mfa-auth-page{padding:15px}
+ .mfa-auth-card{padding:17px!important;border-radius:16px!important}
+ .mfa-auth-card .mfa-panel{padding:15px}
+ .mfa-otp-digits{gap:6px}
+ .mfa-otp-digits span{height:53px;border-radius:9px;font-size:21px}
+ .mfa-otp-box>input{height:55px}
+ .mfa-otp-heading span{font-size:10px}
+ .mfa-auth-card .mfa-panel-heading strong{font-size:15px}
+}
