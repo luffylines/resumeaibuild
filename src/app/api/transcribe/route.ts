@@ -1,6 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createClient} from '@supabase/supabase-js';
 import {serverSupabase} from '@/lib/supabase-server';
+import {geminiModel} from '@/lib/ai-model';
 
 export const runtime='nodejs';
 const MAX_AUDIO_BYTES=2_500_000;
@@ -20,6 +21,7 @@ export async function POST(req:NextRequest){
  if(!supabase)return reply('Configure Supabase before enabling AI transcription.',503);
  const {data:{user},error:authError}=await supabase.auth.getUser();
  if(authError||!user)return reply('Sign in to ResumeBuilder first to use AI transcription.',401);
+ const {data:aal,error:aalError}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();if(aalError||!aal||aal.nextLevel==='aal2'&&aal.currentLevel!=='aal2')return reply('Complete your two-factor authentication first.',403);
 
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
  const adminKey=process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -62,7 +64,7 @@ export async function POST(req:NextRequest){
    transcript=typeof json.text==='string'?json.text.trim():'';
   }else if(process.env.GEMINI_API_KEY){
    const data=Buffer.from(await audio.arrayBuffer()).toString('base64');
-   const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
+   const model=geminiModel();
    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
     method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
     body:JSON.stringify({
@@ -70,7 +72,7 @@ export async function POST(req:NextRequest){
       {text:'Transcribe the recorded interview answer faithfully in its original language (English/Filipino/Taglish). Return ONLY the spoken words with natural punctuation. Do not answer the question, paraphrase, summarize, correct factual claims, or invent speech if audio is silent.'},
       {inlineData:{mimeType:mime,data}}
      ]}],
-     generationConfig:{temperature:0,maxOutputTokens:1100}
+     generationConfig:{maxOutputTokens:1100}
     }),signal:abort
    });
    const json=await res.json();if(!res.ok)throw Error(json.error?.message||'Gemini transcription unavailable.');

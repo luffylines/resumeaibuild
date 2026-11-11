@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {serverSupabase} from '@/lib/supabase-server';
+import {geminiModel} from '@/lib/ai-model';
 export const runtime='nodejs';
 const guides:Record<string,string>={
  resume:'Return ONLY a valid JSON object with keys summary, targetRole and skills (comma-separated). Use only user-supplied facts. No Markdown. Never invent education, employers, expertise, experience or numbers.',
@@ -8,9 +9,9 @@ const guides:Record<string,string>={
  interview:'Act as an interview coach. Evaluate the submitted answer with headings Strengths, Suggestions, and Better example. Do not invent past experience.',
 };
 async function gemini(prompt:string){
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(process.env.GEMINI_MODEL||'gemini-2.5-flash')+':generateContent',{
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(geminiModel())+':generateContent',{
   method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY!},
-  body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:1200}}),signal:AbortSignal.timeout(28000)});
+  body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1200}}),signal:AbortSignal.timeout(28000)});
  const j=await r.json();if(!r.ok)throw Error(j.error?.message||'AI request failed');return (j.candidates?.[0]?.content?.parts||[]).map((p:{text?:string})=>p.text||'').join('');
 }
 async function openai(prompt:string){
@@ -21,6 +22,7 @@ export async function POST(req:NextRequest){
  if(!process.env.GEMINI_API_KEY&&!process.env.OPENAI_API_KEY)return NextResponse.json({error:'Configure GEMINI_API_KEY or OPENAI_API_KEY first.'},{status:503});
  const supabase=await serverSupabase();if(!supabase)return NextResponse.json({error:'Configure a separate Supabase project and sign in first.'},{status:503});
  const {data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:'Sign in to access AI.'},{status:401});
+ const {data:aal,error:aalError}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel();if(aalError||!aal||aal.nextLevel==='aal2'&&aal.currentLevel!=='aal2')return NextResponse.json({error:'Complete your two-factor authentication before using AI.'},{status:403});
  let body:unknown;try{body=await req.json();}catch{return NextResponse.json({error:'Invalid JSON.'},{status:400});}
  if(!body||typeof body!=='object')return NextResponse.json({error:'Invalid request.'},{status:400});
  const {task,context}=body as {task?:unknown;context?:unknown};
