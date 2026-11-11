@@ -3,7 +3,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import {
- Activity,ArrowDownToLine,ArrowLeft,ArrowRight,BarChart3,BookOpen,BriefcaseBusiness,Check,CheckCircle2,
+ Activity,ArrowDownToLine,ArrowLeft,ArrowRight,BarChart3,BookOpen,BriefcaseBusiness,Check,CheckCircle2,LockKeyhole,
  ChevronDown,ChevronRight,ClipboardCheck,Copy,FileCheck2,FilePlus2,FileText,Flag,FolderOpen,GraduationCap,
  LayoutDashboard,Lightbulb,LoaderCircle,LogOut,Mail,Menu,MessageCircle,Plus,Search,Settings2,ShieldCheck,
  Sparkles,Target,Trash2,UploadCloud,UserRound,WalletCards,WandSparkles,X,Zap
@@ -19,7 +19,8 @@ import InterviewStudio from '@/components/interview-studio';
 import {authReturnUrl} from '@/lib/auth-return-url';
 import SettingsPanel from '@/components/settings-panel';
 import MfaPanel from '@/components/mfa-panel';
-import {accountAvatar,readProfilePhoto} from '@/lib/profile-photo';
+import {accountAvatar,loadProfilePhoto,readProfilePhoto} from '@/lib/profile-photo';
+import {requiresMfaChallenge} from '@/lib/mfa-factors';
 import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
@@ -79,6 +80,7 @@ export default function Home(){
  const [letterCompany,setLetterCompany]=useState('');
  const [letterTone,setLetterTone]=useState('Professional');
  const [letterOutput,setLetterOutput]=useState('');
+ const [demoLetter,setDemoLetter]=useState('Dear Hiring Manager,\n\nI am excited to apply for this opportunity. My background in teamwork, technical projects, and problem-solving has prepared me to contribute effectively to your organization.\n\nI look forward to discussing how my skills and experience match your needs.\n\nSincerely,\nYour Name');
  const [generationPrompt,setGenerationPrompt]=useState('');
  const [answer,setAnswer]=useState('');
  const [questionIndex,setQuestionIndex]=useState(0);
@@ -101,12 +103,44 @@ export default function Home(){
  const results=atsScore(activeResume,jobDescription);
  const formattedName=user?.user_metadata?.full_name?.split(' ')[0]||user?.email?.split('@')[0]||'Christian';
  const isDemo=!user;
+ useEffect(()=>{try{const cached=localStorage.getItem('resumebuilder:demo-cover-letter:v1');if(cached!==null)setDemoLetter(cached);}catch{}},[]);
+ useEffect(()=>{if(!ready||!isDemo)return;try{localStorage.setItem('resumebuilder:demo-cover-letter:v1',demoLetter);}catch{}},[demoLetter,isDemo,ready]);
  const avatarSrc=accountAvatar(user,resumes,profilePhoto);
+ // Browsers can always take screenshots; for ordinary Print requests,
+ // hide demo previews before the print document is captured. Restore the UI
+ // afterwards so visitors can continue editing.
  useEffect(()=>{
-  const update=()=>setProfilePhoto(user?.id?readProfilePhoto(user.id):'');
-  update();
-  window.addEventListener('resumebuilder:avatar-changed',update);
-  return()=>window.removeEventListener('resumebuilder:avatar-changed',update);
+  if(!isDemo)return;
+  const previous=new Map<HTMLElement,{display:string;priority:string}>();
+  const hide=()=>{
+   for(const element of document.querySelectorAll<HTMLElement>('.wizard-page--demo,.cover-letter-preview--demo')){
+    if(previous.has(element))continue;
+    previous.set(element,{display:element.style.getPropertyValue('display'),priority:element.style.getPropertyPriority('display')});
+    element.style.setProperty('display','none','important');
+   }
+  };
+  const restore=()=>{
+   for(const [element,style] of previous){
+    if(style.display)element.style.setProperty('display',style.display,style.priority);
+    else element.style.removeProperty('display');
+   }
+   previous.clear();
+  };
+  window.addEventListener('beforeprint',hide);
+  window.addEventListener('afterprint',restore);
+  return()=>{window.removeEventListener('beforeprint',hide);window.removeEventListener('afterprint',restore);restore();};
+ },[isDemo]);
+
+ useEffect(()=>{
+  const id=user?.id;
+  let active=true;
+  const refresh=()=>{
+   setProfilePhoto(id?readProfilePhoto(id):'');
+   if(id)void loadProfilePhoto(id).then(url=>{if(active)setProfilePhoto(url);});
+  };
+  refresh();
+  window.addEventListener('resumebuilder:avatar-changed',refresh);
+  return()=>{active=false;window.removeEventListener('resumebuilder:avatar-changed',refresh);};
  },[user?.id]);
  useEffect(()=>{
   if(!profileMenuOpen)return;
@@ -120,9 +154,17 @@ export default function Home(){
   if(!sb||!nextUser){setMfaState('guest');return;}
   setMfaState('checking');setMfaError('');
   try{
-   const {data,error}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-   if(error)throw error;
-   setMfaState(data.nextLevel==='aal2'&&data.currentLevel!=='aal2'?'required':'verified');
+   const [assurance,listed]=await Promise.all([
+    sb.auth.mfa.getAuthenticatorAssuranceLevel(),
+    sb.auth.mfa.listFactors()
+   ]);
+   if(assurance.error)throw assurance.error;
+   if(listed.error)throw listed.error;
+   // Never demand a 2FA login challenge for an enrollment that was started
+   // but never verified. AAL2 authentication is only required after a factor
+   // is VERIFIED by Supabase, not after QR generation or QR scanning.
+   const required=requiresMfaChallenge(listed.data,assurance.data.currentLevel);
+   setMfaState(required?'required':'verified');
   }catch(error){
    setMfaState('error');
    setMfaError(error instanceof Error?error.message:'Could not confirm two-factor security state.');
@@ -305,7 +347,7 @@ export default function Home(){
  return <div className="app-shell resume-client-shell">
   {mobileNav&&<button className="workspace-scrim" aria-label="Close sidebar navigation" onClick={()=>setMobileNav(false)}/>}
   <aside id="mobile-workspace-nav" className={'sidebar '+(mobileNav?'sidebar-open':'')}>
-   <div className="brand"><span className="brand-icon"><BrandMark size={20}/></span><span>Resume<span className="brand-bold">Builder</span></span><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
+   <div className="brand"><button type="button" className="workspace-brand-home" aria-label={user?"Go to my ResumeBuilder dashboard":"Go to ResumeBuilder home"} onClick={()=>user?go("dashboard"):window.location.assign("/")}><span className="brand-icon"><BrandMark size={49}/></span><span>Resume<span className="brand-bold">Builder</span></span></button><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
    <button className="create-button" onClick={startNew}><Plus size={17}/> Create New Resume <ArrowRight size={16}/></button>
    <div className="side-label">WORKSPACE</div>
    <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><span className="side-nav-icon"><Icon size={18} strokeWidth={1.9}/></span><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
@@ -341,7 +383,7 @@ export default function Home(){
 <div className="client-shortcuts"><h2>Quick Actions</h2><div>{([{id:'builder',label:'Build Resume',desc:'Generate with AI',icon:FileText},{id:'ats',label:'ATS Checker',desc:'Improve your score',icon:ShieldCheck},{id:'templates',label:'Templates',desc:'Photo-ready designs',icon:BookOpen},{id:'interview',label:'Interview Practice',desc:'AI mock interview',icon:MessageCircle},{id:'letters',label:'Cover Letter',desc:'Create in seconds',icon:Mail}] as const).map(a=>{const Icon=a.icon;return <button key={a.id} onClick={()=>go(a.id)}><span><Icon size={22}/></span><span><strong>{a.label}</strong><small>{a.desc}</small></span></button>})}</div></div>
 <div className="client-bottom-row"><section className="panel"><div className="panel-head"><div><FolderOpen size={18}/><strong>Recent Resumes</strong></div><button onClick={()=>go('resumes')}>View all <ArrowRight size={14}/></button></div>{resumes.slice(0,3).map(r=><button className="doc-row" key={r.id} onClick={()=>editResume(r)}><span className="doc-icon"><FileText size={18}/></span><span className="doc-name"><strong>{r.title}</strong><small>Resume · Edited {new Date(r.updatedAt).toLocaleDateString()}</small></span><span className="doc-score">ATS: {atsScore(r).score}%</span></button>)}{!resumes.length&&<p className="empty-small">Create your first resume</p>}</section><section className="panel client-next-steps"><div className="panel-head"><div><Flag size={18}/><strong>Next Steps</strong></div></div><button onClick={()=>go('interview')}><CheckCircle2 size={18}/><span><strong>Prepare for interview</strong><small>Practice with AI based on your target role.</small></span></button><button onClick={()=>go('ats')}><Target size={18}/><span><strong>Optimize resume keywords</strong><small>Improve your ATS score (current: {currentScore}%).</small></span></button><button onClick={()=>go('templates')}><BookOpen size={18}/><span><strong>Explore resume templates</strong><small>Choose a professional layout with an optional photo.</small></span></button></section></div>
 </div>}
-{section==='builder'&&<><div className="resume-autosave-status" role="status"><CheckCircle2 size={16}/>{autosaveStatus==='saving'?'Saving to your account…':autosaveStatus==='synced'?'Changes saved to your account':autosaveStatus==='local'?'Draft auto-saved on this device':autosaveStatus==='error'?'Auto-save failed — use Save Draft or check connection':'Changes are saved automatically as you type'}</div><ResumeWizard draft={draft} setDraft={setDraft} save={saveResume} runAI={requestAI} busy={busy} preview={<ResumeDocument resume={draft}/>} storageScope={scope} onBack={()=>go('resumes')}/></>}
+{section==='builder'&&<><div className="resume-autosave-status" role="status"><CheckCircle2 size={16}/>{autosaveStatus==='saving'?'Saving to your account…':autosaveStatus==='synced'?'Changes saved to your account':autosaveStatus==='local'?'Draft auto-saved on this device':autosaveStatus==='error'?'Auto-save failed — use Save Draft or check connection':'Changes are saved automatically as you type'}</div><ResumeWizard draft={draft} setDraft={setDraft} save={saveResume} runAI={requestAI} busy={busy} preview={<ResumeDocument resume={draft}/>} storageScope={scope} onBack={()=>go('resumes')} isDemo={isDemo}/></>}
 {section==='templates'&&<TemplateGallery resume={(draft.name||draft.summary||draft.skills)?draft:sampleResume} onUse={(id,accentColor,backgroundColor)=>{setDraft(old=>({...old,template:id,accentColor,backgroundColor}));go('builder');flash('Layout and colors selected. You can change them before saving.');}}/>}
 {section==='resumes'&&<><div className="page-heading"><div><div className="eyebrow">YOUR DOCUMENTS</div><h1>My Resumes</h1><p>Create versions tailored to different roles and companies.</p></div><button className="black-button" onClick={startNew}><Plus size={16}/> New Resume</button></div>
      <div className="resumes-grid">{filteredResumes.map(r=><article className="panel resume-card" key={r.id}><div className="rt-saved-preview"><div className="rt-preview-stage"><div className="rt-preview-viewport"><ResumeDocument resume={r} miniature/></div></div></div><div className="resume-card-body"><div><h3>{r.title}</h3><p>{r.experience.find(e=>e.role.trim())?.role||'General professional resume'}</p></div><span className="muted-badge"><span className="green-dot"/> {atsScore(r).score}% score</span></div><div className="resume-card-footer"><small>Edited {new Date(r.updatedAt).toLocaleDateString()}</small><div><button onClick={()=>void removeResume(r.id)} aria-label={'Delete '+r.title}><Trash2 size={16}/></button><button onClick={()=>editResume(r)} className="small-dark">Edit <ArrowRight size={15}/></button></div></div></article>)}
@@ -353,9 +395,12 @@ export default function Home(){
     </>}
     {section==='interview'&&<InterviewStudio key={scope} resumes={[activeResume,...resumes.filter(r=>r.id!==activeResume.id)]} activeResumeId={activeResume.id} userId={scope} userName={user?.user_metadata?.full_name||activeResume.name||user?.email?.split('@')[0]||''} runAI={requestAI} busy={busy} signedIn={!!user}/>}
 
-{section==='letters'&&<><div className="page-heading"><div><div className="eyebrow">CREATE TAILORED LETTERS</div><h1>Cover Letter</h1><p>Generate a tailored cover letter for your job application.</p></div></div><div className="two-column cover-letter-layout">
- <section className="panel padded"><h2 className="card-heading"><Mail size={19}/> Job Details</h2><Field label="Job Title" value={letterRole} onChange={setLetterRole} placeholder="e.g. Web Developer"/><Field label="Company (Optional)" value={letterCompany} onChange={setLetterCompany} placeholder="e.g. Abiotiz Tech"/><label className="field"><span>Choose Your Resume</span><select value={activeResume.id} onChange={e=>setSelectedId(e.target.value)}>{resumes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}{!resumes.length&&<option value={draft.id}>{draft.title}</option>}</select></label><label className="field"><span>Tone</span><select value={letterTone} onChange={e=>setLetterTone(e.target.value)}>{['Professional','Confident','Friendly','Concise','Formal'].map(x=><option key={x}>{x}</option>)}</select></label><button className="purple-button cover-generate-button" disabled={!letterRole.trim()||busy} onClick={async()=>{const out=await requestAI('coverletter',JSON.stringify({targetRole:letterRole,company:letterCompany,tone:letterTone,resume:activeResume}));if(out)setLetterOutput(out);}}><Sparkles size={17}/>{busy?'Generating...':'Generate with AI'} <ArrowRight size={16}/></button><p className="muted-copy">AI uses your resume information. Always proofread the final letter for accuracy.</p></section>
- <section className="panel padded cover-letter-preview"><div className="panel-head"><div><FileText size={18}/><strong>Generated Cover Letter</strong></div><div>{letterOutput&&<><button onClick={()=>{void navigator.clipboard.writeText(letterOutput).then(()=>flash('Cover letter copied.')).catch(()=>setError('Clipboard access unavailable.'));}}><Copy size={15}/> Copy</button><button onClick={()=>{const file=new Blob([letterOutput],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download='resumebuilder-cover-letter.txt';a.click();URL.revokeObjectURL(url);}}><ArrowDownToLine size={15}/> Download</button></>}</div></div>{letterOutput?<textarea aria-label="Editable generated cover letter" rows={17} className="cover-letter-text" value={letterOutput} onChange={e=>setLetterOutput(e.target.value)}/>:<div className="cover-letter-placeholder"><span>Dear Hiring Manager,</span><p>I am writing to express my interest in the position. My experience and relevant skills would make me a strong candidate for this opportunity.</p><i/><i/><i/><p>Sincerely,<br/>{activeResume.name||'Your Name'}</p></div>}</section></div></>}
+{section==='letters'&&<><div className="page-heading"><div><div className="eyebrow">CREATE TAILORED LETTERS</div><h1>Cover Letter</h1><p>{isDemo?'Try the editor and preview. Exporting is available after sign-in.':'Generate a tailored cover letter for your job application.'}</p></div></div><div className="two-column cover-letter-layout">
+ <section className="panel padded"><h2 className="card-heading"><Mail size={19}/> Job Details</h2><Field label="Job Title" value={letterRole} onChange={setLetterRole} placeholder="e.g. Web Developer"/><Field label="Company (Optional)" value={letterCompany} onChange={setLetterCompany} placeholder="e.g. Technology Company"/><label className="field"><span>Choose Your Resume</span><select value={activeResume.id} onChange={e=>setSelectedId(e.target.value)}>{resumes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}{!resumes.length&&<option value={draft.id}>{draft.title}</option>}</select></label><label className="field"><span>Tone</span><select value={letterTone} onChange={e=>setLetterTone(e.target.value)}>{['Professional','Confident','Friendly','Concise','Formal'].map(x=><option key={x}>{x}</option>)}</select></label>
+ {isDemo?<div className="cover-demo-locked"><LockKeyhole size={20}/><strong>AI generation is locked in Demo Mode</strong><p>Use the editor to try your cover letter. Sign in to generate with AI, copy, or download the final letter.</p><a href="/signup">Create Free Account <ArrowRight size={15}/></a></div>:<button className="purple-button cover-generate-button" disabled={!letterRole.trim()||busy} onClick={async()=>{const out=await requestAI('coverletter',JSON.stringify({targetRole:letterRole,company:letterCompany,tone:letterTone,resume:activeResume}));if(out)setLetterOutput(out);}}><Sparkles size={17}/>{busy?'Generating...':'Generate with AI'} <ArrowRight size={16}/></button>}
+ <p className="muted-copy">{isDemo?'Demo writing stays on this device. Preview only; no export.':'AI uses your resume information. Always proofread the final letter for accuracy.'}</p></section>
+ <section className={'panel padded cover-letter-preview'+(isDemo?' cover-letter-preview--demo':'')}><div className="panel-head"><div><FileText size={18}/><strong>{isDemo?'Cover Letter · Demo Preview':'Generated Cover Letter'}</strong></div><div>{isDemo?<span className="cover-demo-badge"><LockKeyhole size={13}/> Preview only</span>:letterOutput&&<><button onClick={()=>{void navigator.clipboard.writeText(letterOutput).then(()=>flash('Cover letter copied.')).catch(()=>setError('Clipboard access unavailable.'));}}><Copy size={15}/> Copy</button><button onClick={()=>{const file=new Blob([letterOutput],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download='resumebuilder-cover-letter.txt';a.click();URL.revokeObjectURL(url);}}><ArrowDownToLine size={15}/> Download</button></>}</div></div>
+ {isDemo?<><div className="cover-demo-editor"><textarea aria-label="Editable demo cover letter" rows={17} className="cover-letter-text" value={demoLetter} onChange={e=>setDemoLetter(e.target.value)} onCopy={e=>{e.preventDefault();flash('Demo preview only. Sign in to copy or download your cover letter.');}}/><div className="cover-demo-watermark" aria-hidden="true"><span>DEMO · PREVIEW ONLY</span><span>DEMO · PREVIEW ONLY</span></div></div><p className="cover-demo-preview-note"><LockKeyhole size={14}/> You can edit and preview this letter, but copying and downloading are disabled in Demo Mode. Screenshots cannot be fully blocked by a website.</p></>:letterOutput?<textarea aria-label="Editable generated cover letter" rows={17} className="cover-letter-text" value={letterOutput} onChange={e=>setLetterOutput(e.target.value)}/>:<div className="cover-letter-placeholder"><span>Dear Hiring Manager,</span><p>I am writing to express my interest in the position. My experience and relevant skills would make me a strong candidate for this opportunity.</p><i/><i/><i/><p>Sincerely,</p><p>{activeResume.name||'Your Name'}</p></div>}</section></div></>}
 
 {section==='settings'&&<SettingsPanel user={user} resumes={resumes} signOut={signOut} initialTab={settingsFocus}/>}
    </main>

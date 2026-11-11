@@ -785,3 +785,167 @@
 .resume-client-shell .avatar img,.settings-v2 .settings-avatar img{
  object-fit:cover!important;object-position:center!important;
 }
+
+/* Accessible, high-visibility shared logo across public and signed-in views. */
+.public-logo-mark{
+ width:56px!important;height:56px!important;
+ min-width:56px;min-height:56px;
+ background:transparent!important;box-shadow:none!important;border:none!important;
+ overflow:visible!important;padding:0!important;
+}
+.public-logo-mark img{display:block;width:52px!important;height:52px!important;max-width:none!important;max-height:none!important;object-fit:contain!important;}
+.resume-client-shell .workspace-brand-home{
+ display:inline-flex;align-items:center;gap:10px;min-width:0;padding:0;margin:0;border:0;
+ background:transparent;color:inherit;font:inherit;text-align:left;font-weight:500;letter-spacing:inherit;
+ text-decoration:none;cursor:pointer;
+}
+.resume-client-shell .workspace-brand-home:hover,.public-logo:hover{color:#5f2be3}
+.resume-client-shell .workspace-brand-home:focus-visible,.public-logo:focus-visible{outline:3px solid #956bfe;outline-offset:4px;border-radius:8px}
+.resume-client-shell .workspace-brand-home .brand-icon{
+ width:52px!important;height:52px!important;min-width:52px;min-height:52px;
+ background:transparent!important;box-shadow:none!important;padding:0!important;border:0!important;
+}
+.resume-client-shell .workspace-brand-home .brand-icon img{width:49px!important;height:49px!important;max-width:none!important;max-height:none!important;object-fit:contain}
+.resume-client-shell .brand{gap:6px;padding:0 2px;}
+/* Consistent Settings icons on phones, even when right-hand chevrons are hidden. */
+@media(max-width:780px){
+ .settings-v2-nav .settings-tab-icon{display:inline-flex!important;align-items:center;justify-content:center;
+  width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;
+  background:#f2edff;color:#6935d8;border-radius:10px;flex:0 0 32px!important;}
+ .settings-v2-nav button.selected .settings-tab-icon{background:#ded0ff;color:#5222c2}
+ .settings-v2-nav .settings-tab-icon>svg{display:block!important;width:19px!important;height:19px!important;opacity:1!important;visibility:visible!important;flex:none}
+ .settings-v2-nav button>svg:last-child{display:none!important}
+ .settings-v2-nav button{display:inline-flex;align-items:center;gap:8px}
+}
+@media(max-width:480px){
+ .public-logo-mark{width:44px!important;height:44px!important;min-width:44px;min-height:44px}
+ .public-logo-mark img{width:42px!important;height:42px!important}
+ .public-logo{font-size:17px}
+ .resume-client-shell .workspace-brand-home .brand-icon{width:45px!important;height:45px!important;min-width:45px}
+ .resume-client-shell .workspace-brand-home .brand-icon img{width:43px!important;height:43px!important}
+}
+
+/* Clear distinction: enrollment is NOT enabled until Supabase accepts a TOTP. */
+.mfa-status-pending{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #e1cff7;border-radius:9px;background:#f8f2ff;color:#6841ad;font-size:11px;font-weight:800}
+.mfa-manual-key{display:flex;align-items:center;gap:10px;max-width:100%;flex-wrap:wrap}
+.mfa-manual-key code{letter-spacing:1px;font-weight:750;user-select:all}
+.mfa-manual-key button{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #d7c6e9;border-radius:8px;color:#6032c8;padding:8px 10px;font-size:12px;font-weight:750}
+.mfa-verify input{font-variant-numeric:tabular-nums;transition:border-color .18s,box-shadow .18s,background .18s}
+.mfa-verify input:focus{outline:none;border-color:#7949e3;box-shadow:0 0 0 3px #9256ff25}
+.mfa-verify input.mfa-code-invalid,.mfa-verify input.mfa-code-invalid:focus{border-color:#ed536b!important;background:#fff5f6!important;color:#b92943!important;box-shadow:0 0 0 3px #f64a6422!important}
+.mfa-verify input.mfa-code-verified{border-color:#20a36b!important;background:#f2fcf6!important;color:#0f774d!important;box-shadow:0 0 0 3px #32bf7525!important}
+@media(max-width:520px){.mfa-manual-key{width:100%}.mfa-manual-key code{font-size:11px;word-break:break-word}}
+
+
+/* Professional demo-only export lock: editing stays functional, exports don't. */
+.wizard-demo-export{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:14px;background:linear-gradient(115deg,#f8f4ff,#fff);border:1px solid #ded1fa;border-radius:16px;padding:22px;margin:12px 0;color:#342650}
+.wizard-demo-icon{width:52px;height:52px;display:grid;place-items:center;color:#6433c9;border-radius:13px;background:#ece3ff;box-shadow:inset 0 0 0 1px #dbc6fc}
+.wizard-demo-export-copy strong{font-size:16px;font-weight:850;letter-spacing:-.25px;color:#302146}
+.wizard-demo-export-copy p{font-size:12px;line-height:1.65;margin:6px 0 0;color:#736885}
+.wizard-demo-signin,.cover-demo-locked>a{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;background:#6937e9;color:#fff!important;border-radius:10px;padding:13px 16px;min-height:45px;font-size:12px;font-weight:800;box-shadow:0 7px 18px #4c23ad25}
+.wizard-demo-signin:hover,.cover-demo-locked>a:hover{background:#5122c6}
+.wizard-demo-formats{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #eadff9;padding-top:14px;margin-top:2px}
+.wizard-demo-formats span{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:7px 9px;background:#f0ecf7;color:#81758f;font-size:11px;font-weight:700}
+.wizard-export-locked{background:#f3ebff!important;color:#6f46a7!important;border:1px solid #e3d6f3!important}
+.wizard-preview-document{position:relative;isolation:isolate}
+.wizard-preview-demo-overlay{user-select:none;-webkit-user-select:none}
+.wizard-preview-demo-overlay .resume-document{pointer-events:none}
+.wizard-watermark{position:absolute;inset:0;z-index:10;pointer-events:none;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;overflow:hidden}
+.wizard-watermark span{display:block;transform:rotate(-29deg);font-size:clamp(18px,2vw,30px);color:#7d50ab7a;letter-spacing:3px;font-weight:900;text-align:center;white-space:nowrap;text-shadow:0 1px #ffffffa0}
+.wizard-preview--watermarked .wizard-preview-head>span{color:#6438c3;background:#f2ebff;border-radius:8px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px}
+.wizard-preview--watermarked>p{color:#655875;font-size:11px;line-height:1.6}
+
+/* Demo cover letter is editable, but the preview is visibly watermarked. */
+.cover-demo-locked{display:flex;flex-direction:column;align-items:flex-start;gap:10px;border-radius:14px;background:linear-gradient(125deg,#f6f0ff,#fff);border:1px solid #e5d7f7;padding:18px;margin:18px 0 10px}
+.cover-demo-locked>svg{color:#6436d2}
+.cover-demo-locked strong{font-size:14px;color:#31244c;line-height:1.4}
+.cover-demo-locked p{font-size:12px;color:#766b86;line-height:1.7;margin:0}
+.cover-demo-locked>a{padding:11px 15px}
+.cover-demo-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;background:#f2eafa;color:#6a46a2;border:1px solid #e1d4f6;border-radius:9px;font-size:11px;font-weight:750}
+.cover-demo-editor{position:relative;isolation:isolate;overflow:hidden;border-radius:10px}
+.cover-demo-editor textarea{width:100%;min-height:350px;position:relative;z-index:1;background:transparent}
+.cover-demo-watermark{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;pointer-events:none;z-index:2;overflow:hidden}
+.cover-demo-watermark span{transform:rotate(-24deg);color:#6a40b540;letter-spacing:4px;font-size:clamp(18px,2vw,29px);font-weight:900;white-space:nowrap}
+.cover-demo-preview-note{display:flex;gap:8px;align-items:flex-start;color:#75638b;line-height:1.65;font-size:11px;padding:12px 4px 0;margin:0}
+.cover-demo-preview-note svg{flex:none;margin-top:1px}
+@media(max-width:720px){
+ .wizard-demo-export{grid-template-columns:46px minmax(0,1fr);padding:16px;gap:12px}
+ .wizard-demo-icon{width:44px;height:44px}
+ .wizard-demo-signin{grid-column:1/-1;width:100%;min-height:46px}
+ .wizard-demo-formats{justify-content:flex-start}
+ .wizard-demo-export-copy strong{font-size:14px}
+ .cover-demo-watermark span{font-size:17px;letter-spacing:2px}
+}
+/* Demo pages never expose an unwatermarked resume through normal browser Print.
+   Page source/camera screenshots are not technically preventable on the web. */
+@media print{
+ body:has(.wizard-page--demo) .resume-paper,
+ body:has(.wizard-page--demo) .resume-paper *,
+ body:has(.wizard-page--demo) .resume-document,
+ body:has(.wizard-page--demo) .resume-document *{visibility:hidden!important;display:none!important}
+ body:has(.wizard-page--demo)::after{
+  content:'ResumeBuilder · DEMO PREVIEW ONLY · Please sign in to export';
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:20pt;color:#6c4dac;visibility:visible!important;text-align:center;
+ }
+ body:has(.cover-letter-preview--demo) .cover-demo-editor,
+ body:has(.cover-letter-preview--demo) .cover-demo-editor *{visibility:hidden!important;display:none!important}
+}
+
+
+/* Two-factor security screen: legible, mobile-first and native-OTP-friendly. */
+.mfa-auth-page{background:radial-gradient(circle at 50% 10%,#ece3ff 0,#f6f1ff 45%,#fcfaff 100%);min-height:100dvh}
+.mfa-auth-card{width:min(100%,520px)!important;border-radius:22px!important;padding:28px!important;box-shadow:0 24px 70px #2c16551d!important}
+.mfa-auth-brand{gap:11px;font-size:17px;letter-spacing:-.3px;margin-bottom:22px}
+.mfa-auth-brand .brand-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px}
+.mfa-auth-brand .brand-icon img{width:40px!important;height:40px!important;object-fit:contain}
+.mfa-auth-card .mfa-panel{border:1px solid #e6dcf5;border-radius:16px;background:#fcfaff;padding:22px;width:100%;gap:17px}
+.mfa-auth-card .mfa-panel-heading{align-items:flex-start;gap:12px}
+.mfa-auth-card .mfa-panel-heading>svg{color:#6837d7;min-width:28px;width:28px;height:28px;padding:4px;background:#efe7ff;border-radius:9px}
+.mfa-auth-card .mfa-panel-heading strong{font-size:17px;color:#271a48;line-height:1.4}
+.mfa-auth-card .mfa-panel-heading small{font-size:12px;line-height:1.65;color:#70637e}
+.mfa-auth-card .mfa-note{font-size:12px;line-height:1.65;color:#6f6580}
+.mfa-verify{width:100%!important;gap:12px!important;align-items:stretch!important}
+.mfa-otp-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mfa-otp-heading label{color:#33264c;font-size:12px;font-weight:800}
+.mfa-otp-heading span{font-size:11px;font-weight:750;color:#8259ad}
+.mfa-otp-box{width:100%;position:relative;isolation:isolate;min-width:0}
+.mfa-otp-box>input{position:absolute;inset:0;height:62px;width:100%;z-index:2;opacity:0;cursor:text;font-size:16px!important;letter-spacing:3px}
+.mfa-otp-digits{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;pointer-events:none}
+.mfa-otp-digits span{display:flex;align-items:center;justify-content:center;height:60px;min-width:0;border:1.5px solid #dcd1ed;border-radius:11px;background:#fff;box-shadow:0 2px 7px #3113440a;color:#6a40a6;font-weight:850;font-size:25px;line-height:1;font-variant-numeric:tabular-nums;transition:background .18s,border-color .18s,box-shadow .18s,color .18s}
+.mfa-otp-digits span.filled{color:#362056;border-color:#bca5ef;background:#fcfaff}
+.mfa-otp-box:focus-within .mfa-otp-digits span{border-color:#8c64e9;box-shadow:0 0 0 3px #8b5cf61a}
+.mfa-otp-box.mfa-otp-invalid .mfa-otp-digits span,.mfa-otp-box.mfa-otp-invalid:focus-within .mfa-otp-digits span{background:#fff5f6;color:#a52040;border-color:#e95873;box-shadow:0 0 0 3px #f251671c}
+.mfa-otp-box.mfa-otp-verified .mfa-otp-digits span,.mfa-otp-box.mfa-otp-verified:focus-within .mfa-otp-digits span{background:#f0fcf5;color:#137d4d;border-color:#2cad75;box-shadow:0 0 0 3px #15b56a1b}
+.mfa-otp-box.mfa-otp-invalid+.mfa-auto-hint{color:#a92842}
+.mfa-otp-box.mfa-otp-verified+.mfa-auto-hint{color:#12784a}
+.mfa-auto-hint{margin:0;font-size:11px;color:#827491;line-height:1.55}
+.mfa-verify-button{display:flex!important;align-items:center;justify-content:center;gap:9px;width:100%!important;min-height:51px!important;padding:13px 17px!important;background:#6e39e8!important;color:#fff!important;border:1px solid #6e39e8!important;border-radius:11px!important;font-size:13px!important;font-weight:850!important;line-height:1.35!important;box-shadow:0 8px 19px #6b39e82e!important;cursor:pointer!important;opacity:1!important;visibility:visible!important;transition:background .16s,box-shadow .16s,transform .16s}
+.mfa-verify-button:not(:disabled):hover{background:#5124c7!important;box-shadow:0 9px 22px #6e38e83b!important;transform:translateY(-1px)}
+.mfa-verify-button:disabled{background:#8e70c9!important;border-color:#8e70c9!important;color:#fff!important;box-shadow:none!important;cursor:not-allowed!important;opacity:.85!important}
+.mfa-verify-button:focus-visible{outline:3px solid #4f25b6;outline-offset:3px}
+.mfa-panel>.outline-button{min-height:40px;color:#5e3374;font-weight:750;border-color:#e7dcee}
+.mfa-panel .settings-v2-error{border-radius:9px;background:#fff0f2;color:#a52443;border:1px solid #f4bdca;font-size:12px;line-height:1.5;padding:11px}
+.mfa-panel .settings-v2-notice{background:#eefaf2;color:#137c4e;border:1px solid #c3e9d1;border-radius:9px;font-size:12px;line-height:1.5;padding:11px}
+@media(max-width:520px){
+ .mfa-auth-page{padding:15px}
+ .mfa-auth-card{padding:17px!important;border-radius:16px!important}
+ .mfa-auth-card .mfa-panel{padding:15px}
+ .mfa-otp-digits{gap:6px}
+ .mfa-otp-digits span{height:53px;border-radius:9px;font-size:21px}
+ .mfa-otp-box>input{height:55px}
+ .mfa-otp-heading span{font-size:10px}
+ .mfa-auth-card .mfa-panel-heading strong{font-size:15px}
+}
+
+/* Direct print guard: hide the entire demo editor DOM, not just descendants.
+   This works independently of :has() and global .resume-paper print rules. */
+@media print {
+ .wizard-page--demo,.wizard-page--demo *,.wizard-page--demo::before,.wizard-page--demo::after,
+ .cover-letter-preview--demo,.cover-letter-preview--demo *{
+  display:none!important;visibility:hidden!important;
+ }
+}
+
+.admin-export-locked{display:inline-flex;align-items:center;gap:7px;border:1px solid #e2d7f1;background:#f8f4ff;color:#76569b;padding:9px 13px;min-height:38px;border-radius:9px;font-size:11px;font-weight:750}
+@media print{.admin-shell:has(.admin-preview-banner){display:none!important}}

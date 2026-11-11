@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {BrandMark} from '@/components/brand-icons';
 import {useCallback,useEffect,useState} from 'react';
-import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,Download,CalendarDays,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap} from 'lucide-react';
+import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,Download,CalendarDays,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap,LockKeyhole} from 'lucide-react';
 type Tab='dashboard'|'users'|'resumes'|'ats'|'plans'|'usage'|'activity'|'settings';
 type Person={id:string;email:string;name:string;plan:string;created_at:string;last_sign_in_at?:string|null};
 type Doc={id:string;title:string;user_id:string;created_at:string;updated_at:string};
@@ -40,36 +40,19 @@ export default function AdminPanel({demo}:{demo:boolean}){
  });
  const rangeControl=<label className="admin-range-control"><CalendarDays size={17}/><span>Period</span><select aria-label="Reporting period" value={period} onChange={e=>setPeriod(e.target.value)}><option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option><option value="all">All Time</option></select></label>;
  const exportExcel=async(kind:ExportKind)=>{
+  if(demo){setNotice('Downloads are disabled in Demo Mode. Sign in with an authorized admin account to export reports.');return;}
   setExporting(true);setError('');
   try{
-   if(!demo){
-    const response=await fetch('/api/admin/export?kind='+kind+'&period='+period,{cache:'no-store'});
-    if(!response.ok){const j=await response.json();throw Error(j.error||'Excel export failed.');}
-    const blob=await response.blob();const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download='resumebuilder-'+kind+'-'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();
-    URL.revokeObjectURL(url);return;
-   }
-   const ExcelJS=(await import('exceljs')).default;const workbook=new ExcelJS.Workbook();workbook.creator='ResumeBuilder Demo';
-   const report=workbook.addWorksheet(kind[0].toUpperCase()+kind.slice(1));
-   const rows:Record<ExportKind,(string|number|null)[][]>={
-    activity:[['Action','Actor Email','Actor ID','Details','IP Address','Browser','Date'],...displayedActivities.map(a=>[a.action,String(a.details.actor_email||'Example account'),a.actor_id||'',JSON.stringify(a.details||{}),a.ip_address||'Not recorded',a.user_agent||'Not recorded',dateTime(a.created_at)])],
-    users:[['Name','Email','Joined','Plan'],...data.users.map(u=>[u.name,u.email,dateTime(u.created_at),u.plan])],
-    resumes:[['Title','Owner ID','Created'],...data.resumes.map(r=>[r.title,r.user_id,dateTime(r.created_at)])],
-    ats:[['ATS Scan ID','Score','Date'],...data.ats.map(a=>[a.id,a.score,dateTime(a.created_at)])],
-    usage:[['Task','Date'],...data.aiEvents.map(a=>[a.task,dateTime(a.created_at)])]
-   };
-   for(const line of rows[kind])report.addRow(line.map(v=>{const value=String(v??'');return /^[\s]*[=+\-@]/.test(value)?"'"+value:value;}));
-   report.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};
-   report.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF6430EE'}};
-   report.columns.forEach(c=>c.width=25);
-   const buffer=await workbook.xlsx.writeBuffer();
-   const blob=new Blob([new Uint8Array(buffer).buffer as ArrayBuffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-   const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;
-   link.download='resumebuilder-'+kind+'-DEMO.xlsx';link.click();URL.revokeObjectURL(url);
+   const response=await fetch('/api/admin/export?kind='+kind+'&period='+period,{cache:'no-store'});
+   if(!response.ok){const j=await response.json();throw Error(j.error||'Excel export failed.');}
+   const blob=await response.blob();const url=URL.createObjectURL(blob);
+   const a=document.createElement('a');a.href=url;a.download='resumebuilder-'+kind+'-'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();
+   URL.revokeObjectURL(url);
   }catch(e){setError(e instanceof Error?e.message:'Excel export unavailable.');}
   finally{setExporting(false);}
  };
- const exportButton=(kind:ExportKind)=><button className="admin-export-button" disabled={exporting} onClick={()=>void exportExcel(kind)}><Download size={17}/>{exporting?'Preparing…':'Download Excel'}</button>;
+ const exportButton=(kind:ExportKind)=>demo?<span className="admin-export-locked"><LockKeyhole size={15}/> Demo export locked</span>:
+ <button className="admin-export-button" disabled={exporting} onClick={()=>void exportExcel(kind)}><Download size={17}/>{exporting?'Preparing…':'Download Excel'}</button>;
 
  const total=data.plans.free+data.plans.pro+data.plans.team||1;
  const matches=(str:string)=>str.toLowerCase().includes(search.toLowerCase());
