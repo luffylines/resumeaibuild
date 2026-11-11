@@ -1,5 +1,5 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,Check,Download,FileDown,FileImage,FileType,Printer,Palette,ExternalLink,FileText,GraduationCap,Plus,Save,Sparkles,Trash2,UserRound,BriefcaseBusiness,ShieldCheck,Camera,ImageUp,XCircle} from 'lucide-react';
 import type {ReactNode} from 'react';
 import {UNIQUE_RESUME_TEMPLATES,TEMPLATE_CATEGORIES,DESIGN_COLOR_OPTIONS,PAGE_BACKGROUND_OPTIONS,getResumeTemplate,canonicalTemplateId,designDisplayName,PHOTO_READY_TEMPLATES} from '@/lib/templates';
@@ -10,10 +10,27 @@ import type {TemplateCategory} from '@/lib/templates';
 import type {Resume} from '@/lib/types';
 import {uid} from '@/lib/types';
 const stages=[{label:'Profile',icon:UserRound},{label:'Experience',icon:BriefcaseBusiness},{label:'Education',icon:GraduationCap},{label:'Skills',icon:Sparkles},{label:'Generate',icon:FileText}];
-type Props={draft:Resume;setDraft:(v:Resume)=>void;save:(v:Resume)=>Promise<void>;runAI:(task:'resume'|'summary',context:string)=>Promise<string|null>;busy:boolean;preview:ReactNode;onBack:()=>void};
+type Props={draft:Resume;setDraft:(v:Resume)=>void;save:(v:Resume)=>Promise<void>;runAI:(task:'resume'|'summary',context:string)=>Promise<string|null>;busy:boolean;preview:ReactNode;storageScope:string;onBack:()=>void};
 function Input({label,value,change,placeholder='',area=false}:{label:string;value:string;change:(s:string)=>void;placeholder?:string;area?:boolean}){return <label className="wizard-field"><span>{label}</span>{area?<textarea rows={4} value={value} onChange={e=>change(e.target.value)} placeholder={placeholder}/>:<input value={value} onChange={e=>change(e.target.value)} placeholder={placeholder}/>}</label>;}
-export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,onBack}:Props){
+export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,storageScope,onBack}:Props){
  const [step,setStep]=useState(0),[prompt,setPrompt]=useState(''),[message,setMessage]=useState('');
+ const [wizardLoadedKey,setWizardLoadedKey]=useState('');
+ const wizardKey='resumebuilder:wizard:v1:'+storageScope+':'+draft.id;
+ useEffect(()=>{
+  try{
+   const raw=localStorage.getItem(wizardKey);
+   if(raw){
+    const value=JSON.parse(raw);
+    setStep(Number.isInteger(value.step)&&value.step>=0&&value.step<=4?value.step:0);
+    setPrompt(typeof value.prompt==='string'?value.prompt:'');
+   }else{setStep(0);setPrompt('');}
+  }catch{setStep(0);setPrompt('');}
+  setWizardLoadedKey(wizardKey);
+ },[wizardKey]);
+ useEffect(()=>{
+  if(wizardLoadedKey!==wizardKey)return;
+  try{localStorage.setItem(wizardKey,JSON.stringify({step,prompt,updatedAt:Date.now()}));}catch{}
+ },[wizardKey,wizardLoadedKey,step,prompt]);
  const photoInput=useRef<HTMLInputElement>(null);
  const exportSheet=useRef<HTMLDivElement>(null);
  const [exporting,setExporting]=useState<'PDF'|'DOCX'|'PNG'|null>(null);
