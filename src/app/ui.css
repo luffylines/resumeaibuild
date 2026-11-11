@@ -587,3 +587,18 @@
 .password-card h1{font-size:24px;letter-spacing:-.6px;margin:0 0 9px}
 .password-card>p{font-size:12px;color:#8e859f;line-height:1.7;margin:0 0 24px}
 .password-card .auth-success{display:flex;align-items:center;gap:8px}
+
+/* Cover letter writer */
+.cover-letter-layout{grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr)}
+.cover-generate-button{margin-top:7px;min-width:210px}
+.cover-letter-preview>.panel-head{padding:0 0 17px;margin-bottom:17px}
+.cover-letter-preview>.panel-head>div:last-child{display:flex;gap:10px}
+.cover-letter-preview>.panel-head>div:last-child button{display:inline-flex;align-items:center;gap:7px;border:1px solid #e6def3;background:#faf7ff;border-radius:8px;color:#6934e3;font-size:11px;font-weight:700;padding:8px 11px}
+.cover-letter-placeholder{min-height:380px;background:#fdfcff;border:1px solid #f0eaf7;border-radius:10px;padding:26px;color:#645a74;font-size:12px;line-height:1.8}
+.cover-letter-placeholder>p{margin:21px 0}
+.cover-letter-placeholder i{display:block;width:91%;height:7px;background:#e8e3ed;border-radius:4px;margin:12px 0}
+.cover-letter-placeholder i:nth-of-type(2){width:77%}
+.cover-letter-placeholder i:nth-of-type(3){width:60%}
+.cover-letter-text{font-family:Georgia,'Times New Roman',serif;width:100%;font-size:13px;line-height:1.9;border:1px solid #e9e1f3;border-radius:10px;padding:21px;color:#343040;resize:vertical;min-height:380px;outline:0}
+.cover-letter-text:focus{border-color:#986eeb}
+@media(max-width:1000px){.cover-letter-layout{grid-template-columns:1fr}}

@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import type {JobApplication,Resume} from '@/lib/types';
 import {ArrowRight,Bell,Check,CheckCircle2,Cloud,Download,ExternalLink,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards} from 'lucide-react';
@@ -11,6 +11,7 @@ export default function SettingsPanel({user,resumes,applications,signOut}:Props)
  const [tab,setTab]=useState<Tab>('account'),[name,setName]=useState(user?.user_metadata?.full_name||'Christian B. Aring'),[notice,setNotice]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [notify,setNotify]=useState<Record<string,boolean>>(()=>{if(typeof window==='undefined')return {interview:true,applications:true,product:false};try{return JSON.parse(localStorage.getItem('resume_notification_prefs')||'{"interview":true,"applications":true,"product":false}') as Record<string,boolean>;}catch{return {interview:true,applications:true,product:false};}});
  const sb=browserSupabase();
+ useEffect(()=>{if(user?.user_metadata?.full_name)setName(user.user_metadata.full_name);},[user]);
  const providers=user?.app_metadata?.providers as string[]|undefined;
  const saveName=async()=>{if(!name.trim()){setError('Please enter your name.');return;}setBusy(true);setError('');try{if(user&&sb){const {error:e}=await sb.auth.updateUser({data:{full_name:name.trim()}});if(e)throw e;}else localStorage.setItem('resume_demo_name',name.trim());setNotice('Profile name saved. Refresh to see the updated account name.');}catch(e){setError(e instanceof Error?e.message:'Unable to update profile.');}finally{setBusy(false);}};
  const resetPassword=async()=>{if(!user?.email||!sb){setError('Sign in to request a password reset email.');return;}setBusy(true);setError('');try{const {error:e}=await sb.auth.resetPasswordForEmail(user.email,{redirectTo:window.location.origin+'/auth/reset'});if(e)throw e;setNotice('Password reset instructions sent to your email, if supported by the provider.');}catch(e){setError(e instanceof Error?e.message:'Unable to send reset email.');}finally{setBusy(false);}};
