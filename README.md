@@ -136,3 +136,14 @@ In **Build Resume → Skills** add and edit content beyond the standard name, pr
 Templates suggest sections in a different order based on their design (for example, graduate layouts lead with education, creative sidebars can put skills/languages in the side column, and editorial layouts emphasize experience). These are **suggestions, not restrictions**. If you enter information that a template does not normally include, the populated section appears automatically in the live preview and **PDF, editable DOCX, PNG and Print** exports. If no information is entered, that section is hidden from the final resume; blank placeholders are not exported. Changing templates does not delete section data. The same shared section registry drives HTML previews and document exports, preventing mismatched missing content.
 
 Existing JSON resumes remain valid: all extra arrays and the Additional Information text are optional. Both demo browser storage and the dedicated Supabase \`resumes.content\` JSONB field persist the extra sections without a database schema migration. All details are user-provided; nothing is invented as qualifications or references. Review your resume before applying.
+
+
+## Canva handoff and high-resolution PNG repair (November 2026)
+
+The **Generate** step in the resume wizard now uses a polished design picker with real scaled documents, a responsive preview, balanced export buttons, and an **Edit in Canva** card.
+
+**Edit in Canva** prepares a selectable-text PDF download and opens https://www.canva.com/pdf-editor/ in a new browser tab so the user can import the PDF there. This is intentionally a **handoff**, not an automatic upload: Canva controls its accounts and imported designs, and directly saving a generated design to someone's Canva account requires an authorized Canva REST API integration and OAuth 2.0. The app does **not** request the user's Canva password and does not send resume data directly to Canva. If the new tab is blocked, the wizard displays a backup Canva link.
+
+For the PNG export, the app now renders a temporary, actual-size A4-proportioned resume document, waits for fonts and portrait images, and captures the document rather than the offscreen wrapper. It exports at 2× resolution and measures the full rendered height so longer content is not clipped. The capture node is always removed afterward. Browser tests check PNG pixel dimensions, color diversity, and real image content instead of checking only the file signature. PNG images are not text-editable in Canva; prefer the PDF or DOCX import for further editing.
+
+**Print** still depends on the browser's print dialog. For browser-supplied date, page number or localhost URL, disable "Headers and footers" when printing.
