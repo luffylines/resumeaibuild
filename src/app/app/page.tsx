@@ -16,6 +16,7 @@ import ResumeWizard from '@/components/resume-wizard';
 import JobBoard from '@/components/job-board';
 import InterviewStudio from '@/components/interview-studio';
 import SettingsPanel from '@/components/settings-panel';
+import {BrandMark} from '@/components/brand-icons';
 import ResumeDocument from '@/components/resume-document';
 import TemplateGallery from '@/components/template-gallery';
 
@@ -56,6 +57,14 @@ function Status({value}:{value:ApplicationStatus}){return <span className={'stat
 export default function Home(){
  const [section,setSection]=useState<Section>('dashboard');
  const [mobileNav,setMobileNav]=useState(false);
+ useEffect(()=>{
+  if(!mobileNav)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setMobileNav(false);};
+  const onResize=()=>{if(window.innerWidth>700)setMobileNav(false);};
+  const prior=document.body.style.overflow;document.body.style.overflow='hidden';
+  document.addEventListener('keydown',onKey);window.addEventListener('resize',onResize);
+  return()=>{document.body.style.overflow=prior;document.removeEventListener('keydown',onKey);window.removeEventListener('resize',onResize);};
+ },[mobileNav]);
  useEffect(()=>{const initial=new URLSearchParams(window.location.search).get('section');if(initial==='templates')setSection('templates');},[]);
  const [resumes,setResumes]=useState<Resume[]>(sampleResumes);
  const [applications,setApplications]=useState<JobApplication[]>(starters);
@@ -161,11 +170,12 @@ export default function Home(){
  const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',jobs:'Job Matching',interview:'Interview Practice',tracker:'Job Tracker',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
  const filteredResumes=resumes.filter(r=>(r.title+' '+r.targetRole).toLowerCase().includes(search.toLowerCase()));
  return <div className="app-shell resume-client-shell">
-  <aside className={'sidebar '+(mobileNav?'sidebar-open':'')}>
-   <div className="brand"><span className="brand-icon"><FileText size={18}/></span><span>Resume<span className="brand-bold">Builder</span><span className="brand-dot">.</span></span><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
+  {mobileNav&&<button className="workspace-scrim" aria-label="Close sidebar navigation" onClick={()=>setMobileNav(false)}/>}
+  <aside id="mobile-workspace-nav" className={'sidebar '+(mobileNav?'sidebar-open':'')}>
+   <div className="brand"><span className="brand-icon"><BrandMark size={20}/></span><span>Resume<span className="brand-bold">Builder</span></span><button className="mobile-close icon-button" onClick={()=>setMobileNav(false)} aria-label="Close menu"><X size={19}/></button></div>
    <button className="create-button" onClick={startNew}><Plus size={17}/> Create New Resume <ArrowRight size={16}/></button>
    <div className="side-label">WORKSPACE</div>
-   <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><Icon size={17}/><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
+   <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><span className="side-nav-icon"><Icon size={18} strokeWidth={1.9}/></span><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
    <div className="side-label recent-label">RECENT DOCUMENTS</div>
    <div className="sidebar-docs">{resumes.slice(0,3).map(r=><button onClick={()=>editResume(r)} key={r.id}><FileText size={14}/><span>{r.title}</span></button>)}{resumes.length===0&&<p>No saved resumes yet</p>}</div>
    <div className="sidebar-bottom">{isAdmin&&<a className="admin-account-link" href="/admin"><ShieldCheck size={16}/> Admin Dashboard <ArrowRight size={15}/></a>}
@@ -174,7 +184,7 @@ export default function Home(){
    </div>
   </aside>
   <div className="main-area">
-   <header className="topbar"><button className="mobile-menu icon-button" onClick={()=>setMobileNav(true)} aria-label="Open menu"><Menu/></button>
+   <header className="topbar"><button className="mobile-menu icon-button" onClick={()=>setMobileNav(true)} aria-label="Open navigation menu" aria-expanded={mobileNav} aria-controls="mobile-workspace-nav"><Menu/></button>
     <div className="breadcrumbs">Workspace <ChevronRight size={15}/><strong>{title[section]}</strong></div>
     <div className="top-actions"><div className="searchbox"><Search size={17}/><input placeholder="Search resumes..." value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')go('resumes');}}/></div><span className="top-separator"/><button onClick={()=>user?go('settings'):window.location.assign('/login')} className="profile-chip"><span className="avatar mini">{formattedName.slice(0,1).toUpperCase()}</span><span>{user?'My Account':'Demo Mode'}</span><ChevronDown size={14}/></button></div>
    </header>

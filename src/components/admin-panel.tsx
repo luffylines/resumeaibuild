@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import {BrandMark} from '@/components/brand-icons';
 import {useCallback,useEffect,useState} from 'react';
 import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap} from 'lucide-react';
 type Tab='dashboard'|'users'|'resumes'|'ats'|'jobs'|'plans'|'usage'|'activity'|'settings';
@@ -19,6 +20,14 @@ export default function AdminPanel({demo}:{demo:boolean}){
  const [tab,setTab]=useState<Tab>('dashboard');const [data,setData]=useState<Data>(sample);const [loading,setLoading]=useState(!demo);
  const [error,setError]=useState('');const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);
  const [search,setSearch]=useState('');const [sidebar,setSidebar]=useState(false);const [edit,setEdit]=useState(false);const [job,setJob]=useState(blank());
+ useEffect(()=>{
+  if(!sidebar)return;
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')setSidebar(false);};
+  const onResize=()=>{if(window.innerWidth>840)setSidebar(false);};
+  const prior=document.body.style.overflow;document.body.style.overflow='hidden';
+  document.addEventListener('keydown',onKey);window.addEventListener('resize',onResize);
+  return()=>{document.body.style.overflow=prior;document.removeEventListener('keydown',onKey);window.removeEventListener('resize',onResize);};
+ },[sidebar]);
  const load=useCallback(async()=>{if(demo){try{const s=localStorage.getItem('resume_admin_preview');if(s)setData(JSON.parse(s) as Data);}catch{}setLoading(false);return;}setLoading(true);try{const r=await fetch('/api/admin',{cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Admin data unavailable');setData(j);}catch(e){setError(e instanceof Error?e.message:'Unable to load data');}finally{setLoading(false);}},[demo]);
  useEffect(()=>{void load()},[load]);
  const saveDemo=(v:Data)=>{setData(v);localStorage.setItem('resume_admin_preview',JSON.stringify(v))};
@@ -29,8 +38,9 @@ export default function AdminPanel({demo}:{demo:boolean}){
  const total=data.plans.free+data.plans.pro+data.plans.team||1;
  const matches=(str:string)=>str.toLowerCase().includes(search.toLowerCase());
  return <div className="admin-shell">
- <aside className={'admin-sidebar '+(sidebar?'menu-open':'')}><Link href="/" className="admin-brand"><span><Sparkles size={20}/></span><strong>ResumeBuilder<small>Admin</small></strong></Link><nav>{nav.map(n=>{const I=n.icon;return <button key={n.id} className={tab===n.id?'selected':''} onClick={()=>{setTab(n.id);setSearch('');setSidebar(false);}}><I size={18}/>{n.label}</button>})}</nav><div className="admin-footer"><span className="admin-avatar">A</span><div><strong>Admin</strong><small>System Administrator</small></div><Link href="/app"><ArrowRight size={17}/></Link></div></aside>
- <div className="admin-content"><header className="admin-top"><button className="admin-menu" onClick={()=>setSidebar(!sidebar)}><Menu size={22}/></button><div><h1>{tab==='dashboard'?'Admin Dashboard':nav.find(x=>x.id===tab)?.label}</h1><p>Manage users, resumes, jobs, and system performance.</p></div><div><span className="admin-period">Last 30 Days <ChevronDown size={15}/></span><Link className="admin-back" href="/app">User Dashboard <ArrowRight size={15}/></Link></div></header>
+ {sidebar&&<button className="admin-mobile-scrim" aria-label="Close admin navigation" onClick={()=>setSidebar(false)}/>}
+ <aside id="admin-mobile-nav" className={'admin-sidebar '+(sidebar?'menu-open':'')}><Link href="/" className="admin-brand"><span><BrandMark size={20}/></span><strong>ResumeBuilder<small>Admin</small></strong></Link><nav>{nav.map(n=>{const I=n.icon;return <button key={n.id} className={tab===n.id?'selected':''} onClick={()=>{setTab(n.id);setSearch('');setSidebar(false);}}><span className="admin-nav-icon"><I size={18} strokeWidth={1.9}/></span>{n.label}</button>})}</nav><div className="admin-footer"><span className="admin-avatar">A</span><div><strong>Admin</strong><small>System Administrator</small></div><Link href="/app"><ArrowRight size={17}/></Link></div></aside>
+ <div className="admin-content"><header className="admin-top"><button className="admin-menu" aria-label={sidebar?'Close admin menu':'Open admin menu'} aria-expanded={sidebar} aria-controls="admin-mobile-nav" onClick={()=>setSidebar(!sidebar)}>{sidebar?<X size={22}/>:<Menu size={22}/>}</button><div><h1>{tab==='dashboard'?'Admin Dashboard':nav.find(x=>x.id===tab)?.label}</h1><p>Manage users, resumes, jobs, and system performance.</p></div><div><span className="admin-period">Last 30 Days <ChevronDown size={15}/></span><Link className="admin-back" href="/app">User Dashboard <ArrowRight size={15}/></Link></div></header>
  <main className="admin-main">{demo&&<div className="admin-preview-banner"><Sparkles size={17}/> Preview mode — displayed numbers are examples. Changes are local until a separate Supabase project is configured.</div>}
  {error&&<div role="alert" className="admin-flash bad">{error}<button onClick={()=>setError('')}><X size={16}/></button></div>}
  {notice&&<div role="status" className="admin-flash">{notice}<button onClick={()=>setNotice('')}><X size={16}/></button></div>}
