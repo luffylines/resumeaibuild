@@ -147,8 +147,41 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.locator('.wizard-photo-thumb img').waitFor({state:'visible',timeout:10000});
   await photoPage.getByRole('button',{name:'Remove'}).click();
   await photoPage.locator('.wizard-photo-thumb img').waitFor({state:'hidden'});
+  await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Skills'}).click();
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Certifications & Training'}).click();
+  await photoPage.getByLabel('Certificate / Training Title').fill('Sample Network Certification');
+  await photoPage.getByLabel('Issuer / Organization').fill('Demo Training Academy');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Professional References'}).click();
+  await photoPage.getByLabel('Reference Name').fill('Test Reference');
+  await photoPage.getByLabel('Contact Information').fill('reference@example.test');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Languages'}).click();
+  await photoPage.getByLabel('Language',{exact:true}).fill('English');
+  await photoPage.getByLabel('Proficiency Level').fill('Fluent');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Projects & Portfolio'}).click();
+  await photoPage.getByLabel('Project Name').fill('Responsive CV Project');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Awards & Achievements'}).click();
+  await photoPage.getByLabel('Award / Achievement').fill('Demo Merit Award');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Volunteer Experience'}).click();
+  await photoPage.getByLabel('Volunteer Role').fill('Community Volunteer');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Custom Sections'}).click();
+  await photoPage.getByLabel('Section Title').fill('Professional Memberships');
+  await photoPage.getByLabel('Content',{exact:true}).fill('Demo technology association');
+  await photoPage.locator('.wizard-extra-pick').filter({hasText:'Additional Information'}).click();
+  await photoPage.getByLabel('Other Qualifications / Information').fill('Eligible to work in the Philippines');
+  const requiredSections=['Certifications & Training','References','Languages','Projects','Awards & Achievements','Volunteer Experience','Professional Memberships','Additional Information'];
+  for(const name of requiredSections){
+   const element=photoPage.locator('.wizard-preview .resume-document .rd-section').filter({has:photoPage.locator('h3').getByText(name,{exact:true})});
+   if(await element.count()!==1)throw Error('Optional section not visible: '+name);
+  }
+  await photoPage.getByRole('button',{name:'Save Draft'}).click();
   await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Generate'}).click();
   await photoPage.locator('.rt-wizard-template-grid button').last().waitFor({state:'visible'});
+  await photoPage.locator('.rt-wizard-template-grid').getByRole('button',{name:/Creative Sidebar/}).click();
+  for(const name of requiredSections){
+   const visible=await photoPage.locator('.wizard-preview .resume-document .rd-section h3').getByText(name,{exact:true}).count();
+   if(visible!==1)throw Error('Section was lost after switching to Creative Sidebar: '+name);
+  }
+
   await photoPage.getByRole('button',{name:'Accent Blue'}).click();
   await photoPage.getByRole('button',{name:'Background Soft blue'}).click();
   const customized=await photoPage.locator('.wizard-preview .resume-document').evaluate(el=>[el.style.getPropertyValue('--rd-accent'),el.style.getPropertyValue('--rd-page-bg')]);
@@ -162,13 +195,21 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    const valid=label==='Download PNG'?bytes[0]===0x89&&bytes.subarray(1,4).toString()==='PNG':bytes.subarray(0,magic.length).toString()===magic;
    if(!valid)throw Error(label+' did not return a valid file header');
    console.log('PASS '+label+': '+bytes.length+' bytes, '+d.suggestedFilename());
+   if(label==='Download DOCX'){
+    const {execFileSync}=require('node:child_process');
+    const xml=execFileSync('unzip',['-p',await d.path(),'word/document.xml'],{encoding:'utf8'});
+    for(const marker of ['Sample Network Certification','Test Reference','Professional Memberships','Eligible to work in the Philippines']){
+     if(!xml.includes(marker))throw Error('Missing user-added content in DOCX: '+marker);
+    }
+   }
+
   }
 
   await open(photoPage,'/app?section=templates');
   const count=await photoPage.locator('.rt-template-card').count();
   if(count!==20)throw Error('Expected 20 unique resume layout cards, found '+count);
   await photoContext.close();
-  console.log('PASS photo upload/remove and 20 unique resume layout cards');
+  console.log('PASS photo upload/remove, dynamic CV sections, template switching and 20 unique resume layout cards');
   console.log('PASS Admin Dashboard preview, navigation and job post editor');
 
   console.log('PASS: '+checked+' responsive viewport suites');
