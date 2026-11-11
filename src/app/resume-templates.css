@@ -201,3 +201,27 @@
  .wizard-preview .resume-document.rd-photo-layout.rd-layout-band .rd-portrait{right:15px}
  .wizard-preview .resume-document.rd-photo-layout.rd-layout-band .rd-header{padding-right:85px}
 }
+
+
+/* Dynamic resume sections: readable one/two-column placement and flexible entries. */
+.resume-document .rd-entry-title{flex-wrap:wrap;align-items:flex-start}
+.resume-document .rd-entry-title strong{min-width:0;overflow-wrap:anywhere}
+.resume-document .rd-entry-title>span{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.resume-document .rd-secondary .rd-entry-title{gap:3px;flex-direction:column;align-items:flex-start}
+.resume-document .rd-secondary .rd-entry-title strong{font-size:10px}
+.resume-document .rd-secondary .rd-entry-details{overflow-wrap:anywhere;white-space:pre-wrap;font-size:10px}
+.resume-document .rd-key-references .rd-entry-details{font-size:10px;line-height:1.6}
+.resume-document .rd-key-languages .rd-entry{margin-bottom:9px}
+.resume-document .rd-key-languages .rd-entry-title{gap:6px;margin:0}
+.resume-document .rd-key-certifications .rd-entry{margin-bottom:12px}
+.resume-document .rd-key-customSections .rd-section{margin-bottom:14px}
+.resume-document.rd-style-graduate .rd-primary>.rd-section{order:0!important}
+.resume-document.rd-layout-timeline .rd-primary>.rd-section:not(.rd-key-experience){border-left:0!important;padding-left:0!important}
+.resume-document.rd-layout-timeline .rd-primary>.rd-key-experience{border-left:2px solid #d2c1e9;padding-left:21px}
+.resume-document.rd-layout-timeline .rd-primary>.rd-key-experience .rd-entry{position:relative}
+.resume-document.rd-layout-timeline .rd-primary>.rd-key-experience .rd-entry:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--rd-accent);position:absolute;left:-26px;top:4px}
+@media print{
+ .resume-document .rd-section{break-inside:avoid-page}
+ .resume-document .rd-entry{break-inside:avoid}
+ .resume-document .rd-secondary .rd-entry-title{flex-direction:column}
+}
