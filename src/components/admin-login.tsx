@@ -81,7 +81,11 @@ export default function AdminLogin(){
    if(oauthError)throw oauthError;
    // Browser redirects to Google; callback verifies admin membership server-side.
   }catch(reason){
-   setError(passwordError(reason));
+   const message=reason instanceof Error?reason.message:'';
+   setError(/provider.*not enabled|unsupported provider/i.test(message)?oauthMessages.oauth_provider:
+    /redirect|callback|pkce|code verifier/i.test(message)?oauthMessages.oauth_exchange_failed:
+    /rate.limit|too many requests/i.test(message)?'Google sign-in is temporarily rate-limited. Try again later.':
+    'Unable to start Google sign-in. Check the ResumeBuilder Google provider and callback URL configuration.');
    setBusy(null);
   }
  }
