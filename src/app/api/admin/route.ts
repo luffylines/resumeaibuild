@@ -42,7 +42,7 @@ export async function GET(req:NextRequest){
  const meta=new Map((profiles.data||[]).map(p=>[p.user_id,p]));
  const people=(users.data?.users||[]).map(u=>({
   id:u.id,email:u.email||'',name:meta.get(u.id)?.full_name||u.user_metadata?.full_name||'',
-  plan:meta.get(u.id)?.plan||'Free',created_at:u.created_at,last_sign_in_at:u.last_sign_in_at||null
+  plan:meta.get(u.id)?.plan||'Unassigned',created_at:u.created_at,last_sign_in_at:u.last_sign_in_at||null
  }));
  const data={
   users:people,userTotal:users.data?.total||people.length,
