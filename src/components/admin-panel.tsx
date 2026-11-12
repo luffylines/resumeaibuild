@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {BrandMark} from '@/components/brand-icons';
 import {useCallback,useEffect,useState} from 'react';
-import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,Download,CalendarDays,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,LoaderCircle as RefreshLoader,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap,LockKeyhole,AlertTriangle,RefreshCw} from 'lucide-react';
+import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,Download,CalendarDays,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap,LockKeyhole,AlertTriangle,RefreshCw} from 'lucide-react';
 type Tab='dashboard'|'users'|'resumes'|'ats'|'plans'|'usage'|'activity'|'settings';
 type Person={id:string;email:string;name:string;plan:string;created_at:string;last_sign_in_at?:string|null};
 type Doc={id:string;title:string;user_id:string;created_at:string;updated_at:string};
