@@ -715,3 +715,46 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   transition:none;
  }
 }
+
+
+/* Live administrator data: transparent connection state and consistent design. */
+.admin-top{gap:14px;flex-wrap:wrap}
+.admin-top>div{min-width:0;flex:1}
+.admin-data-badge{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:0 0 auto;border:1px solid #ded1f2;background:#f8f4ff;color:#6f4b9f;border-radius:11px;padding:10px 13px;font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap}
+.admin-data-badge--connected{background:#edfaf1;color:#13814d;border-color:#c5e9d2}
+.admin-data-badge--partial{background:#fff7ea;color:#996123;border-color:#f1d5ab}
+.admin-data-badge--offline{background:#fff2f3;color:#af3b51;border-color:#f3c6cb}
+.admin-data-badge--loading{background:#f7f2ff;color:#7252a7}
+.admin-data-badge--demo{background:#f2ecff;color:#6b42a6}
+.admin-health-card{border:1px solid #efdbb8;background:linear-gradient(125deg,#fffaf1,#fffdfb);border-radius:14px;padding:19px 21px;margin-bottom:20px;box-shadow:0 5px 17px #7a43190a;color:#523c2c}
+.admin-health-card>div:first-child{display:flex;align-items:center;gap:11px;font-size:15px}
+.admin-health-card>div:first-child svg{color:#c27d1c;flex:none}
+.admin-health-card p{font-size:12px;line-height:1.7;color:#786653;margin:10px 0}
+.admin-health-card ul{margin:9px 0 15px;padding:0 0 0 19px;display:grid;gap:6px}
+.admin-health-card li{font-size:11px;line-height:1.6;word-break:break-word}
+.admin-health-retry{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:42px;background:#6330e4;color:#fff;border:1px solid #6330e4;padding:11px 17px;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer}
+.admin-health-retry:hover{background:#5222c2}
+.admin-health-retry:focus-visible{outline:3px solid #815bea;outline-offset:3px}
+.admin-offline-panel{max-width:740px;min-height:340px;margin:20px auto;border-radius:20px;border:1px solid #e6dff3;background:#fff;box-shadow:0 16px 44px #30204412;padding:36px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:14px}
+.admin-offline-panel>span{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;color:#6432cc;background:#f1eafe;border:1px solid #e4d5fc}
+.admin-offline-panel h2{font-weight:850;color:#261b3d;font-size:24px;letter-spacing:-.65px;line-height:1.3;margin:0}
+.admin-offline-panel p{max-width:550px;color:#786f88;font-size:13px;line-height:1.8;margin:0}
+.admin-offline-panel small{color:#998ca6;line-height:1.7;max-width:550px}
+.admin-growth-bars{display:flex;align-items:stretch;justify-content:space-around;gap:9px;height:210px;padding:10px 10px 8px;margin-top:10px;border-bottom:1px solid #ece6f4}
+.admin-growth-day{display:flex;align-items:center;justify-content:flex-end;flex-direction:column;flex:1;min-width:0;height:100%;gap:7px;color:#6b5a89}
+.admin-growth-day>strong{font-size:11px;font-weight:750;color:#3b2a55}
+.admin-growth-day>span{display:block;width:min(100%,40px);min-height:5px;background:linear-gradient(0deg,#7341ee,#ad83ff);border-radius:7px 7px 2px 2px;transition:height .25s;box-shadow:0 3px 7px #6836cb21}
+.admin-growth-day>small{color:#9386a6;font-size:10px;font-weight:700;white-space:nowrap}
+@media(max-width:850px){
+ .admin-top{align-items:flex-start}
+ .admin-data-badge{margin-left:auto;font-size:10px;padding:8px 11px}
+}
+@media(max-width:560px){
+ .admin-data-badge{width:max-content;max-width:100%;margin-left:0}
+ .admin-health-card{padding:15px}
+ .admin-offline-panel{margin:10px auto;padding:22px;border-radius:14px;min-height:310px}
+ .admin-offline-panel h2{font-size:20px}
+ .admin-growth-bars{height:160px;gap:5px;padding-inline:0}
+ .admin-growth-day>small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.admin-growth-day>span{transition:none}}
