@@ -45,8 +45,8 @@ export function buildInterviewQuestions(resume?:Resume):string[]{
   for(const project of shuffle((resume.projects||[]).filter(x=>x.name)).slice(0,2)){
    personal.push(`Your resume mentions the ${readable(project.name,70)} project. What was your contribution and what did you learn?`);
   }
-  for(const edu of shuffle((resume.education||[]).filter(x=>x.degree||x.school)).slice(0,2)){
-   personal.push(`How did your ${readable(edu.degree||'education',70)} studies${edu.school?' at '+readable(edu.school,60):''} prepare you for real-world responsibilities?`);
+  for(const edu of shuffle((resume.education||[]).filter(x=>x.program||x.degree||x.level||x.school)).slice(0,2)){
+   personal.push(`How did your ${readable(edu.program||edu.degree||edu.level||'education',70)} studies${edu.school?' at '+readable(edu.school,60):''} prepare you for real-world responsibilities?`);
   }
   for(const cert of shuffle((resume.certifications||[]).filter(x=>x.title)).slice(0,1)){
    personal.push(`What practical knowledge did you gain from ${readable(cert.title,70)}?`);
