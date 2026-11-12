@@ -5,7 +5,7 @@ import type {Resume} from '@/lib/types';
 import {ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 import {GoogleIcon} from '@/components/brand-icons';
-import {accountAvatar,loadProfilePhoto,readProfilePhoto,removeProfilePhoto,saveProfilePhoto} from '@/lib/profile-photo';
+import {accountAvatar,isProfilePhotoPending,loadProfilePhoto,readProfilePhoto,removeProfilePhoto,retryProfilePhotoSync,saveProfilePhoto} from '@/lib/profile-photo';
 import MfaPanel from '@/components/mfa-panel';
 
 type Tab='account'|'subscription'|'integrations'|'security'|'notifications';
@@ -26,6 +26,7 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
  const [photo,setPhoto]=useState('');
+ const [photoStatus,setPhotoStatus]=useState<'none'|'loading'|'uploading'|'synced'|'local-only'>('none');
  const photoInput=useRef<HTMLInputElement|null>(null);
  const [aiProviders,setAiProviders]=useState<Provider[]|null>(null);
  const [aiLoading,setAiLoading]=useState(false);
@@ -39,9 +40,14 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
   setName(user?.user_metadata?.full_name||'');
   const id=user?.id;
   setPhoto(id?readProfilePhoto(id):'');
+  setPhotoStatus(!id?'none':isProfilePhotoPending(id)?'local-only':'loading');
   if(!id)return;
   let active=true;
-  void loadProfilePhoto(id).then(image=>{if(active)setPhoto(image);});
+  void loadProfilePhoto(id).then(image=>{
+   if(!active)return;
+   setPhoto(image);
+   setPhotoStatus(isProfilePhotoPending(id)?'local-only':image&&/^https?:\/\//.test(image)?'synced':'none');
+  });
   return()=>{active=false;};
  },[user?.id,user?.user_metadata?.full_name]);
  useEffect(()=>{
@@ -76,14 +82,29 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const setProfileImage=async(file:File|undefined)=>{
   if(!file)return;
   if(!user){setError('Sign in before updating your profile photo.');return;}
-  setBusy(true);setError('');setNotice('');
+  setBusy(true);setError('');setNotice('');setPhotoStatus('uploading');
   try{
-   const saved=await saveProfilePhoto(user.id,file);
+   const saved=await saveProfilePhoto(user.id,file,image=>{
+    setPhoto(image);
+    setPhotoStatus('uploading');
+   });
    setPhoto(saved.image);
+   setPhotoStatus(saved.cloudSaved?'synced':'local-only');
    if(saved.cloudSaved)setNotice(saved.detail);
    else setError(saved.detail);
-  }catch(e){setError(e instanceof Error?e.message:'Could not save profile photo.');}
+  }catch(e){setPhotoStatus(isProfilePhotoPending(user.id)?'local-only':'none');setError(e instanceof Error?e.message:'Could not save profile photo.');}
   finally{setBusy(false);if(photoInput.current)photoInput.current.value='';}
+ };
+ const retryCloudPhoto=async()=>{
+  if(!user)return;
+  setBusy(true);setError('');setNotice('');setPhotoStatus('uploading');
+  try{
+   const saved=await retryProfilePhotoSync(user.id);
+   setPhoto(saved.image);setPhotoStatus('synced');setNotice(saved.detail);
+  }catch(e){
+   setPhotoStatus('local-only');
+   setError(e instanceof Error?e.message:'Unable to sync your photo to the account.');
+  }finally{setBusy(false);}
  };
  const resetPassword=async()=>{
   if(!user?.email||!sb){setError('Sign in to request a password reset email.');return;}
@@ -118,20 +139,31 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
      </div>
      <div className="settings-photo-tools">
       <input type="file" ref={photoInput} hidden accept="image/jpeg,image/png,image/webp" onChange={e=>void setProfileImage(e.target.files?.[0])}/>
-      <button type="button" className="outline-button" disabled={busy||!user} onClick={()=>photoInput.current?.click()}><Camera size={16}/> Upload Profile Photo</button>
+      <button type="button" className="outline-button" disabled={busy||!user} onClick={()=>photoInput.current?.click()}><Camera size={16}/> {photoStatus==='uploading'?'Saving Photo…':photo?'Change Profile Photo':'Upload Profile Photo'}</button>
+      {photoStatus==='local-only'&&user&&<button type="button" className="outline-button settings-photo-retry" disabled={busy} onClick={()=>void retryCloudPhoto()}><UploadCloud size={16}/> Retry Cloud Sync</button>}
       {photo&&<button type="button" className="outline-button" disabled={busy} onClick={()=>void (async()=>{
    if(!user)return;setBusy(true);setError('');setNotice('');
-   try{const result=await removeProfilePhoto(user.id);setPhoto('');if(result.cloudRemoved)setNotice(result.detail);else setError(result.detail);}
+   try{
+    const result=await removeProfilePhoto(user.id);
+    if(result.localRemoved){setPhoto('');setPhotoStatus('none');setNotice(result.detail);}
+    else setError(result.detail);
+   }catch(e){setError(e instanceof Error?e.message:'Unable to remove photo.');}
    finally{setBusy(false);}
   })()}><X size={16}/> Remove Photo</button>}
      </div>
+     {user&&photoStatus!=='none'&&<p className={'settings-photo-status settings-photo-status--'+photoStatus} role="status">
+      {photoStatus==='uploading'?<><LoaderCircle size={16} className="spin"/> Uploading and verifying your picture…</>:
+       photoStatus==='synced'?<><CheckCircle2 size={16}/> Saved to your account — available after refresh and on your other devices.</>:
+       photoStatus==='local-only'?<><UploadCloud size={16}/> Saved on this browser only. Cloud sync is not complete; retry after configuring private Storage.</>:
+       <><LoaderCircle size={16} className="spin"/> Checking saved profile picture…</>}
+     </p>}
      <label className="settings-input">Full Name<input value={name} onChange={e=>setName(e.target.value)} maxLength={120}/></label>
      <label className="settings-input">Email Address<input disabled value={user?.email||'demo@example.com'} readOnly/></label>
      <div className="settings-actions">
       <button className="purple-button" disabled={busy} onClick={()=>void saveName()}><Check size={16}/> Save Profile</button>
       {user&&<button className="outline-button" onClick={()=>void signOut()}><LogOut size={16}/> Sign Out</button>}
      </div>
-     <p className="settings-footnote">Profile images sync to your private ResumeBuilder Supabase Storage after that project has its profile-avatars bucket and RLS policies configured. Until then, the app clearly reports local-only saves.</p>
+     <p className="settings-footnote">Photos upload automatically as soon as you select one. <strong>Save Profile</strong> updates your name only. To keep your picture after signing in on another device, the private <code>profile-avatars</code> Storage bucket must be configured in the dedicated ResumeBuilder Supabase project. Until cloud sync is verified, the app shows a local-only warning and a Retry Cloud Sync button.</p>
     </>}
     {tab==='subscription'&&<>
      <header><h2>Subscription Plans</h2><p>Choose the tools that fit your career goals. Prices are proposed monthly amounts.</p></header>

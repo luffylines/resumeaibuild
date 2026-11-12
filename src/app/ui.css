@@ -1006,3 +1006,26 @@
  .wizard-education-status{flex-direction:column}
  .wizard-education-status button{width:100%}
 }
+
+
+/* Verified account avatar upload with honest, visible sync feedback. */
+.settings-v2-panel .settings-profile{align-items:center;gap:15px}
+.settings-v2-panel .settings-avatar{width:62px;height:62px;border:3px solid #e8d8ff;box-shadow:0 3px 12px #6033a51c;overflow:hidden;flex-shrink:0}
+.settings-v2-panel .settings-avatar img{width:100%;height:100%;display:block;object-fit:cover}
+.settings-photo-tools{margin:3px 0 12px;gap:10px}
+.settings-photo-tools .outline-button{min-height:42px;padding:10px 14px;border-radius:10px}
+.settings-photo-tools .outline-button:focus-visible{outline:3px solid #8553df;outline-offset:2px}
+.settings-photo-retry{color:#6c38dc!important;background:#f7f2ff!important;border-color:#d9c8f4!important;font-weight:800!important}
+.settings-photo-retry:hover{background:#efe7ff!important}
+.settings-photo-status{display:inline-flex;align-items:center;gap:9px;max-width:100%;margin:0 0 19px;padding:10px 13px;border:1px solid #d6c9ef;border-radius:10px;background:#f9f6ff;color:#624890;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.settings-photo-status svg{flex:0 0 auto}
+.settings-photo-status--synced{background:#f0fbf3;border-color:#c3e5ce;color:#187c45}
+.settings-photo-status--local-only{background:#fff9e9;border-color:#efdca8;color:#825e28}
+.settings-photo-status--uploading,.settings-photo-status--loading{background:#f7f2ff;color:#624890}
+.settings-v2 .settings-footnote code{font-size:11px;padding:2px 4px;background:#f5f0fa;border-radius:4px;color:#6948a5;overflow-wrap:anywhere}
+@media(max-width:580px){
+ .settings-v2-panel .settings-profile{align-items:flex-start}
+ .settings-photo-tools{flex-direction:column;align-items:stretch}
+ .settings-photo-tools .outline-button{width:100%;min-height:46px}
+ .settings-photo-status{display:flex;width:100%;font-size:12px}
+}
