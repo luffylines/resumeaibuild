@@ -36,6 +36,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    if(size.width<=390)await page.screenshot({path:path.join(shots,'login-'+size.name+'.png')});
    await open(page,'/app');
    await checkOverflow(page,size.name,'/app');
+   if(await page.locator('.dashboard-admin-link,.sidebar-admin-area,.admin-workspace-link').count())throw Error(size.name+' user workspace must not expose admin entry points');
    if(size.width<=700){
     await page.getByRole('button',{name:'Open navigation menu'}).click();
     const nav=page.locator('#mobile-workspace-nav');
@@ -113,7 +114,7 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
    }});
   });
   await open(speechPage,'/app');
-  if(!(await speechPage.locator('.dashboard-admin-link').count()))throw Error('Missing Admin Preview access on demo client dashboard');
+  if(await speechPage.locator('.dashboard-admin-link,.sidebar-admin-area').count())throw Error('Normal workspace must not expose Admin Login or Admin Dashboard links');
   await speechPage.locator('.side-nav').getByRole('button',{name:'Interview Practice'}).click();
   await speechPage.getByRole('button',{name:'Start Personalized Interview'}).click();
   await speechPage.waitForFunction(()=>window.__resumeSpeechMock?.spoken?.some(x=>x.includes('Let us begin.')));
