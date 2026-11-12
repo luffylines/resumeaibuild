@@ -1,5 +1,5 @@
 import type {Resume,SampleJob} from './types';
-export function resumeText(r:Resume){return [r.summary,r.skills,...r.experience.flatMap(x=>[x.role,x.company,x.details]),...r.education.map(x=>x.degree)].join(' ').toLowerCase();}
+export function resumeText(r:Resume){return [r.summary,r.skills,...r.experience.flatMap(x=>[x.role,x.company,x.details]),...r.education.flatMap(x=>[x.degree,x.program||'',x.level||'',x.school,x.address||''])].join(' ').toLowerCase();}
 export function atsScore(r:Resume,description=''){
  const checks=[!!r.name,/.+@.+\..+/.test(r.email),!!r.phone,!!r.location,r.summary.trim().length>=50,r.skills.split(',').filter(Boolean).length>=4,r.experience.some(x=>!!x.role&&x.details.length>=20),r.education.some(x=>!!x.school)];
  const base=Math.round(checks.filter(Boolean).length/checks.length*70);
