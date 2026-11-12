@@ -161,7 +161,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
    summary:(resume.summary||'').slice(0,850),
    skills:(resume.skills||'').slice(0,600),
    experience:(resume.experience||[]).slice(0,5).map(x=>({role:x.role,company:x.company,details:(x.details||'').slice(0,270)})),
-   education:(resume.education||[]).slice(0,4).map(x=>({degree:x.degree,school:x.school})),
+   education:(resume.education||[]).slice(0,4).map(x=>({degree:x.program||x.degree,level:x.level||'',school:x.school,dates:x.dates})),
    projects:(resume.projects||[]).slice(0,5).map(x=>({name:x.name,role:x.role,details:(x.details||'').slice(0,240)})),
    certifications:(resume.certifications||[]).slice(0,4).map(x=>({title:x.title,issuer:x.issuer})),
    volunteer:(resume.volunteer||[]).slice(0,3).map(x=>({role:x.role,organization:x.organization})),
