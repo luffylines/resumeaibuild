@@ -1,0 +1,46 @@
+const assert=require('node:assert/strict');
+const ts=require('typescript');
+const fs=require('node:fs');
+const vm=require('node:vm');
+
+function load(path){
+ const src=fs.readFileSync(path,'utf8');
+ const compiled=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const mod={exports:{}};
+ vm.runInNewContext(compiled,{module:mod,exports:mod.exports});
+ return mod.exports;
+}
+const {EDUCATION_LEVELS,newEducation,educationYears,educationDates,educationProgram,updateEducation,educationEntry,sortEducation}=load('src/lib/education.ts');
+assert.ok(EDUCATION_LEVELS.includes('Alternative Learning System (ALS)'));
+assert.ok(EDUCATION_LEVELS.includes('Senior High School / TVL'));
+const blank=newEducation('id-a');
+assert.equal(blank.school,'');
+assert.equal(blank.isCurrent,false);
+const old={id:'old',school:'State University',degree:'B.S. Digital Design',dates:'2016 – 2020'};
+assert.equal(educationProgram(old),'B.S. Digital Design');
+assert.equal(educationDates(old),'2016 – 2020');
+assert.equal(educationYears(old).startYear,'2016');
+assert.equal(educationYears(old).endYear,'2020');
+assert.equal(educationEntry(old).title,'B.S. Digital Design');
+const tvl={id:'tvl',school:'Ernesto Rondon High School',degree:'',dates:'',level:'Senior High School / TVL',program:'TVL – Information and Communications Technology',startYear:'2023',endYear:'2025',isCurrent:false,address:'146 Rd 3, Project 6, Quezon City'};
+assert.equal(educationDates(tvl),'2023 – 2025');
+assert.ok(educationEntry(tvl).title.includes('TVL – Information'));
+assert.equal(educationEntry(tvl).body,'146 Rd 3, Project 6, Quezon City');
+const als={id:'als',school:'San Antonio Elementary School',degree:'',dates:'',level:'Alternative Learning System (ALS)',startYear:'2020',endYear:'2021',address:'Quezon City'};
+const secondary={id:'secondary',school:'Ernesto Rondon High School',degree:'',dates:'',level:'Secondary / Junior High School',startYear:'2018',endYear:'2020'};
+const primary={id:'primary',school:'Mines Elementary School',degree:'',dates:'',level:'Primary / Elementary',startYear:'2012',endYear:'2018',address:'10 Mines Street Barangay Vasra Quezon City'};
+assert.deepEqual([...sortEducation([primary,als,tvl,secondary]).map(e=>e.id)],['tvl','als','secondary','primary']);
+const inProgress=updateEducation(tvl,{isCurrent:true});
+assert.equal(educationDates(inProgress),'2023 – Present');
+assert.equal(educationDates(updateEducation(inProgress,{isCurrent:false})),'2023 – 2025');
+const typedProgram=updateEducation(old,{program:'Bachelor of Arts'});
+assert.equal(typedProgram.degree,'Bachelor of Arts');
+assert.equal(old.degree,'B.S. Digital Design','Do not mutate older cached objects');
+const legacyCustom={id:'custom',school:'Evening School',degree:'Certificate',dates:'Completed 2021'};
+assert.equal(educationDates(legacyCustom),'Completed 2021');
+assert.equal(educationEntry(legacyCustom).subtitle,'Evening School · Completed 2021');
+const source=fs.readFileSync('src/lib/resume-sections.ts','utf8');
+assert.ok(source.includes('sortEducation(r.education||[])'),'Renderer must render structured education in one shared mapping');
+const exporter=fs.readFileSync('src/lib/resume-export.ts','utf8');
+assert.ok(exporter.includes('getResumeSections(r)'),'PDF and DOCX exports must share same education mapping');
+console.log('PASS: education levels, structured years, Present status, legacy data, reverse chronology, and shared preview/export content');
