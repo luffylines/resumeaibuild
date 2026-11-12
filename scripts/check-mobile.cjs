@@ -45,6 +45,27 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
     if(await nav.evaluate(el=>el.classList.contains('sidebar-open')))throw Error('Client drawer did not close');
    }
    if(size.width<=390)await page.screenshot({path:path.join(shots,'client-'+size.name+'.png')});
+   // Native select controls should have spacious right padding for a custom
+   // chevron, readable labels and no iPhone focus zoom.
+   if(size.width<=700)await page.getByRole('button',{name:'Open navigation menu'}).click();
+   await page.locator('.side-nav').getByRole('button',{name:'Cover Letter'}).click();
+   const dropdownGeometry=await page.evaluate(()=>{
+    const selects=[...document.querySelectorAll('.resume-client-shell .field select')];
+    return selects.map(el=>{
+     const style=getComputedStyle(el),box=el.getBoundingClientRect();
+     return {rightPadding:parseFloat(style.paddingRight),leftPadding:parseFloat(style.paddingLeft),font:parseFloat(style.fontSize),appearance:style.appearance,
+      arrow:style.backgroundImage,viewportRight:document.documentElement.clientWidth-box.right,width:box.width};
+    });
+   });
+   if(dropdownGeometry.length<2)throw Error('Cover letter resume/tone dropdown controls missing');
+   for(const select of dropdownGeometry){
+    if(select.rightPadding<44||select.leftPadding<14||select.width<100||!select.arrow.includes('svg+xml')||select.viewportRight<0)
+     throw Error(size.name+' dropdown has cramped text/arrow or clipping: '+JSON.stringify(select));
+    if(size.width<=768&&select.font<16)throw Error(size.name+' dropdown could trigger iOS focus zoom: '+JSON.stringify(select));
+   }
+   if(size.width<=390)await page.screenshot({path:path.join(shots,'cover-dropdown-'+size.name+'.png')});
+   console.log('PASS '+size.name+' resume/tone selects have inset chevrons, readable text and no horizontal overflow');
+
    await open(page,'/app?section=templates');await checkOverflow(page,size.name,'/app?section=templates');
    await open(page,'/admin/preview');await checkOverflow(page,size.name,'/admin/preview');
    if(size.width<=840){
