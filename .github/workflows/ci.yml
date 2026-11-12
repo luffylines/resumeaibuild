@@ -27,6 +27,8 @@ jobs:
         run: node scripts/check-mfa-factors.cjs
       - name: Administrator OAuth and role authorization checks
         run: node scripts/check-admin-login.cjs
+      - name: Administrator live-data and private-entry regression checks
+        run: node scripts/check-admin-data.cjs
       - name: Next.js production build
         run: npm run build
       - name: Smoke test website routes (demo mode)
