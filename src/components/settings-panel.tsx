@@ -156,7 +156,7 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
        photoStatus==='synced'?<><CheckCircle2 size={16}/> Saved to your account — available after refresh and on your other devices.</>:
        photoStatus==='local-only'?<><UploadCloud size={16}/> Saved on this browser only. Cloud sync is not complete; retry after configuring private Storage.</>:
        <><LoaderCircle size={16} className="spin"/> Checking saved profile picture…</>}
-     </p>
+     </p>}
      <label className="settings-input">Full Name<input value={name} onChange={e=>setName(e.target.value)} maxLength={120}/></label>
      <label className="settings-input">Email Address<input disabled value={user?.email||'demo@example.com'} readOnly/></label>
      <div className="settings-actions">
