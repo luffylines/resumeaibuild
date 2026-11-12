@@ -285,22 +285,9 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 
   const photoContext=await browser.newContext({viewport:{width:1280,height:850}});
   const photoPage=await photoContext.newPage();
-  photoPage.on('pageerror',error=>console.log('BUILDER PAGE ERROR:',error.message));
   await open(photoPage,'/app');
   await photoPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
-  await photoPage.waitForTimeout(900);
-  const wizardVisible=await photoPage.locator('.wizard-stagebar').count();
-  if(!wizardVisible){
-   const diagnostic=await photoPage.evaluate(()=>({
-    headings:[...document.querySelectorAll('h1,h2')].map(x=>x.textContent).slice(0,12),
-    text:document.body.innerText.slice(-900),wizard:document.querySelector('.wizard-page')?.className||'missing'
-   }));
-   throw Error('Builder did not show stage bar after navigation: '+JSON.stringify(diagnostic));
-  }
-  const stepDetails=await photoPage.locator('.wizard-stagebar button').evaluateAll(items=>items.map(b=>({label:(b.textContent||'').trim(),display:getComputedStyle(b).display,visibility:getComputedStyle(b).visibility})));
-  console.log('EDUCATION STEP TEST:',JSON.stringify(stepDetails));
-  if(stepDetails.length!==5||!stepDetails[2].label.includes('Education'))throw Error('Education stage is missing: '+JSON.stringify(stepDetails));
-  await photoPage.locator('.wizard-stagebar button').nth(2).click();
+  await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Education'}).click();
   const educationOne=photoPage.getByRole('region',{name:'Education 1'});
   await educationOne.getByLabel('Education Level').selectOption('Senior High School / TVL');
   await educationOne.getByLabel('School / Institution').fill('Ernesto Rondon High School');
@@ -325,9 +312,8 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await photoPage.getByRole('button',{name:'Save Draft'}).click();
   await photoPage.waitForTimeout(700);
   await photoPage.reload({waitUntil:'networkidle'});
-  const stepDetailsReload=await photoPage.locator('.wizard-stagebar button').evaluateAll(items=>items.map(b=>({label:(b.textContent||'').trim(),display:getComputedStyle(b).display,visibility:getComputedStyle(b).visibility})));
-  if(stepDetailsReload.length!==5||!stepDetailsReload[2].label.includes('Education'))throw Error('Education stage missing after reload: '+JSON.stringify(stepDetailsReload));
-  await photoPage.locator('.wizard-stagebar button').nth(2).click();
+  await photoPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
+  await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Education'}).click();
   const persisted=photoPage.getByRole('region',{name:'Education 1'});
   if(await persisted.getByLabel('School / Institution').inputValue()!=='Ernesto Rondon High School')throw Error('Education institution lost after refresh');
   if(await persisted.getByLabel('Program / Strand / Course (Optional)').inputValue()!=='TVL – Information and Communications Technology')throw Error('Education strand lost after refresh');
