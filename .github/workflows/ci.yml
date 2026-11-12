@@ -29,6 +29,8 @@ jobs:
         run: node scripts/check-admin-login.cjs
       - name: Administrator live-data and private-entry regression checks
         run: node scripts/check-admin-data.cjs
+      - name: Education levels, year ranges and legacy resumes
+        run: node scripts/check-education.cjs
       - name: Next.js production build
         run: npm run build
       - name: Smoke test website routes (demo mode)

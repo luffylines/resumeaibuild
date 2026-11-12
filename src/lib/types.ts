@@ -1,6 +1,6 @@
 import type {ResumeTemplateId} from './templates';
 export type Experience = { id:string; role:string; company:string; dates:string; details:string };
-export type Education = { id:string; school:string; degree:string; dates:string };
+export type Education = { id:string; school:string; degree:string; dates:string; level?:string; program?:string; address?:string; startYear?:string; endYear?:string; isCurrent?:boolean };
 
 export type Certification={id:string;title:string;issuer:string;year:string;details:string};
 export type ProfessionalReference={id:string;name:string;role:string;company:string;contact:string};

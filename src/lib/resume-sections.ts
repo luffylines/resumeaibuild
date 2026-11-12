@@ -1,4 +1,5 @@
 import type {Resume} from './types';
+import {educationEntry,sortEducation} from './education';
 import {getResumeTemplate} from './templates';
 
 /** Shared section model for live HTML preview, PDF, DOCX and PNG. */
@@ -145,7 +146,7 @@ function entries(r:Resume,key:ResumeSectionKey):SectionEntry[]{
   case 'summary':return [item('','',r.summary)].filter(hasContent);
   case 'skills':return [item('','',r.skills)].filter(hasContent);
   case 'experience':return (r.experience||[]).map(x=>item([x.role,x.company].filter(fill).join(' · '),x.dates,x.details)).filter(hasContent);
-  case 'education':return (r.education||[]).map(x=>item(x.degree,[x.school,x.dates].filter(fill).join(' · '))).filter(hasContent);
+  case 'education':return sortEducation(r.education||[]).map(x=>{const e=educationEntry(x);return item(e.title,e.subtitle,e.body);}).filter(hasContent);
   case 'certifications':return (r.certifications||[]).map(x=>item(x.title,[x.issuer,x.year].filter(fill).join(' · '),x.details)).filter(hasContent);
   case 'projects':return (r.projects||[]).map(x=>item(x.name,[x.role,x.link].filter(fill).join(' · '),x.details)).filter(hasContent);
   case 'languages':return (r.languages||[]).map(x=>item(x.name,x.level)).filter(hasContent);
