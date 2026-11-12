@@ -949,3 +949,60 @@
 
 .admin-export-locked{display:inline-flex;align-items:center;gap:7px;border:1px solid #e2d7f1;background:#f8f4ff;color:#76569b;padding:9px 13px;min-height:38px;border-radius:9px;font-size:11px;font-weight:750}
 @media print{.admin-shell:has(.admin-preview-banner){display:none!important}}
+
+
+/* Education editor: structured history with ATS-friendly output. */
+.wizard-education-editor{display:flex;flex-direction:column;gap:17px;min-width:0}
+.wizard-education-intro{display:flex;align-items:flex-start;gap:11px;background:linear-gradient(110deg,#f8f4ff,#fff);padding:15px 17px;border:1px solid #e9defd;border-radius:12px;color:#6b40c8}
+.wizard-education-intro>svg{flex:none;margin-top:2px}
+.wizard-education-intro p{color:#6e6480;font-size:12px;line-height:1.7;margin:0}
+.wizard-education-entry{padding:21px;border:1px solid #e6dcef;background:#fff;border-radius:15px;box-shadow:0 6px 20px #29144808}
+.wizard-education-entry:focus-within{border-color:#d2bff3}
+.wizard-education-entry .wizard-repeat-head{margin-bottom:21px}
+.wizard-education-entry-label{display:inline-flex;align-items:center;gap:9px;color:#33234f;font-size:13px;font-weight:850}
+.wizard-education-entry-label svg{color:#7643e2}
+.wizard-education-remove{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:9px;border:1px solid #efdfeb!important;background:#fff8fa!important;color:#a65372!important;cursor:pointer}
+.wizard-education-remove:hover{border-color:#e69ab7!important;background:#ffeff3!important}
+.wizard-education-remove:focus-visible,.wizard-education-status button:focus-visible,.wizard-education-add:focus-visible{outline:3px solid #8a60e8;outline-offset:3px}
+.wizard-education-grid{gap:17px}
+.wizard-education-grid .wizard-field{min-width:0;gap:8px}
+.wizard-education-grid .wizard-field>span{font-size:11px;font-weight:800;line-height:1.5;display:inline-flex;align-items:center;gap:5px;color:#514763}
+.wizard-education-grid select,.wizard-education-grid input,.wizard-education-grid textarea{
+ width:100%;max-width:100%;min-width:0;border:1px solid #ded5eb;border-radius:10px;background-color:#fff;color:#302740;font:inherit;font-size:13px;line-height:1.4;box-shadow:0 2px 7px #25144407;
+}
+.wizard-education-grid input{height:46px;padding:12px 14px}
+.wizard-education-grid select{height:46px;padding:11px 47px 11px 14px;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-size:17px;background-position:right 15px center;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%237d54c1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
+.wizard-education-grid textarea{min-height:78px;padding:12px 14px;resize:vertical}
+.wizard-education-grid input:focus-visible,.wizard-education-grid select:focus-visible,.wizard-education-grid textarea:focus-visible{
+ outline:2px solid #8753e5;outline-offset:1px;box-shadow:0 0 0 4px #814ceb14;border-color:#8456e4
+}
+.wizard-education-grid input:disabled{background:#f7f5fa;color:#7f748f;cursor:not-allowed}
+.wizard-education-grid input::placeholder,.wizard-education-grid textarea::placeholder{color:#a79db4}
+.wizard-education-status{display:inline-flex;gap:5px;align-items:stretch;max-width:100%;padding:4px;border:1px solid #e5ddf1;border-radius:12px;background:#f9f7fd}
+.wizard-education-status button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:9px;background:transparent;color:#746785;min-height:39px;padding:9px 15px;font-size:12px;font-weight:750;line-height:1.3;cursor:pointer}
+.wizard-education-status button.selected{background:#fff;color:#6632d3;border-color:#dac9f7;box-shadow:0 3px 9px #6e38b218}
+.wizard-education-warning,.wizard-education-legacy{margin:0;padding:10px 13px;border:1px solid #f0d0a3;background:#fff9ed;color:#875c2b;border-radius:9px;font-size:11px;line-height:1.6}
+.wizard-education-legacy{display:flex;align-items:flex-start;gap:8px}
+.wizard-education-legacy svg{flex:none;margin-top:2px}
+.wizard-education-add{align-self:flex-start;display:inline-flex;align-items:center;gap:9px;min-height:43px;padding:12px 15px}
+.wizard-education-footer{display:flex;align-items:flex-start;gap:9px;margin:0;color:#82778e;font-size:11px;line-height:1.65}
+.wizard-education-footer svg{flex:none;margin-top:1px;color:#7550c1}
+/* All 32 templates use these shared education SectionEntry styles. */
+.resume-document .rd-key-education .rd-entry{min-width:0;break-inside:avoid;page-break-inside:avoid}
+.resume-document .rd-key-education .rd-entry-title{min-width:0;flex-wrap:wrap;gap:3px 9px;overflow-wrap:anywhere}
+.resume-document .rd-key-education .rd-entry-title strong,.resume-document .rd-key-education .rd-entry-title span{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.resume-document .rd-key-education .rd-entry-details{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+@media(max-width:780px){
+ .wizard-education-entry{padding:16px}
+ .wizard-education-grid{grid-template-columns:1fr!important;gap:14px}
+ .wizard-education-grid .wizard-full{grid-column:1/-1}
+ .wizard-education-grid input,.wizard-education-grid select,.wizard-education-grid textarea{font-size:16px!important}
+ .wizard-education-grid input,.wizard-education-grid select{min-height:49px}
+ .wizard-education-grid select{background-position:right 16px center;padding-right:48px}
+ .wizard-education-status{display:flex;width:100%}
+ .wizard-education-status button{flex:1;min-width:0;padding:10px}
+}
+@media(max-width:370px){
+ .wizard-education-status{flex-direction:column}
+ .wizard-education-status button{width:100%}
+}
