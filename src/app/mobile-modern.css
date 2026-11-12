@@ -573,3 +573,145 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .admin-login-success>svg{flex:none}
 .admin-login-password input:-webkit-autofill,.admin-login-card input:-webkit-autofill{box-shadow:0 0 0 1000px #fdfcff inset!important;-webkit-text-fill-color:#2a2040!important}
 @media(max-width:600px){.admin-login-google{min-height:50px;font-size:13px}.admin-login-divider{font-size:11px}}
+
+
+/* ResumeBuilder dropdown system
+ * Reserve room for the label AND chevron, rather than placing the caret or
+ * selected value against the edge. Keep native keyboard and iOS select menus.
+ */
+:where(.resume-client-shell,.admin-shell) select:not([multiple]),
+.interview-language-row select,
+.interview-resume-selector select,
+.wizard-page select{
+ -webkit-appearance:none;
+ appearance:none;
+ box-sizing:border-box;
+ min-width:0;
+ max-width:100%;
+ min-height:46px;
+ padding:11px 48px 11px 16px;
+ border:1px solid #dfd5ef;
+ border-radius:11px;
+ color:#33284a;
+ background-color:#fff;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b4bb5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+ background-position:right 16px center;
+ background-size:18px 18px;
+ background-repeat:no-repeat;
+ box-shadow:0 2px 7px #28154606;
+ text-overflow:ellipsis;
+ line-height:1.35;
+ cursor:pointer;
+ transition:border-color .18s,box-shadow .18s,background-color .18s;
+}
+:where(.resume-client-shell,.admin-shell) select:not([multiple]):hover,
+.interview-language-row select:hover,
+.interview-resume-selector select:hover,
+.wizard-page select:hover{
+ border-color:#a994dd;
+ background-color:#fdfbff;
+}
+:where(.resume-client-shell,.admin-shell) select:not([multiple]):focus-visible,
+.interview-language-row select:focus-visible,
+.interview-resume-selector select:focus-visible,
+.wizard-page select:focus-visible{
+ outline:2px solid #6e3ee0;
+ outline-offset:2px;
+ border-color:#8154e5;
+ box-shadow:0 0 0 4px #8154e51a;
+}
+:where(.resume-client-shell,.admin-shell) select:disabled,
+.interview-language-row select:disabled,
+.interview-resume-selector select:disabled,
+.wizard-page select:disabled{
+ cursor:not-allowed;
+ opacity:.6;
+ background-color:#f7f5fa;
+}
+/* The tiny Kanban status select already has its own positioned chevron. */
+.kanban-move-label select{
+ min-height:30px!important;
+ padding:4px 24px 4px 9px!important;
+ border:1px solid #e5dcf4!important;
+ border-radius:7px!important;
+ background-image:none!important;
+ background-color:#faf8ff!important;
+}
+/* Compact reporting filters get their own right edge reserve. */
+.admin-shell .admin-range-control{padding-inline:12px;gap:9px;max-width:100%}
+.admin-shell .admin-range-control select{
+ flex:1;
+ width:auto;
+ min-width:115px;
+ max-width:170px;
+ min-height:38px;
+ padding:8px 32px 8px 9px;
+ background-size:15px 15px;
+ background-position:right 8px center;
+ border:0;
+ box-shadow:none;
+ background-color:transparent;
+ font-weight:750;
+}
+.admin-shell .admin-table-scroll select{
+ min-height:39px;
+ padding:8px 34px 8px 12px;
+ background-size:15px;
+ background-position:right 10px center;
+}
+.interview-language-row select,.interview-resume-selector select{
+ padding-right:48px;
+ padding-left:16px;
+ background-position:right 16px center;
+}
+.workspace-account-menu{position:relative;min-width:0}
+.workspace-account-dropdown{
+ inset-inline-end:clamp(5px,1vw,12px);
+ top:calc(100% + 12px);
+ width:min(306px,calc(100vw - 40px));
+ max-width:calc(100vw - 40px);
+ padding:9px;
+ gap:5px;
+ border:1px solid #e5dcf5;
+ border-radius:15px;
+ background:#fff;
+ box-shadow:0 16px 42px #27144325;
+}
+.workspace-account-dropdown button{
+ min-height:43px;
+ padding:11px 15px;
+ border-radius:10px;
+ gap:11px;
+ font-size:12px;
+ line-height:1.4;
+}
+.workspace-account-dropdown button svg{flex-shrink:0}
+.workspace-account-dropdown button:focus-visible{outline:2px solid #7d51de;outline-offset:-2px}
+@media(max-width:780px){
+ :where(.resume-client-shell,.admin-shell) select:not([multiple]),
+ .interview-language-row select,.interview-resume-selector select,.wizard-page select{
+  font-size:16px!important;
+  min-height:48px;
+  padding:12px 49px 12px 15px;
+  background-position:right 16px center;
+  background-size:18px 18px;
+ }
+ .workspace-account-dropdown{
+  inset-inline-end:8px;
+  width:min(300px,calc(100vw - 42px));
+  max-width:calc(100vw - 42px);
+  border-radius:14px;
+ }
+ .admin-shell .admin-range-control select{
+  min-height:40px;
+  padding:8px 34px 8px 8px;
+  background-position:right 9px center;
+  font-size:16px!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ :where(.resume-client-shell,.admin-shell) select,
+ .interview-language-row select,.interview-resume-selector select,.wizard-page select{
+  transition:none;
+ }
+}
