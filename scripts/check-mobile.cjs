@@ -285,8 +285,18 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
 
   const photoContext=await browser.newContext({viewport:{width:1280,height:850}});
   const photoPage=await photoContext.newPage();
+  photoPage.on('pageerror',error=>console.log('BUILDER PAGE ERROR:',error.message));
   await open(photoPage,'/app');
   await photoPage.locator('.side-nav').getByRole('button',{name:'Build Resume'}).click();
+  await photoPage.waitForTimeout(900);
+  const wizardVisible=await photoPage.locator('.wizard-stagebar').count();
+  if(!wizardVisible){
+   const diagnostic=await photoPage.evaluate(()=>({
+    headings:[...document.querySelectorAll('h1,h2')].map(x=>x.textContent).slice(0,12),
+    text:document.body.innerText.slice(-900),wizard:document.querySelector('.wizard-page')?.className||'missing'
+   }));
+   throw Error('Builder did not show stage bar after navigation: '+JSON.stringify(diagnostic));
+  }
   await photoPage.locator('.wizard-stagebar').getByRole('button',{name:'Education'}).click();
   const educationOne=photoPage.getByRole('region',{name:'Education 1'});
   await educationOne.getByLabel('Education Level').selectOption('Senior High School / TVL');
