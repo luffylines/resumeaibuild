@@ -70,7 +70,6 @@ export default function Home(){
  const [draft,setDraft]=useState<Resume>(sampleResume);
  const [selectedId,setSelectedId]=useState(sampleResume.id);
  const [user,setUser]=useState<User|null>(null);
- const [isAdmin,setIsAdmin]=useState(false);
  const [ready,setReady]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
@@ -173,7 +172,7 @@ export default function Home(){
  const init=useCallback(async(u:User|null)=>{
   try{
    if(sb&&u){
-    const rr=await (sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false});const role=await (sb as any).from('admin_users').select('user_id').eq('user_id',u.id).maybeSingle();setIsAdmin(!!role.data);
+    const rr=await (sb as any).from('resumes').select('content').eq('user_id',u.id).order('updated_at',{ascending:false});
     if(rr.error)throw rr.error;
     const r=(rr.data||[]).map((x:{content:Resume})=>x.content);
     const cached=latestCachedResumeDraft(u.id);
@@ -197,7 +196,7 @@ export default function Home(){
     const old=cached?r.find((x:Resume)=>x.id===cached.id):null;
     const chosen=cached&&isCacheNewer(cached,old)?cached:r[0]||emptyResume();
     setResumes(cached&&isCacheNewer(cached,old)?[chosen,...r.filter((x:Resume)=>x.id!==chosen.id)]:r);
-    setIsAdmin(false);setDraft(chosen);setSelectedId(chosen.id);
+    setDraft(chosen);setSelectedId(chosen.id);
    }
   }catch(e){setError(e instanceof Error?e.message:'Unable to load saved data.');}
   finally{setReady(true);}
@@ -353,14 +352,6 @@ export default function Home(){
    <nav className="side-nav" aria-label="Main navigation">{nav.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>go(n.id)} className={section===n.id?'nav-active':''}><span className="side-nav-icon"><Icon size={18} strokeWidth={1.9}/></span><span>{n.label}</span>{section===n.id&&<span className="active-marker"/>}</button>;})}</nav>
    <div className="side-label recent-label">RECENT DOCUMENTS</div>
    <div className="sidebar-docs">{resumes.slice(0,3).map(r=><button onClick={()=>editResume(r)} key={r.id}><FileText size={14}/><span>{r.title}</span></button>)}{resumes.length===0&&<p>No saved resumes yet</p>}</div>
-   {(!configured||isAdmin)&&<div className="sidebar-admin-area">
-    <div className="side-label">ADMIN WORKSPACE</div>
-    <a className="admin-workspace-link" href="/admin/login" aria-label="Open Admin Login">
-     <span className="admin-workspace-symbol"><ShieldCheck size={19} strokeWidth={1.9}/></span>
-     <span><strong>Admin Dashboard</strong><small>{configured?'Authorized Admin Login':'Login / Demo Preview'}</small></span>
-     <ArrowRight size={16}/>
-    </a>
-   </div>}
    <div className="sidebar-bottom">
     <div className="sidebar-tip"><span><Sparkles size={18}/></span><strong>Career toolkit</strong><p>Your next opportunity starts with a stronger resume.</p></div>
     <button className="account-button" onClick={()=>{go('settings');}}><span className="avatar">{avatarSrc?<img src={avatarSrc} alt="Your profile picture" />:formattedName.slice(0,1).toUpperCase()}</span><span className="account-text"><strong>{user?.user_metadata?.full_name|| (isDemo?'Christian B. Aring (Demo)':user?.email)}</strong><small>{isDemo?'Demo workspace':'Personal account'}</small></span><Settings2 size={17}/></button>
@@ -377,7 +368,7 @@ export default function Home(){
     {!!error&&<div role="alert" className="alert alert-error">{error}<button onClick={()=>setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
     {!!notice&&<div role="status" className="alert alert-success"><CheckCircle2 size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
     {isDemo&&ready&&<div className="demo-notice"><Sparkles size={16}/><span>Preview mode: sample content and local browser storage. Connect a new Supabase project for private account storage and AI features.</span><button onClick={()=>window.location.assign('/signup')}>Connect account <ArrowRight size={14}/></button></div>}
-    {section==='dashboard'&&<div className="client-dashboard"><div className="client-dashboard-heading"><div><h1>Welcome back, <span>{cap(formattedName)}!</span> 👋</h1><p>AI Resume Builder &amp; Career Tools</p><small>Professional resumes, ATS checks, interview practice, at modern photo-ready templates.</small></div><div className="dashboard-main-actions">{(!configured||isAdmin)&&<a className="dashboard-admin-link" href="/admin/login"><ShieldCheck size={16}/> {configured?'Admin Login':'Admin Login / Preview'} <ArrowRight size={15}/></a>}<button className="purple-button" onClick={startNew}><Plus size={17}/> Create New Resume</button></div></div>
+    {section==='dashboard'&&<div className="client-dashboard"><div className="client-dashboard-heading"><div><h1>Welcome back, <span>{cap(formattedName)}!</span> 👋</h1><p>AI Resume Builder &amp; Career Tools</p><small>Professional resumes, ATS checks, interview practice, at modern photo-ready templates.</small></div><div className="dashboard-main-actions"><button className="purple-button" onClick={startNew}><Plus size={17}/> Create New Resume</button></div></div>
 <div className="client-stat-grid">{[{label:'My Resumes',value:resumes.length,icon:FileText,go:'resumes' as Section},{label:'ATS Score (Latest)',value:currentScore+'%',icon:ShieldCheck,go:'ats' as Section},{label:'Templates',value:UNIQUE_RESUME_TEMPLATES.length,icon:BookOpen,go:'templates' as Section},{label:'Photo Layouts',value:UNIQUE_RESUME_TEMPLATES.filter(t=>PHOTO_READY_TEMPLATES.has(t.id)).length,icon:UserRound,go:'templates' as Section}].map(stat=>{const Icon=stat.icon;return <button key={stat.label} className="client-stat" onClick={()=>go(stat.go)}><span className="client-stat-icon"><Icon size={23}/></span><div><small>{stat.label}</small><strong>{stat.value}</strong></div></button>})}</div>
 <div className="client-feature-row"><section className="client-purple-hero"><div><h2>Create a Professional<br/> Resume with AI ✨</h2><p>Build an ATS-friendly resume in minutes with the power of AI.</p><button onClick={startNew}>Create Resume <ArrowRight size={17}/></button></div><div className="client-resume-graphic"><div><span className="mock-avatar">{formattedName.slice(0,1)}</span><strong>{user?.user_metadata?.full_name||'Christian B. Aring'}</strong><small>IT Professional</small><i/><i/><i/><i/></div><span><CheckCircle2 size={15}/> ATS Ready</span></div></section><section className="client-progress"><h3>Your Progress</h3><div className="client-progress-ring" style={{'--progress':currentScore+'%'} as React.CSSProperties}><strong>{currentScore}%</strong></div><div className="client-check"><CheckCircle2/> Build a Resume</div><div className="client-check"><CheckCircle2/> Run ATS Check</div><div className="client-check"><span/> Practice Interview</div><div className="client-check"><span/> Choose a Template</div></section></div>
 <div className="client-shortcuts"><h2>Quick Actions</h2><div>{([{id:'builder',label:'Build Resume',desc:'Generate with AI',icon:FileText},{id:'ats',label:'ATS Checker',desc:'Improve your score',icon:ShieldCheck},{id:'templates',label:'Templates',desc:'Photo-ready designs',icon:BookOpen},{id:'interview',label:'Interview Practice',desc:'AI mock interview',icon:MessageCircle},{id:'letters',label:'Cover Letter',desc:'Create in seconds',icon:Mail}] as const).map(a=>{const Icon=a.icon;return <button key={a.id} onClick={()=>go(a.id)}><span><Icon size={22}/></span><span><strong>{a.label}</strong><small>{a.desc}</small></span></button>})}</div></div>
