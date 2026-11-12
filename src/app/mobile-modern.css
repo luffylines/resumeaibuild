@@ -556,3 +556,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   font-size:16px!important;
  }
 }
+
+
+/* Admin OAuth sign-in: accessible, high-contrast and responsive. */
+.admin-login-auth-options{display:flex;flex-direction:column;gap:17px}
+.admin-login-google{display:flex;justify-content:center;align-items:center;gap:12px;min-height:50px;padding:11px 17px;width:100%;background:#fff;border:1.5px solid #ddd4eb;border-radius:11px;box-shadow:0 3px 9px #37224e0b;color:#2c233e;font-size:13px;font-weight:800;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s}
+.admin-login-google:hover:not(:disabled){border-color:#9977e7;box-shadow:0 7px 20px #6338b419;transform:translateY(-1px)}
+.admin-login-google:disabled{cursor:wait;opacity:.68}
+.admin-login-google:focus-visible,.admin-login-submit:focus-visible{outline:3px solid #8a5bea;outline-offset:3px}
+.admin-login-google>svg:first-child{flex:none}
+.admin-login-divider{display:flex;align-items:center;gap:14px;text-align:center;white-space:nowrap;font-size:11px;color:#968aa9}
+.admin-login-divider::before,.admin-login-divider::after{content:'';height:1px;flex:1;background:#eee7f5}
+.admin-login-error{display:flex;align-items:flex-start;gap:9px}
+.admin-login-error>svg{flex:none;margin-top:2px}
+.admin-login-success{display:flex;align-items:center;gap:9px;margin-bottom:14px;padding:11px 13px;border:1px solid #b4e5c4;background:#effbf2;color:#126d40;border-radius:10px;font-size:12px;line-height:1.6}
+.admin-login-success>svg{flex:none}
+.admin-login-password input:-webkit-autofill,.admin-login-card input:-webkit-autofill{box-shadow:0 0 0 1000px #fdfcff inset!important;-webkit-text-fill-color:#2a2040!important}
+@media(max-width:600px){.admin-login-google{min-height:50px;font-size:13px}.admin-login-divider{font-size:11px}}

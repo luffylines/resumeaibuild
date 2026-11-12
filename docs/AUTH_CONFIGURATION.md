@@ -91,3 +91,41 @@ The code uses src/lib/auth-return-url.ts for OAuth, signup, email OTP and passwo
 
 https://vercel.com/docs/deployment-protection
 https://supabase.com/docs/guides/auth/redirect-urls
+
+
+## 7. Administrator email and Google sign-in
+
+The **Admin Login** page now supports both **Continue with Google** and email/password sign-in. Both methods authenticate through the **same dedicated ResumeBuilder Supabase Auth project**, not a separate hardcoded admin password. After successful authentication, the server checks `public.admin_users.user_id` against the authenticated Supabase Auth user UUID. **No user becomes an admin merely by using Google or matching an email address.**
+
+### Required redirects (correct ResumeBuilder project ONLY)
+
+- Vercel `NEXT_PUBLIC_SITE_URL` (Production): `https://resumeaibuild-virid.vercel.app`
+- Supabase Authentication → URL Configuration → Site URL: `https://resumeaibuild-virid.vercel.app`
+- Redirect URL for normal users: `https://resumeaibuild-virid.vercel.app/auth/callback`
+- Redirect URL for Admin Google sign-in: `https://resumeaibuild-virid.vercel.app/auth/callback?next=admin`
+- Password recovery: `https://resumeaibuild-virid.vercel.app/auth/reset`
+
+For OAuth callbacks with query parameters, explicitly add the admin callback URL to the Supabase Redirect URLs allowlist (or add a suitably narrow trusted wildcard rule). Google Cloud's Authorized Redirect URI must point to **the correct Supabase project's** `https://<project-ref>.supabase.co/auth/v1/callback`, *not* directly to Vercel.
+
+### Why a correct-looking admin email/password can fail
+
+Supabase returns `invalid_credentials` before any admin-role check when the submitted email/password combination is not accepted by **that project's Supabase Auth**. This can also occur when the user originally registered only with Google and never set an email/password, or signed up in a different Supabase project. The code cannot recover or guess an existing password.
+
+To diagnose without disclosing credentials:
+1. In the **correct ResumeBuilder Supabase dashboard**, open **Authentication → Users** and find your intended admin account. Confirm the Auth provider, confirmed email status, and account UUID. Do not paste your password into a chat.
+2. If the account only uses Google, use **Continue with Google**. Otherwise use **Forgot password?** to set a new password through that same Supabase Auth project; confirm recovery emails arrive before repeated attempts.
+3. In the project's SQL editor, after creating `public.admin_users` through `supabase/admin.sql`, have a project owner manually authorize the correct, verified UUID:
+
+   ```sql
+   insert into public.admin_users (user_id)
+   values ('UUID_FROM_AUTH_USERS')
+   on conflict (user_id) do nothing;
+   ```
+
+   **Only use a UUID from the intended ResumeBuilder project.** No admin permission is automatically granted by email, Google sign-in, or `user_metadata`. Do not run this against SKVASRA or any unrelated project.
+4. Ensure the `admin_users` SELECT policy allows the account to read only its own membership. If a query fails, the UI reports a role-check configuration error rather than calling the user unauthorized.
+5. Sign in at `/admin/login`; Google returns through the OAuth callback, and authorized users land at `/admin`. Ordinary signed-in users are refused admin access and shown a clear message.
+
+Check **Supabase → Authentication → Logs** for `invalid_credentials`, `email_not_confirmed`, or Google provider/callback errors. Credentials, OAuth tokens and secrets are not logged by the application. Rotate any password accidentally exposed in a screenshot.
+
+The GitHub code and tests do not activate Google sign-in, create administrators or connect a different Supabase/Vercel project by themselves. These dashboard settings must be configured in the correct accounts.

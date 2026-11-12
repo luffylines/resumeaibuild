@@ -25,6 +25,8 @@ jobs:
         run: node scripts/check-ai-fallback.cjs
       - name: MFA verified vs unverified factor checks
         run: node scripts/check-mfa-factors.cjs
+      - name: Administrator OAuth and role authorization checks
+        run: node scripts/check-admin-login.cjs
       - name: Next.js production build
         run: npm run build
       - name: Smoke test website routes (demo mode)
