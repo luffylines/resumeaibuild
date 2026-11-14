@@ -33,6 +33,8 @@ jobs:
         run: node scripts/check-education.cjs
       - name: Profile avatar persistence, cloud verification and retry regression tests
         run: node scripts/check-profile-photo.cjs
+      - name: Authenticated avatar API and private Storage provisioning
+        run: node scripts/check-profile-avatar-api.cjs
       - name: Next.js production build
         run: npm run build
       - name: Smoke test website routes (demo mode)
