@@ -114,7 +114,7 @@ export default function AuthForm({mode}:{mode:Mode}){
    });
    if(e)throw e;
    if(data.session){
-    await logLogin();window.location.assign('/app');
+    await logLogin();toastAfterRedirect(mode==='signup'?'Account created. Welcome to ResumeBuilder!':'Welcome back! Signed in successfully.');window.location.assign('/app');
    }else{
     startCooldown();setRemaining(readCooldown());setSent(true);setCode('');setOtpState('idle');
     setMessage('We sent a verification message to your email. Enter the 6-digit code to activate your account. Your ResumeBuilder Supabase Confirm Sign Up template must include the six-digit {{ .Token }} variable.');
@@ -122,7 +122,7 @@ export default function AuthForm({mode}:{mode:Mode}){
   }else{
    const {error:e}=await sb.auth.signInWithPassword({email:normalized,password});
    if(e)throw e;
-   await logLogin();window.location.assign('/app');
+   await logLogin();toastAfterRedirect(mode==='signup'?'Account created. Welcome to ResumeBuilder!':'Welcome back! Signed in successfully.');window.location.assign('/app');
   }
  });
  const verify=()=>run(async()=>{
