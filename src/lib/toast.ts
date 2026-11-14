@@ -27,3 +27,11 @@ export function toastAfterRedirect(message:string){
  try{window.sessionStorage.setItem(TOAST_NEXT_PAGE,JSON.stringify({message:value,at:Date.now()}));}catch{}
 }
 /** Mirror page-local error/success state to the shared root notification UI. */
+
+import {useEffect} from 'react';
+
+/** Subscribe to text state without altering existing inline validation/UI. */
+export function useToastMessages(error:string,success:string){
+ useEffect(()=>{if(error)showToast({kind:'error',message:error});},[error]);
+ useEffect(()=>{if(success)showToast({kind:'success',message:success});},[success]);
+}
