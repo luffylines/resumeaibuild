@@ -1,4 +1,5 @@
 'use client';
+import {useEffect} from 'react';
 
 export type ToastKind='success'|'error'|'info';
 export type ToastPayload={kind:ToastKind;message:string;title?:string;durationMs?:number};
@@ -28,10 +29,23 @@ export function toastAfterRedirect(message:string){
 }
 /** Mirror page-local error/success state to the shared root notification UI. */
 
-import {useEffect} from 'react';
-
 /** Subscribe to text state without altering existing inline validation/UI. */
 export function useToastMessages(error:string,success:string){
  useEffect(()=>{if(error)showToast({kind:'error',message:error});},[error]);
  useEffect(()=>{if(success)showToast({kind:'success',message:success});},[success]);
+}
+
+/** An operation can report success or failure through one legacy status
+ * field. Do not toast live progress updates unless they indicate an outcome.
+ */
+export function useToastOutcome(message:string){
+ useEffect(()=>{
+  if(!message)return;
+  if(/(?:fail|error|unable|could not|not available|unavailable|denied|blocked|invalid|too large|choose (?:a |an |another)|requires |must |no speech|does not support|did not start|check .*permission)/i.test(message)){
+   showToast({kind:'error',message});return;
+  }
+  if(/(?:saved|downloaded|exported|completed|added|removed|generated|created|copied|restored|successfully|ready|enabled|verified)/i.test(message)){
+   showToast({kind:'success',message});
+  }
+ },[message]);
 }
