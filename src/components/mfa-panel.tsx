@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import {Check,CheckCircle2,Copy,KeyRound,LoaderCircle,RotateCcw,ShieldCheck,ShieldOff,Smartphone,X} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
+import {useToastMessages} from '@/lib/toast';
 
 import {classifyFactors,removeUnverifiedFactors} from '@/lib/mfa-factors';
 import type {MfaFactor as Factor,MfaFactorList as FactorList} from '@/lib/mfa-factors';
@@ -34,6 +35,7 @@ export default function MfaPanel({user,mode='settings',onVerified,onSignOut}:Pro
  const [initializing,setInitializing]=useState(true);
  const [message,setMessage]=useState('');
  const [error,setError]=useState('');
+ useToastMessages(error,message);
  const [codeState,setCodeState]=useState<'idle'|'invalid'|'verified'>('idle');
  const [aal,setAal]=useState<'aal1'|'aal2'|'unknown'>('unknown');
  const refresh=async()=>{
