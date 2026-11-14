@@ -1163,3 +1163,49 @@
  .rb-toast{min-height:66px;padding:13px 42px 16px 13px;border-radius:12px}
 }
 @media(prefers-reduced-motion:reduce){.rb-toast{animation:none}.rb-toast-progress{animation:none}}
+
+
+/* Account pictures: face-visible portrait crop with a substantial
+   touch target on desktop and mobile without changing saved files. */
+.resume-client-shell .account-button>.avatar {
+ width:48px!important;height:48px!important;min-width:48px;
+ border:2px solid #e4d5fa;border-radius:50%;overflow:hidden;
+ background:#f6f0fe;box-shadow:0 3px 11px #5730a521;
+}
+.resume-client-shell .profile-chip>.avatar.mini {
+ width:42px!important;height:42px!important;min-width:42px;
+ border:2px solid #e4d5fa;border-radius:50%;overflow:hidden;
+ background:#f6f0fe;box-shadow:0 3px 10px #5730a51b;
+}
+.resume-client-shell .account-button>.avatar img,
+.resume-client-shell .profile-chip>.avatar img {
+ display:block;width:100%!important;height:100%!important;
+ max-width:none;max-height:none;object-fit:cover!important;
+ object-position:center 34%!important;border-radius:50%;
+}
+.resume-client-shell .account-button{gap:12px}
+.resume-client-shell .account-button .account-text{min-width:0}
+.settings-v2 .settings-profile{gap:16px;align-items:center}
+.settings-v2-panel .settings-avatar,
+.settings-v2 .settings-avatar{
+ width:86px!important;height:86px!important;min-width:86px;
+ padding:0!important;border:3px solid #e6d6fc!important;
+ border-radius:50%;overflow:hidden;box-shadow:0 5px 18px #512c9126;
+ background:#f2edfc;
+}
+.settings-v2 .settings-avatar img{
+ display:block;width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ object-fit:cover!important;object-position:center 32%!important;
+ border-radius:50%;
+}
+@media(max-width:700px){
+ .resume-client-shell .profile-chip>.avatar.mini{width:42px!important;height:42px!important;min-width:42px}
+ .resume-client-shell .account-button>.avatar{width:46px!important;height:46px!important;min-width:46px}
+ .settings-v2-panel .settings-avatar,.settings-v2 .settings-avatar{
+  width:74px!important;height:74px!important;min-width:74px;
+ }
+}
+@media(max-width:370px){
+ .resume-client-shell .profile-chip>.avatar.mini{width:40px!important;height:40px!important;min-width:40px}
+}
