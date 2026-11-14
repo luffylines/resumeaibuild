@@ -1109,3 +1109,103 @@
  .settings-toast{animation:none}
  .settings-toast-timer{animation:none}
 }
+
+
+/* Universal ResumeBuilder notifications: top-right, five-second dismissal.
+ * Used by authentication, workspace, resume exports and admin. */
+.rb-toast-stack{
+ position:fixed;
+ z-index:2147483000;
+ top:max(18px,env(safe-area-inset-top,0px));
+ right:max(18px,env(safe-area-inset-right,0px));
+ display:flex;
+ flex-direction:column;
+ gap:11px;
+ width:min(418px,calc(100vw - 32px));
+ max-width:calc(100vw - 32px);
+ pointer-events:none;
+}
+.rb-toast{
+ position:relative;
+ display:flex;
+ align-items:flex-start;
+ gap:12px;
+ min-height:70px;
+ padding:16px 43px 17px 15px;
+ background:#fff;
+ border:1px solid #bfe5cb;
+ border-radius:14px;
+ box-shadow:0 17px 48px #241b3d35,0 4px 12px #241b3d10;
+ overflow:hidden;
+ animation:rb-toast-enter .23s ease-out both;
+ pointer-events:auto;
+ color:#175f37;
+}
+.rb-toast--error{border-color:#fac2c9;color:#b8324c}
+.rb-toast--info{border-color:#d8ccfa;color:#714ac7}
+.rb-toast-icon{display:grid;place-items:center;flex:0 0 33px;width:33px;height:33px;border-radius:10px;background:#eaf9ed;color:#19834b}
+.rb-toast--error .rb-toast-icon{background:#fff0f2;color:#d7435c}
+.rb-toast--info .rb-toast-icon{background:#f5f0ff;color:#7645e1}
+.rb-toast-copy{display:flex;flex-direction:column;min-width:0;gap:5px;font-size:12px;line-height:1.55;color:#5a5268;overflow-wrap:anywhere}
+.rb-toast-copy strong{font-size:13px;line-height:1.35;font-weight:800;color:#17683f}
+.rb-toast--error .rb-toast-copy strong{color:#b62f48}
+.rb-toast--info .rb-toast-copy strong{color:#6e41c2}
+.rb-toast-close{position:absolute;right:10px;top:10px;display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;color:#776d85;background:transparent;cursor:pointer}
+.rb-toast-close:hover{color:#3f3253;background:#f2eef8}
+.rb-toast-close:focus-visible{outline:2px solid #6e3ee0;outline-offset:1px}
+.rb-toast-progress{position:absolute;bottom:0;left:0;height:3px;width:100%;background:#29b76f;transform-origin:left;animation:rb-toast-countdown 5s linear forwards}
+.rb-toast--error .rb-toast-progress{background:#e65b75}
+.rb-toast--info .rb-toast-progress{background:#8b67df}
+@keyframes rb-toast-enter{from{opacity:0;transform:translate(12px,-12px)}to{opacity:1;transform:translate(0,0)}}
+@keyframes rb-toast-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media(max-width:700px){
+ .rb-toast-stack{left:16px;right:16px;top:max(13px,env(safe-area-inset-top,0px));width:auto;max-width:none}
+ .rb-toast{min-height:66px;padding:13px 42px 16px 13px;border-radius:12px}
+}
+@media(prefers-reduced-motion:reduce){.rb-toast{animation:none}.rb-toast-progress{animation:none}}
+
+
+/* Account pictures: face-visible portrait crop with a substantial
+   touch target on desktop and mobile without changing saved files. */
+.resume-client-shell .account-button>.avatar {
+ width:48px!important;height:48px!important;min-width:48px;
+ border:2px solid #e4d5fa;border-radius:50%;overflow:hidden;
+ background:#f6f0fe;box-shadow:0 3px 11px #5730a521;
+}
+.resume-client-shell .profile-chip>.avatar.mini {
+ width:42px!important;height:42px!important;min-width:42px;
+ border:2px solid #e4d5fa;border-radius:50%;overflow:hidden;
+ background:#f6f0fe;box-shadow:0 3px 10px #5730a51b;
+}
+.resume-client-shell .account-button>.avatar img,
+.resume-client-shell .profile-chip>.avatar img {
+ display:block;width:100%!important;height:100%!important;
+ max-width:none;max-height:none;object-fit:cover!important;
+ object-position:center 34%!important;border-radius:50%;
+}
+.resume-client-shell .account-button{gap:12px}
+.resume-client-shell .account-button .account-text{min-width:0}
+.settings-v2 .settings-profile{gap:16px;align-items:center}
+.settings-v2-panel .settings-avatar,
+.settings-v2 .settings-avatar{
+ width:86px!important;height:86px!important;min-width:86px;
+ padding:0!important;border:3px solid #e6d6fc!important;
+ border-radius:50%;overflow:hidden;box-shadow:0 5px 18px #512c9126;
+ background:#f2edfc;
+}
+.settings-v2 .settings-avatar img{
+ display:block;width:100%!important;height:100%!important;
+ max-width:none!important;max-height:none!important;
+ object-fit:cover!important;object-position:center 32%!important;
+ border-radius:50%;
+}
+@media(max-width:700px){
+ .resume-client-shell .profile-chip>.avatar.mini{width:42px!important;height:42px!important;min-width:42px}
+ .resume-client-shell .account-button>.avatar{width:46px!important;height:46px!important;min-width:46px}
+ .settings-v2-panel .settings-avatar,.settings-v2 .settings-avatar{
+  width:74px!important;height:74px!important;min-width:74px;
+ }
+}
+@media(max-width:370px){
+ .resume-client-shell .profile-chip>.avatar.mini{width:40px!important;height:40px!important;min-width:40px}
+}

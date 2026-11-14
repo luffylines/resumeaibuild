@@ -17,6 +17,7 @@ import {cacheResumeDraft,cachedResumeDraft,discardCachedResumeDraft,isCacheNewer
 import ResumeWizard from '@/components/resume-wizard';
 import InterviewStudio from '@/components/interview-studio';
 import {authReturnUrl} from '@/lib/auth-return-url';
+import {useToastMessages,toastAfterRedirect} from '@/lib/toast';
 import SettingsPanel from '@/components/settings-panel';
 import MfaPanel from '@/components/mfa-panel';
 import {accountAvatar,loadProfilePhoto,readProfilePhoto} from '@/lib/profile-photo';
@@ -73,6 +74,7 @@ export default function Home(){
  const [ready,setReady]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ useToastMessages(error,notice);
  const [search,setSearch]=useState('');
  const [jobDescription,setJobDescription]=useState('');
  const [letterRole,setLetterRole]=useState('');
@@ -324,6 +326,7 @@ export default function Home(){
   setProfileMenuOpen(false);
   setUser(null);
   // Return to public login instead of leaving a logged-out user in demo mode.
+  toastAfterRedirect('You have signed out successfully.');
   window.location.assign('/login');
  }
  const title:Record<Section,string>={dashboard:'Dashboard',builder:'Build Resume',resumes:'My Resumes',ats:'ATS Checker',interview:'Interview Practice',letters:'Cover Letter',templates:'Templates',settings:'Settings'};
@@ -390,7 +393,7 @@ export default function Home(){
  <section className="panel padded"><h2 className="card-heading"><Mail size={19}/> Job Details</h2><Field label="Job Title" value={letterRole} onChange={setLetterRole} placeholder="e.g. Web Developer"/><Field label="Company (Optional)" value={letterCompany} onChange={setLetterCompany} placeholder="e.g. Technology Company"/><label className="field"><span>Choose Your Resume</span><select value={activeResume.id} onChange={e=>setSelectedId(e.target.value)}>{resumes.map(r=><option key={r.id} value={r.id}>{r.title}</option>)}{!resumes.length&&<option value={draft.id}>{draft.title}</option>}</select></label><label className="field"><span>Tone</span><select value={letterTone} onChange={e=>setLetterTone(e.target.value)}>{['Professional','Confident','Friendly','Concise','Formal'].map(x=><option key={x}>{x}</option>)}</select></label>
  {isDemo?<div className="cover-demo-locked"><LockKeyhole size={20}/><strong>AI generation is locked in Demo Mode</strong><p>Use the editor to try your cover letter. Sign in to generate with AI, copy, or download the final letter.</p><a href="/signup">Create Free Account <ArrowRight size={15}/></a></div>:<button className="purple-button cover-generate-button" disabled={!letterRole.trim()||busy} onClick={async()=>{const out=await requestAI('coverletter',JSON.stringify({targetRole:letterRole,company:letterCompany,tone:letterTone,resume:activeResume}));if(out)setLetterOutput(out);}}><Sparkles size={17}/>{busy?'Generating...':'Generate with AI'} <ArrowRight size={16}/></button>}
  <p className="muted-copy">{isDemo?'Demo writing stays on this device. Preview only; no export.':'AI uses your resume information. Always proofread the final letter for accuracy.'}</p></section>
- <section className={'panel padded cover-letter-preview'+(isDemo?' cover-letter-preview--demo':'')}><div className="panel-head"><div><FileText size={18}/><strong>{isDemo?'Cover Letter · Demo Preview':'Generated Cover Letter'}</strong></div><div>{isDemo?<span className="cover-demo-badge"><LockKeyhole size={13}/> Preview only</span>:letterOutput&&<><button onClick={()=>{void navigator.clipboard.writeText(letterOutput).then(()=>flash('Cover letter copied.')).catch(()=>setError('Clipboard access unavailable.'));}}><Copy size={15}/> Copy</button><button onClick={()=>{const file=new Blob([letterOutput],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download='resumebuilder-cover-letter.txt';a.click();URL.revokeObjectURL(url);}}><ArrowDownToLine size={15}/> Download</button></>}</div></div>
+ <section className={'panel padded cover-letter-preview'+(isDemo?' cover-letter-preview--demo':'')}><div className="panel-head"><div><FileText size={18}/><strong>{isDemo?'Cover Letter · Demo Preview':'Generated Cover Letter'}</strong></div><div>{isDemo?<span className="cover-demo-badge"><LockKeyhole size={13}/> Preview only</span>:letterOutput&&<><button onClick={()=>{void navigator.clipboard.writeText(letterOutput).then(()=>flash('Cover letter copied.')).catch(()=>setError('Clipboard access unavailable.'));}}><Copy size={15}/> Copy</button><button onClick={()=>{const file=new Blob([letterOutput],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download='resumebuilder-cover-letter.txt';a.click();URL.revokeObjectURL(url);flash('Cover letter downloaded successfully.');}}><ArrowDownToLine size={15}/> Download</button></>}</div></div>
  {isDemo?<><div className="cover-demo-editor"><textarea aria-label="Editable demo cover letter" rows={17} className="cover-letter-text" value={demoLetter} onChange={e=>setDemoLetter(e.target.value)} onCopy={e=>{e.preventDefault();flash('Demo preview only. Sign in to copy or download your cover letter.');}}/><div className="cover-demo-watermark" aria-hidden="true"><span>DEMO · PREVIEW ONLY</span><span>DEMO · PREVIEW ONLY</span></div></div><p className="cover-demo-preview-note"><LockKeyhole size={14}/> You can edit and preview this letter, but copying and downloading are disabled in Demo Mode. Screenshots cannot be fully blocked by a website.</p></>:letterOutput?<textarea aria-label="Editable generated cover letter" rows={17} className="cover-letter-text" value={letterOutput} onChange={e=>setLetterOutput(e.target.value)}/>:<div className="cover-letter-placeholder"><span>Dear Hiring Manager,</span><p>I am writing to express my interest in the position. My experience and relevant skills would make me a strong candidate for this opportunity.</p><i/><i/><i/><p>Sincerely,</p><p>{activeResume.name||'Your Name'}</p></div>}</section></div></>}
 
 {section==='settings'&&<SettingsPanel user={user} resumes={resumes} signOut={signOut} initialTab={settingsFocus}/>}

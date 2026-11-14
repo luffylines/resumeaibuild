@@ -4,6 +4,7 @@ import {ArrowLeft,ArrowRight,BookOpen,Check,CheckCircle2,Headphones,Lightbulb,Lo
 import type {Resume} from '@/lib/types';
 import {INTERVIEW_COUNT,buildInterviewQuestions,parseInterviewQuestions} from '@/lib/interview-questions';
 import {applyInterviewerVoice} from '@/lib/interview-voice';
+import {useToastOutcome} from '@/lib/toast';
 
 type SpeechItem={transcript:string};
 type SpeechResult=ArrayLike<SpeechItem>&{isFinal:boolean};
@@ -53,6 +54,7 @@ export default function InterviewStudio({resumes,activeResumeId,runAI,busy,signe
  const answeredCount=answers.filter((x,i)=>i!==index&&!!x.trim()).length+(answer.trim()?1:0);
  const [feedback,setFeedback]=useState('');
  const [message,setMessage]=useState('');
+ useToastOutcome(message);
  const [language,setLanguage]=useState('en-US');
  const [microphone,setMicrophone]=useState(false);
  const [speaking,setSpeaking]=useState(false);

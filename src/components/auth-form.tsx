@@ -5,6 +5,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LoaderCircle,Lock,LogIn,UserRoundPlus,Mail,ShieldCheck,Sparkles,Clock3,RefreshCw,ClipboardPaste} from 'lucide-react';
 import {browserSupabase,configured} from '@/lib/supabase';
 import {authReturnUrl} from '@/lib/auth-return-url';
+import {useToastMessages,toastAfterRedirect} from '@/lib/toast';
 import {BrandMark,GoogleIcon} from '@/components/brand-icons';
 
 type Mode='login'|'signup';
@@ -55,6 +56,7 @@ export default function AuthForm({mode}:{mode:Mode}){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [message,setMessage]=useState('');
+ useToastMessages(error,message);
  const sb=browserSupabase();
  const logLogin=()=>fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'user_logged_in',detail:'User signed in to ResumeBuilder'})}).catch(()=>{});
  useEffect(()=>{
@@ -112,7 +114,7 @@ export default function AuthForm({mode}:{mode:Mode}){
    });
    if(e)throw e;
    if(data.session){
-    await logLogin();window.location.assign('/app');
+    await logLogin();toastAfterRedirect('Account created. Welcome to ResumeBuilder!');window.location.assign('/app');
    }else{
     startCooldown();setRemaining(readCooldown());setSent(true);setCode('');setOtpState('idle');
     setMessage('We sent a verification message to your email. Enter the 6-digit code to activate your account. Your ResumeBuilder Supabase Confirm Sign Up template must include the six-digit {{ .Token }} variable.');
@@ -120,7 +122,7 @@ export default function AuthForm({mode}:{mode:Mode}){
   }else{
    const {error:e}=await sb.auth.signInWithPassword({email:normalized,password});
    if(e)throw e;
-   await logLogin();window.location.assign('/app');
+   await logLogin();toastAfterRedirect('Welcome back! Signed in successfully.');window.location.assign('/app');
   }
  });
  const verify=()=>run(async()=>{

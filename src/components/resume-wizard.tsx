@@ -6,6 +6,7 @@ import {UNIQUE_RESUME_TEMPLATES,TEMPLATE_CATEGORIES,DESIGN_COLOR_OPTIONS,PAGE_BA
 import ResumeDocument from '@/components/resume-document';
 import ExtraSectionsEditor from '@/components/extra-sections-editor';
 import EducationEditor from '@/components/education-editor';
+import {useToastOutcome} from '@/lib/toast';
 import {exportResumeDOCX,exportResumePDF,exportResumePNG,exportResumePDFText,exportResumeDOCXEditable} from '@/lib/resume-export';
 import type {TemplateCategory} from '@/lib/templates';
 import type {Resume} from '@/lib/types';
@@ -15,6 +16,7 @@ type Props={draft:Resume;setDraft:(v:Resume)=>void;save:(v:Resume)=>Promise<void
 function Input({label,value,change,placeholder='',area=false}:{label:string;value:string;change:(s:string)=>void;placeholder?:string;area?:boolean}){return <label className="wizard-field"><span>{label}</span>{area?<textarea rows={4} value={value} onChange={e=>change(e.target.value)} placeholder={placeholder}/>:<input value={value} onChange={e=>change(e.target.value)} placeholder={placeholder}/>}</label>;}
 export default function ResumeWizard({draft,setDraft,save,runAI,busy,preview,storageScope,onBack,isDemo}:Props){
  const [step,setStep]=useState(0),[prompt,setPrompt]=useState(''),[message,setMessage]=useState('');
+ useToastOutcome(message);
  const [wizardLoadedKey,setWizardLoadedKey]=useState('');
  const wizardKey='resumebuilder:wizard:v1:'+storageScope+':'+draft.id;
  useEffect(()=>{
