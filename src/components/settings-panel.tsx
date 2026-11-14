@@ -1,8 +1,8 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useId,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import type {Resume} from '@/lib/types';
-import {ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
+import {AlertCircle,ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 import {GoogleIcon} from '@/components/brand-icons';
 import {accountAvatar,isProfilePhotoPending,loadProfilePhoto,readProfilePhoto,removeProfilePhoto,retryProfilePhotoSync,saveProfilePhoto} from '@/lib/profile-photo';
@@ -28,6 +28,21 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const [photo,setPhoto]=useState('');
  const [photoStatus,setPhotoStatus]=useState<'none'|'loading'|'uploading'|'synced'|'local-only'>('none');
  const photoInput=useRef<HTMLInputElement|null>(null);
+ const photoInputId=useId();
+ const photoLoadVersion=useRef(0);
+ const [photoFileName,setPhotoFileName]=useState('');
+ // Every error and success toast disappears after 5 seconds. Clear the
+ // timer when a newer message arrives, avoiding old timers clearing new text.
+ useEffect(()=>{
+  if(!notice)return;
+  const timer=window.setTimeout(()=>setNotice(''),5000);
+  return()=>window.clearTimeout(timer);
+ },[notice]);
+ useEffect(()=>{
+  if(!error)return;
+  const timer=window.setTimeout(()=>setError(''),5000);
+  return()=>window.clearTimeout(timer);
+ },[error]);
  const [aiProviders,setAiProviders]=useState<Provider[]|null>(null);
  const [aiLoading,setAiLoading]=useState(false);
  const [aiCheckedAt,setAiCheckedAt]=useState('');
@@ -36,20 +51,29 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
   try{return JSON.parse(localStorage.getItem('resume_notification_prefs')||'{"interview":true,"resumes":true,"product":false}') as Record<string,boolean>;}catch{return {interview:true,resumes:true,product:false};}
  });
  const sb=browserSupabase();
+ useEffect(()=>{setName(user?.user_metadata?.full_name||'');},[user?.id,user?.user_metadata?.full_name]);
  useEffect(()=>{
-  setName(user?.user_metadata?.full_name||'');
   const id=user?.id;
-  setPhoto(id?readProfilePhoto(id):'');
+  const version=++photoLoadVersion.current;
+  const cached=id?readProfilePhoto(id):'';
+  setPhoto(cached);
   setPhotoStatus(!id?'none':isProfilePhotoPending(id)?'local-only':'loading');
   if(!id)return;
   let active=true;
   void loadProfilePhoto(id).then(image=>{
-   if(!active)return;
-   setPhoto(image);
+   // A selected picture must NEVER be replaced by a stale request that
+   // started before the user chose the file.
+   if(!active||version!==photoLoadVersion.current)return;
+   setPhoto(image||readProfilePhoto(id));
    setPhotoStatus(isProfilePhotoPending(id)?'local-only':image&&/^https?:\/\//.test(image)?'synced':'none');
+  }).catch(()=>{
+   if(active&&version===photoLoadVersion.current){
+    setPhoto(readProfilePhoto(id));
+    setPhotoStatus(isProfilePhotoPending(id)?'local-only':'none');
+   }
   });
   return()=>{active=false;};
- },[user?.id,user?.user_metadata?.full_name]);
+ },[user?.id]);
  useEffect(()=>{
   if(tab!=='integrations'||!user)return;
   let active=true;
@@ -81,19 +105,26 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  };
  const setProfileImage=async(file:File|undefined)=>{
   if(!file)return;
+  setPhotoFileName(file.name);
+  const version=++photoLoadVersion.current;
   if(!user){setError('Sign in before updating your profile photo.');return;}
   setBusy(true);setError('');setNotice('');setPhotoStatus('uploading');
   try{
    const saved=await saveProfilePhoto(user.id,file,image=>{
+    if(version!==photoLoadVersion.current)return;
     setPhoto(image);
     setPhotoStatus('uploading');
    });
+   if(version!==photoLoadVersion.current)return;
    setPhoto(saved.image);
    setPhotoStatus(saved.cloudSaved?'synced':'local-only');
    if(saved.cloudSaved)setNotice(saved.detail);
    else setError(saved.detail);
-  }catch(e){setPhotoStatus(isProfilePhotoPending(user.id)?'local-only':'none');setError(e instanceof Error?e.message:'Could not save profile photo.');}
-  finally{setBusy(false);if(photoInput.current)photoInput.current.value='';}
+  }catch(e){
+   if(version!==photoLoadVersion.current)return;
+   setPhotoStatus(isProfilePhotoPending(user.id)?'local-only':'none');
+   setError(e instanceof Error?e.message:'Could not process or save your profile photo.');
+  }finally{setBusy(false);}
  };
  const retryCloudPhoto=async()=>{
   if(!user)return;
@@ -125,12 +156,24 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const providerStatus=(provider:Provider)=>
   provider.status==='connected'?'Connected':provider.status==='not_configured'?'Not configured':'Connection failed';
  return <div className="settings-v2">
+  {(error||notice)&&<div className="settings-toast-stack" aria-label="Account notifications">
+   {error&&<div className="settings-toast settings-toast--error" role="alert" data-testid="account-error-toast">
+    <span className="settings-toast-icon"><AlertCircle size={20}/></span>
+    <span className="settings-toast-copy"><strong>Action failed</strong><span>{error}</span></span>
+    <button type="button" className="settings-toast-close" aria-label="Dismiss error message" onClick={()=>setError('')}><X size={18}/></button>
+    <span className="settings-toast-timer" aria-hidden="true"/>
+   </div>}
+   {notice&&<div className="settings-toast settings-toast--success" role="status" data-testid="account-success-toast">
+    <span className="settings-toast-icon"><CheckCircle2 size={20}/></span>
+    <span className="settings-toast-copy"><strong>Success</strong><span>{notice}</span></span>
+    <button type="button" className="settings-toast-close" aria-label="Dismiss success message" onClick={()=>setNotice('')}><X size={18}/></button>
+    <span className="settings-toast-timer" aria-hidden="true"/>
+   </div>}
+  </div>}
   <div className="page-heading"><div><div className="eyebrow">MY ACCOUNT</div><h1>Settings</h1><p>Manage your account, subscription and integrations.</p></div></div>
   <div className="settings-v2-layout">
    <nav className="settings-v2-nav" aria-label="Settings sections">{menu.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>{setTab(n.id);setNotice('');setError('');}} className={tab===n.id?'selected':''} aria-current={tab===n.id?'page':undefined}><span className="settings-tab-icon"><Icon size={18} strokeWidth={1.9}/></span>{n.label}<ArrowRight size={14}/></button>;})}</nav>
    <section className="settings-v2-panel panel">
-    {notice&&<p className="settings-v2-notice" role="status"><CheckCircle2 size={17}/>{notice}</p>}
-    {error&&<p className="settings-v2-error" role="alert">{error}</p>}
     {tab==='account'&&<>
      <header><h2>Account Information</h2><p>Update how your profile appears inside ResumeBuilder.</p></header>
      <div className="settings-profile">
@@ -138,8 +181,14 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
       <div><strong>{name||user?.email?.split('@')[0]||'Demo User'}</strong><small>{user?.email||'Preview Account · Demo workspace'}</small></div>
      </div>
      <div className="settings-photo-tools">
-      <input type="file" ref={photoInput} hidden accept="image/jpeg,image/png,image/webp" onChange={e=>void setProfileImage(e.target.files?.[0])}/>
-      <button type="button" className="outline-button" disabled={busy||!user} onClick={()=>photoInput.current?.click()}><Camera size={16}/> {photoStatus==='uploading'?'Saving Photo…':photo?'Change Profile Photo':'Upload Profile Photo'}</button>
+      <input id={photoInputId} type="file" ref={photoInput} className="settings-photo-file-input" tabIndex={-1} aria-hidden="true" disabled={busy||!user} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={e=>{
+       const file=e.currentTarget.files?.[0];
+       e.currentTarget.value=''; // Allows choosing the same image again.
+       void setProfileImage(file);
+      }}/>
+      <label htmlFor={photoInputId} role="button" tabIndex={busy||!user?-1:0} aria-disabled={busy||!user} className={'outline-button settings-photo-upload-label'+(busy||!user?' is-disabled':'')} onKeyDown={e=>{
+       if((e.key==='Enter'||e.key===' ')&&!busy&&user){e.preventDefault();photoInput.current?.click();}
+      }}><Camera size={16}/> {photoStatus==='uploading'?'Saving Photo…':photo?'Change Profile Photo':'Upload Profile Photo'}</label>
       {photoStatus==='local-only'&&user&&<button type="button" className="outline-button settings-photo-retry" disabled={busy} onClick={()=>void retryCloudPhoto()}><UploadCloud size={16}/> Retry Cloud Sync</button>}
       {photo&&<button type="button" className="outline-button" disabled={busy} onClick={()=>void (async()=>{
    if(!user)return;setBusy(true);setError('');setNotice('');
@@ -151,6 +200,7 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
    finally{setBusy(false);}
   })()}><X size={16}/> Remove Photo</button>}
      </div>
+     {photoFileName&&<p className="settings-photo-file-name" role="status">Selected: <strong>{photoFileName}</strong></p>}
      {user&&photoStatus!=='none'&&<p className={'settings-photo-status settings-photo-status--'+photoStatus} role="status">
       {photoStatus==='uploading'?<><LoaderCircle size={16} className="spin"/> Uploading and verifying your picture…</>:
        photoStatus==='synced'?<><CheckCircle2 size={16}/> Saved to your account — available after refresh and on your other devices.</>:

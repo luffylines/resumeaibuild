@@ -128,36 +128,82 @@ async function verifiedCloudUpload(userId:string,image:string):Promise<void>{
  * The device backup prevents data loss, but only cloudSaved=true means
  * cross-device persistence was verified.
  */
-export async function saveProfilePhoto(userId:string,file:File,onPreview?:(image:string)=>void):Promise<ProfilePhotoSave>{
- if(!userId||!supported.has(file.type))throw Error('Select a JPG, PNG or WebP photo. Other image types may not work in this browser.');
- if(file.size>MAX_INPUT_BYTES)throw Error('Choose a profile image smaller than 5 MB.');
- const url=URL.createObjectURL(file);
- let image='';
+function imageType(file:File):string {
+ if(supported.has(file.type))return file.type;
+ if(file.type)return '';
+ const extension=file.name.toLowerCase().split('.').pop();
+ return extension==='jpg'||extension==='jpeg'?'image/jpeg':extension==='png'?'image/png':extension==='webp'?'image/webp':'';
+}
+function fileDataUrl(file:File):Promise<string>{
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>typeof reader.result==='string'?resolve(reader.result):reject(Error('Unable to read the selected image.'));
+  reader.onerror=()=>reject(Error('Could not read this picture. Please choose the file again.'));
+  reader.readAsDataURL(file);
+ });
+}
+async function resizedJpeg(file:File):Promise<string>{
+ const src=URL.createObjectURL(file);
  try{
   const picture=new Image();
-  await new Promise<void>((resolve,reject)=>{picture.onload=()=>resolve();picture.onerror=()=>reject(Error('This browser could not open the selected image. Try JPG or PNG.'));picture.src=url;});
-  if(!picture.naturalWidth||!picture.naturalHeight)throw Error('The image has no readable dimensions.');
+  await new Promise<void>((resolve,reject)=>{
+   picture.onload=()=>resolve();
+   picture.onerror=()=>reject(Error('This browser could not decode the selected image. Try JPG or PNG.'));
+   picture.src=src;
+  });
+  if(!picture.naturalWidth||!picture.naturalHeight)throw Error('This picture has no readable dimensions.');
   const canvas=document.createElement('canvas');
   canvas.width=256;canvas.height=256;
-  const ctx=canvas.getContext('2d');if(!ctx)throw Error('Image resizing is unavailable in this browser.');
+  const ctx=canvas.getContext('2d');
+  if(!ctx)throw Error('Your browser cannot resize this image. Try a JPEG under 1 MB.');
   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,256,256);
   const size=Math.min(picture.naturalWidth,picture.naturalHeight);
   ctx.drawImage(picture,(picture.naturalWidth-size)/2,(picture.naturalHeight-size)/2,size,size,0,0,256,256);
-  image=canvas.toDataURL('image/jpeg',.8);
-  if(!image.startsWith('data:image/jpeg;base64,'))throw Error('Could not process the photo as JPEG.');
- }finally{URL.revokeObjectURL(url);}
- const localSaved=cachePreview(userId,image);
+  const output=canvas.toDataURL('image/jpeg',.82);
+  if(!output.startsWith('data:image/jpeg;base64,'))throw Error('Could not convert this picture to JPEG.');
+  return output;
+ }finally{URL.revokeObjectURL(src);}
+}
+
+/** File selection must show the new picture immediately, regardless of network
+ * access. Small, valid JPGs (including progressive JPEGs) do not need canvas
+ * processing; this also avoids browser-specific image decoding failures.
+ */
+export async function saveProfilePhoto(userId:string,file:File,onPreview?:(image:string)=>void):Promise<ProfilePhotoSave>{
+ const mime=imageType(file);
+ if(!userId||!mime)throw Error('Select a JPG, PNG or WebP photo.');
+ if(!file.size||file.size>MAX_INPUT_BYTES)throw Error('Choose a profile image smaller than 5 MB.');
+ const raw=await fileDataUrl(file);
+ if(!raw.includes(';base64,'))throw Error('The selected picture could not be read. Choose JPG or PNG.');
+ const original='data:'+mime+';base64,'+raw.split(';base64,')[1];
+ // Never make the user's visible preview depend on Storage or a successful
+ // image conversion, and keep a per-account local fallback when possible.
+ let image=original;
+ let localSaved=cachePreview(userId,image);
  onPreview?.(image);
+ if(mime!=='image/jpeg'||file.size>MAX_CLOUD_BYTES){
+  try{
+   image=await resizedJpeg(file);
+   localSaved=cachePreview(userId,image)||localSaved;
+   onPreview?.(image);
+  }catch(error){
+   return {
+    image:original,cloudSaved:false,localSaved,
+    detail:'Your photo is selected but the browser could not prepare it for cloud upload. '+(error instanceof Error?error.message:'Try a JPG or PNG photo.')
+   };
+  }
+ }
  try{
   await verifiedCloudUpload(userId,image);
   localRemove(photoPendingKey(userId));
   changed(userId);
   return {image,cloudSaved:true,localSaved,detail:'Profile photo saved to your ResumeBuilder account. It will remain after refresh or sign-in on another device.'};
  }catch(error){
-  if(!localSaved)throw Error('Photo could not be saved on this device or in the cloud: '+reason(error));
-  return {image,cloudSaved:false,localSaved:true,detail:'Photo is visible on this device, but not yet saved to your account. '+reason(error)};
+  if(!localSaved)throw Error('Photo preview is visible, but neither browser backup nor cloud save succeeded. '+reason(error));
+  return {image,cloudSaved:false,localSaved:true,detail:'Photo is visible on this device but not yet saved to your account. '+reason(error)};
  }
 }
+
 /** Retry a previously selected photo without making the user choose it again. */
 export async function retryProfilePhotoSync(userId:string):Promise<ProfilePhotoSave>{
  const image=readProfilePhoto(userId);
