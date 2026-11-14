@@ -1052,3 +1052,60 @@
 @media(max-width:580px){
  .settings-photo-upload-label{width:100%;min-height:46px}
 }
+
+
+/* 5-second success/error toasts: positioned above the account workspace,
+   never inline in forms; readable on iPhone and narrow screens. */
+.settings-toast-stack{
+ position:fixed;
+ z-index:12000;
+ inset-block-start:max(16px,env(safe-area-inset-top,0px));
+ inset-inline-end:max(18px,env(safe-area-inset-right,0px));
+ display:flex;
+ flex-direction:column;
+ align-items:stretch;
+ gap:11px;
+ width:min(410px,calc(100vw - 32px));
+ max-width:calc(100vw - 32px);
+ pointer-events:none;
+}
+.settings-toast{
+ position:relative;
+ display:flex;
+ align-items:flex-start;
+ gap:12px;
+ width:100%;
+ min-height:69px;
+ padding:16px 44px 17px 15px;
+ overflow:hidden;
+ border:1px solid #bee6cb;
+ border-radius:14px;
+ color:#174d34;
+ background:#fff;
+ box-shadow:0 15px 46px #2b1d4340,0 4px 12px #2b1d4312;
+ animation:settings-toast-slide-in .2s ease-out both;
+ pointer-events:auto;
+}
+.settings-toast--error{border-color:#fac5ca;color:#943248}
+.settings-toast-icon{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#eaf9ef;color:#17834d}
+.settings-toast--error .settings-toast-icon{background:#fff0f1;color:#d23f57}
+.settings-toast-copy{min-width:0;display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.55;overflow-wrap:anywhere;color:#655e70}
+.settings-toast-copy strong{color:#176c3c;font-size:13px;letter-spacing:-.1px}
+.settings-toast--error .settings-toast-copy strong{color:#b9344c}
+.settings-toast-copy>span{color:#655e70}
+.settings-toast-close{position:absolute;inset-block-start:12px;inset-inline-end:11px;width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#7b7089;cursor:pointer}
+.settings-toast-close:hover{background:#f6f2fb;color:#453652}
+.settings-toast-close:focus-visible{outline:2px solid #7844df;outline-offset:1px}
+.settings-toast-timer{position:absolute;bottom:0;left:0;width:100%;height:3px;background:#2bb66b;transform-origin:left;animation:settings-toast-countdown 5s linear forwards}
+.settings-toast--error .settings-toast-timer{background:#e35d70}
+@keyframes settings-toast-slide-in{from{opacity:0;transform:translate3d(12px,-12px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes settings-toast-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media(max-width:700px){
+ .settings-toast-stack{inset-inline-end:16px;inset-inline-start:16px;width:auto;max-width:none}
+ .settings-toast{min-height:67px;padding:13px 41px 16px 13px;border-radius:12px}
+ .settings-toast-copy{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .settings-toast{animation:none}
+ .settings-toast-timer{animation:none}
+}
