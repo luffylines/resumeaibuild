@@ -58,6 +58,17 @@ export async function loadProfilePhoto(userId:string):Promise<string>{
  try{
   const {data:{user},error}=await sb.auth.getUser();
   if(error||user?.id!==userId)return local;
+  // The server endpoint uses its own project Storage credentials; use it
+  // first, then the owner-only browser RLS flow for older installations.
+  try{
+   const response=await fetch('/api/profile/avatar',{method:'GET',credentials:'same-origin',cache:'no-store'});
+   if(response.ok){
+    const payload=await response.json() as {url?:string};
+    if((revisions.get(userId)||0)!==version||isProfilePhotoPending(userId))return readProfilePhoto(userId);
+    if(payload.url)return withCacheBuster(payload.url);
+   }
+   if(response.status===404)return readProfilePhoto(userId);
+  }catch{/* Browser RLS fallback below. */}
   const {data,error:signError}=await sb.storage.from(BUCKET).createSignedUrl(photoPath(userId),3600);
   if((revisions.get(userId)||0)!==version||isProfilePhotoPending(userId))return readProfilePhoto(userId);
   if(!signError&&data?.signedUrl)return withCacheBuster(data.signedUrl);
@@ -80,10 +91,33 @@ async function verifiedCloudUpload(userId:string,image:string):Promise<void>{
  if(!response.ok)throw Error('Unable to prepare the photo for upload.');
  const blob=await response.blob();
  if(blob.size===0||blob.size>MAX_CLOUD_BYTES)throw Error('The processed photo size exceeded the avatar bucket limit.');
+ // First attempt an authenticated same-origin server route. It can create
+ // a private Storage bucket on first use if the matching server-only key
+ // exists in the dedicated ResumeBuilder project.
+ let serverFailure='';
+ try{
+  const form=new FormData();
+  form.append('file',blob,'avatar.jpg');
+  const response=await fetch('/api/profile/avatar',{method:'POST',body:form,credentials:'same-origin',cache:'no-store'});
+  if(response.ok){
+   const payload=await response.json() as {saved?:boolean};
+   if(payload.saved)return;
+  }else{
+   const payload=await response.json().catch(()=>({})) as {error?:string};
+   serverFailure=payload.error||'Server avatar endpoint unavailable.';
+   if(response.status===401||response.status===403||response.status===400)throw Error(serverFailure);
+  }
+ }catch(e){
+  if(e instanceof Error&&/session|sign in|request origin|processed JPEG/i.test(e.message))throw e;
+  if(!serverFailure)serverFailure='Server avatar request failed.';
+ }
+ // Older installations may have owner-only RLS policies but no server key.
+ // Keep that route functional, with verification; never report a cloud save
+ // merely because this local upload was attempted.
  const upload=await sb.storage.from(BUCKET).upload(photoPath(userId),blob,{
   contentType:'image/jpeg',cacheControl:'0',upsert:true
  });
- if(upload.error)throw upload.error;
+ if(upload.error)throw Error((serverFailure?serverFailure+' ':'')+(upload.error.message||'Browser Storage upload was rejected.'));
  // A successful write alone does not establish that the owner can read it.
  // A download also catches incomplete SELECT policies and unavailable objects.
  const downloaded=await sb.storage.from(BUCKET).download(photoPath(userId));
@@ -144,8 +178,18 @@ export async function removeProfilePhoto(userId:string):Promise<{cloudRemoved:bo
   try{
    const {data:{user},error}=await sb.auth.getUser();
    if(error||user?.id!==userId)throw Error('Your session expired or account changed.');
-   const removed=await sb.storage.from(BUCKET).remove([photoPath(userId)]);
-   if(removed.error)throw removed.error;
+   let serverRemoved=false;
+   try{
+    const response=await fetch('/api/profile/avatar',{method:'DELETE',credentials:'same-origin'});
+    if(response.ok)serverRemoved=true;
+    else if(response.status!==503)throw Error('Unable to remove photo from the account.');
+   }catch(error){
+    if(error instanceof Error&&/Unable to remove photo from the account/.test(error.message))throw error;
+   }
+   if(!serverRemoved){
+    const removed=await sb.storage.from(BUCKET).remove([photoPath(userId)]);
+    if(removed.error)throw removed.error;
+   }
    localRemove(photoKey(userId));
    localRemove(photoPendingKey(userId));
    changed(userId);
