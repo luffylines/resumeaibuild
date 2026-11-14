@@ -5,6 +5,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LoaderCircle,Lock,LogIn,UserRoundPlus,Mail,ShieldCheck,Sparkles,Clock3,RefreshCw,ClipboardPaste} from 'lucide-react';
 import {browserSupabase,configured} from '@/lib/supabase';
 import {authReturnUrl} from '@/lib/auth-return-url';
+import {useToastMessages,toastAfterRedirect} from '@/lib/toast';
 import {BrandMark,GoogleIcon} from '@/components/brand-icons';
 
 type Mode='login'|'signup';
@@ -55,6 +56,7 @@ export default function AuthForm({mode}:{mode:Mode}){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [message,setMessage]=useState('');
+ useToastMessages(error,message);
  const sb=browserSupabase();
  const logLogin=()=>fetch('/api/activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'user_logged_in',detail:'User signed in to ResumeBuilder'})}).catch(()=>{});
  useEffect(()=>{
