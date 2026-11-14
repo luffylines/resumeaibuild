@@ -5,6 +5,7 @@ import {ArrowLeft,ArrowRight,Eye,EyeOff,LockKeyhole,ShieldCheck,LoaderCircle,Mai
 import {BrandMark,GoogleIcon} from '@/components/brand-icons';
 import {browserSupabase,configured} from '@/lib/supabase';
 import {authReturnUrl} from '@/lib/auth-return-url';
+import {useToastMessages,toastAfterRedirect} from '@/lib/toast';
 
 const oauthMessages:Record<string,string>={
  auth:'Google sign-in was not completed. Check the ResumeBuilder Supabase authentication configuration.',
@@ -31,6 +32,7 @@ export default function AdminLogin(){
  const [busy,setBusy]=useState<'password'|'google'|null>(null);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ useToastMessages(error,notice);
  const sb=browserSupabase();
 
  useEffect(()=>{
