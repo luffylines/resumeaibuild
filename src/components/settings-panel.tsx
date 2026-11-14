@@ -2,7 +2,7 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import type {User} from '@supabase/supabase-js';
 import type {Resume} from '@/lib/types';
-import {ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
+import {AlertCircle,ArrowRight,Bell,Camera,Check,CheckCircle2,Cloud,KeyRound,Lock,LogOut,Mail,Settings2,ShieldCheck,Sparkles,UserRound,WalletCards,X,UploadCloud,LoaderCircle} from 'lucide-react';
 import {browserSupabase} from '@/lib/supabase';
 import {GoogleIcon} from '@/components/brand-icons';
 import {accountAvatar,isProfilePhotoPending,loadProfilePhoto,readProfilePhoto,removeProfilePhoto,retryProfilePhotoSync,saveProfilePhoto} from '@/lib/profile-photo';
@@ -31,6 +31,18 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const photoInputId=useId();
  const photoLoadVersion=useRef(0);
  const [photoFileName,setPhotoFileName]=useState('');
+ // Every error and success toast disappears after 5 seconds. Clear the
+ // timer when a newer message arrives, avoiding old timers clearing new text.
+ useEffect(()=>{
+  if(!notice)return;
+  const timer=window.setTimeout(()=>setNotice(''),5000);
+  return()=>window.clearTimeout(timer);
+ },[notice]);
+ useEffect(()=>{
+  if(!error)return;
+  const timer=window.setTimeout(()=>setError(''),5000);
+  return()=>window.clearTimeout(timer);
+ },[error]);
  const [aiProviders,setAiProviders]=useState<Provider[]|null>(null);
  const [aiLoading,setAiLoading]=useState(false);
  const [aiCheckedAt,setAiCheckedAt]=useState('');
@@ -144,12 +156,24 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
  const providerStatus=(provider:Provider)=>
   provider.status==='connected'?'Connected':provider.status==='not_configured'?'Not configured':'Connection failed';
  return <div className="settings-v2">
+  {(error||notice)&&<div className="settings-toast-stack" aria-label="Account notifications">
+   {error&&<div className="settings-toast settings-toast--error" role="alert" data-testid="account-error-toast">
+    <span className="settings-toast-icon"><AlertCircle size={20}/></span>
+    <span className="settings-toast-copy"><strong>Action failed</strong><span>{error}</span></span>
+    <button type="button" className="settings-toast-close" aria-label="Dismiss error message" onClick={()=>setError('')}><X size={18}/></button>
+    <span className="settings-toast-timer" aria-hidden="true"/>
+   </div>}
+   {notice&&<div className="settings-toast settings-toast--success" role="status" data-testid="account-success-toast">
+    <span className="settings-toast-icon"><CheckCircle2 size={20}/></span>
+    <span className="settings-toast-copy"><strong>Success</strong><span>{notice}</span></span>
+    <button type="button" className="settings-toast-close" aria-label="Dismiss success message" onClick={()=>setNotice('')}><X size={18}/></button>
+    <span className="settings-toast-timer" aria-hidden="true"/>
+   </div>}
+  </div>}
   <div className="page-heading"><div><div className="eyebrow">MY ACCOUNT</div><h1>Settings</h1><p>Manage your account, subscription and integrations.</p></div></div>
   <div className="settings-v2-layout">
    <nav className="settings-v2-nav" aria-label="Settings sections">{menu.map(n=>{const Icon=n.icon;return <button key={n.id} onClick={()=>{setTab(n.id);setNotice('');setError('');}} className={tab===n.id?'selected':''} aria-current={tab===n.id?'page':undefined}><span className="settings-tab-icon"><Icon size={18} strokeWidth={1.9}/></span>{n.label}<ArrowRight size={14}/></button>;})}</nav>
    <section className="settings-v2-panel panel">
-    {notice&&<p className="settings-v2-notice" role="status"><CheckCircle2 size={17}/>{notice}</p>}
-    {error&&<p className="settings-v2-error" role="alert">{error}</p>}
     {tab==='account'&&<>
      <header><h2>Account Information</h2><p>Update how your profile appears inside ResumeBuilder.</p></header>
      <div className="settings-profile">
