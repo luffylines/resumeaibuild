@@ -64,6 +64,15 @@ const context={
   getContext:()=>({fillStyle:'',fillRect:()=>{},drawImage:()=>{}}),
   toDataURL:()=> 'data:image/jpeg;base64,'+Buffer.from('jpeg-data').toString('base64')
  })},
+ FileReader:class{
+  result=null;
+  onload=null;
+  onerror=null;
+  readAsDataURL(file){
+   this.result='data:'+file.type+';base64,'+Buffer.from('jpeg-data').toString('base64');
+   queueMicrotask(()=>this.onload?.());
+  }
+ },
  Image:class{
   naturalWidth=400;naturalHeight=200;
   set src(_){queueMicrotask(()=>this.onload?.());}
@@ -92,6 +101,7 @@ const input={type:'image/jpeg',size:100};
  assert.equal(failed.localSaved,true);
  assert.match(failed.detail,/bucket is missing/);
  assert.ok(preview.startsWith('data:image/jpeg;base64,'));
+ assert.equal(preview,failed.image,'Selected photo must be displayed without waiting for Storage');
  assert.equal(local.has(photoKey(fake.owner)),true);
  assert.equal(isProfilePhotoPending(fake.owner),true);
  const signedCount=fake.signed;
