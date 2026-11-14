@@ -240,6 +240,22 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   if(await settingsPage.getByRole('button',{name:'Export my data'}).count())throw Error('Export my data must be removed');
   const photoButton=settingsPage.getByRole('button',{name:'Upload Profile Photo'});
   if(await photoButton.isEnabled())throw Error('Demo account must not upload an authenticated profile photo');
+  // Errors and success messages are fixed to the top-right and clear after
+  // five seconds; they should not push the Settings form content downward.
+  const fullName=settingsPage.getByLabel('Full Name');
+  await fullName.fill('');
+  await settingsPage.getByRole('button',{name:'Save Profile'}).click();
+  const errorToast=settingsPage.getByTestId('account-error-toast');
+  await errorToast.waitFor({state:'visible'});
+  const toastBox=await errorToast.boundingBox();
+  if(!toastBox||toastBox.y>80||Math.abs(toastBox.x+toastBox.width-1200)>55)throw Error('Error toast must appear fixed near upper-right corner');
+  await errorToast.waitFor({state:'hidden',timeout:7000});
+  await fullName.fill('Demo Profile');
+  await settingsPage.getByRole('button',{name:'Save Profile'}).click();
+  const successToast=settingsPage.getByTestId('account-success-toast');
+  await successToast.waitFor({state:'visible'});
+  await successToast.waitFor({state:'hidden',timeout:7000});
+  console.log('PASS settings: professional upper-right red/green toasts automatically disappear after 5 seconds');
   await settingsPage.getByRole('button',{name:'Subscription'}).click();
   await settingsPage.getByRole('heading',{name:'Subscription Plans'}).waitFor({state:'visible'});
   const prices=await settingsPage.locator('.settings-pricing-price').allTextContents();
