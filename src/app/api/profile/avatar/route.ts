@@ -34,7 +34,24 @@ function rejectCrossOrigin(request:NextRequest){
  const origin=request.headers.get('origin');
  return Boolean(origin&&origin!==request.nextUrl.origin);
 }
-async function ensurePrivateBucket(admin:ReturnType<typeof createClient>){
+export async function GET(){
+ const state=await sessionAndStorage();
+ if('error' in state)return state.error;
+ const {user,admin}=state;
+ const result=await admin.storage.from(BUCKET).createSignedUrl(user.id+'/avatar.jpg',3600);
+ if(result.error){
+  if(isMissing(result.error))return json({error:'No saved account picture was found.'},404);
+  logStorage('signed-url',result.error);
+  return json({error:'Unable to retrieve your saved profile picture.'},503);
+ }
+ return json({url:result.data?.signedUrl||''});
+}
+export async function POST(request:NextRequest){
+ if(rejectCrossOrigin(request))return json({error:'Request origin does not match this website.'},403);
+ const state=await sessionAndStorage();
+ if('error' in state)return state.error;
+ const {user,admin}=state;
+const ensurePrivateBucket=async()=>{
  const present=await admin.storage.getBucket(BUCKET);
  if(present.data){
   if(present.data.public){
@@ -54,24 +71,7 @@ async function ensurePrivateBucket(admin:ReturnType<typeof createClient>){
   if(race.error||!race.data)throw created.error;
   if(race.data.public)throw Error('Avatar storage is not private.');
  }
-}
-export async function GET(){
- const state=await sessionAndStorage();
- if('error' in state)return state.error;
- const {user,admin}=state;
- const result=await admin.storage.from(BUCKET).createSignedUrl(user.id+'/avatar.jpg',3600);
- if(result.error){
-  if(isMissing(result.error))return json({error:'No saved account picture was found.'},404);
-  logStorage('signed-url',result.error);
-  return json({error:'Unable to retrieve your saved profile picture.'},503);
- }
- return json({url:result.data?.signedUrl||''});
-}
-export async function POST(request:NextRequest){
- if(rejectCrossOrigin(request))return json({error:'Request origin does not match this website.'},403);
- const state=await sessionAndStorage();
- if('error' in state)return state.error;
- const {user,admin}=state;
+};
  let part:FormDataEntryValue|null;
  try{
   const data=await request.formData();
@@ -85,7 +85,7 @@ export async function POST(request:NextRequest){
   return json({error:'The file is not a valid JPEG.'},400);
  }
  try{
-  await ensurePrivateBucket(admin);
+  await ensurePrivateBucket();
   const path=user.id+'/avatar.jpg';
   const uploaded=await admin.storage.from(BUCKET).upload(path,bytes,{contentType:'image/jpeg',cacheControl:'0',upsert:true});
   if(uploaded.error)throw uploaded.error;
