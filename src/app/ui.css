@@ -1029,3 +1029,26 @@
  .settings-photo-tools .outline-button{width:100%;min-height:46px}
  .settings-photo-status{display:flex;width:100%;font-size:12px}
 }
+
+
+/* Account avatar picker: native label/input association works more reliably
+   than clicking a hidden file input through script, including mobile Safari. */
+.settings-photo-tools{position:relative}
+.settings-photo-file-input{
+ position:absolute!important;width:1px!important;height:1px!important;
+ padding:0!important;margin:0!important;border:0!important;
+ opacity:0!important;overflow:hidden!important;clip-path:inset(50%)!important;
+ white-space:nowrap!important;
+}
+.settings-photo-upload-label{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ gap:9px;cursor:pointer;user-select:none;line-height:1.35;text-align:center;
+}
+.settings-photo-upload-label.is-disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
+.settings-photo-file-input:focus-visible+.settings-photo-upload-label,
+.settings-photo-upload-label:focus-visible{outline:3px solid #8353e5;outline-offset:3px}
+.settings-photo-file-name{margin:0 0 10px;font-size:11px;color:#665875;line-height:1.6;overflow-wrap:anywhere}
+.settings-photo-file-name strong{font-weight:800;color:#34234b}
+@media(max-width:580px){
+ .settings-photo-upload-label{width:100%;min-height:46px}
+}
