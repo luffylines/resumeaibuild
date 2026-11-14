@@ -62,6 +62,7 @@ export default function AdminLogin(){
    setNotice('Admin account verified. Opening your dashboard…');
    // Role is also verified on the server by /admin and every admin API.
    try{await fetch('/api/admin/login-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_login'})});}catch{}
+   toastAfterRedirect('Administrator sign-in successful.');
    window.location.assign('/admin');
   }catch(reason){
    const err=reason&&typeof reason==='object'?reason as {kind?:string;error?:unknown}:{};
