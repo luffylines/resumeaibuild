@@ -4,6 +4,7 @@ import './ui.css';
 import './resume-templates.css';
 import './template-gallery.css';
 import './mobile-modern.css';
+import GlobalToastHost from '@/components/global-toast-host';
 export const viewport: Viewport = {width:'device-width',initialScale:1,viewportFit:'cover'};
 export const metadata: Metadata = {
   title: 'ResumeBuilder — AI Resume Builder & Professional Templates',
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
   icons: {icon:'/images/logo.png',shortcut:'/images/logo.png',apple:'/images/logo.png'}
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<GlobalToastHost/></body></html>;
 }
