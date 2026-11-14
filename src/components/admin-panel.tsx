@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import {BrandMark} from '@/components/brand-icons';
 import {useCallback,useEffect,useState} from 'react';
+import {useToastMessages} from '@/lib/toast';
 import {Activity,ArrowRight,BarChart3,BriefcaseBusiness,Check,CheckCircle2,ChevronDown,Download,CalendarDays,ClipboardList,Database,FileText,LayoutDashboard,LoaderCircle,Menu,Plus,Search,Settings,ShieldCheck,Sparkles,Trash2,Users,X,Zap,LockKeyhole,AlertTriangle,RefreshCw} from 'lucide-react';
 type Tab='dashboard'|'users'|'resumes'|'ats'|'plans'|'usage'|'activity'|'settings';
 type Person={id:string;email:string;name:string;plan:string;created_at:string;last_sign_in_at?:string|null};
@@ -26,6 +27,7 @@ export default function AdminPanel({demo}:{demo:boolean}){
  const [liveStatus,setLiveStatus]=useState<LiveStatus>(demo?'demo':'loading');
  const [warnings,setWarnings]=useState<AdminWarning[]>([]);
  const [error,setError]=useState('');const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);
+ useToastMessages(error,notice);
  const [search,setSearch]=useState('');const [period,setPeriod]=useState('30');const [exporting,setExporting]=useState(false);const [sidebar,setSidebar]=useState(false);
  useEffect(()=>{
   if(!sidebar)return;
@@ -65,7 +67,7 @@ export default function AdminPanel({demo}:{demo:boolean}){
  });
  const rangeControl=<label className="admin-range-control"><CalendarDays size={17}/><span>Period</span><select aria-label="Reporting period" value={period} onChange={e=>setPeriod(e.target.value)}><option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option><option value="all">All Time</option></select></label>;
  const exportExcel=async(kind:ExportKind)=>{
-  if(demo){setNotice('Downloads are disabled in Demo Mode. Sign in with an authorized admin account to export reports.');return;}
+  if(demo){setError('Downloads are disabled in Demo Mode. Sign in with an authorized admin account to export reports.');return;}
   setExporting(true);setError('');
   try{
    const response=await fetch('/api/admin/export?kind='+kind+'&period='+period,{cache:'no-store'});
