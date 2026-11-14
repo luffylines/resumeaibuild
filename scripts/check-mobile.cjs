@@ -503,7 +503,8 @@ const pause=(ms)=>new Promise(r=>setTimeout(r,ms));
   await authPage.getByRole('button',{name:/Use email and password instead/}).click();
   await authPage.getByPlaceholder('At least 8 characters').waitFor({state:'visible'});
   await open(authPage,'/login?error=oauth_provider');
-  await authPage.getByRole('alert').getByText('Google sign-in is not enabled or configured correctly in the ResumeBuilder Supabase project.').waitFor({state:'visible'});
+  await authPage.getByRole('main').getByRole('alert').getByText('Google sign-in is not enabled or configured correctly in the ResumeBuilder Supabase project.').waitFor({state:'visible'});
+  await authPage.getByTestId('global-error-toast').waitFor({state:'visible'});
   await authCtx.close();
   console.log('PASS password-first signup, OTP alternative and actionable Google OAuth error messages');
 
