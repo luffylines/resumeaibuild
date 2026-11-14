@@ -71,7 +71,11 @@ const context={
  URL:{createObjectURL:()=> 'blob:local',
  revokeObjectURL:()=>{}},
  Event:class{constructor(type){this.type=type;}},
- fetch:async()=>({ok:true,blob:async()=>new Blob(['jpeg-data'],{type:'image/jpeg'})}),
+ fetch:async url=>{
+  if(typeof url==='string'&&url.startsWith('/api/profile/avatar'))return {ok:false,status:503,json:async()=>({error:'Server-only Supabase key is not configured.'})};
+  return {ok:true,blob:async()=>new Blob(['jpeg-data'],{type:'image/jpeg'})};
+ },
+ FormData:class{append(){}},
  Blob,Buffer,Map,Set,Date,Error,Promise,queueMicrotask,console
 };
 vm.runInNewContext(compiled,context);
