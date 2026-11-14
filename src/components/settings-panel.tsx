@@ -157,7 +157,7 @@ export default function SettingsPanel({user,resumes,signOut,initialTab='account'
       <div><strong>{name||user?.email?.split('@')[0]||'Demo User'}</strong><small>{user?.email||'Preview Account · Demo workspace'}</small></div>
      </div>
      <div className="settings-photo-tools">
-      <input id={photoInputId} type="file" ref={photoInput} className="settings-photo-file-input" disabled={busy||!user} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={e=>{
+      <input id={photoInputId} type="file" ref={photoInput} className="settings-photo-file-input" tabIndex={-1} aria-hidden="true" disabled={busy||!user} accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={e=>{
        const file=e.currentTarget.files?.[0];
        e.currentTarget.value=''; // Allows choosing the same image again.
        void setProfileImage(file);
