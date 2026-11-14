@@ -17,6 +17,7 @@ import {cacheResumeDraft,cachedResumeDraft,discardCachedResumeDraft,isCacheNewer
 import ResumeWizard from '@/components/resume-wizard';
 import InterviewStudio from '@/components/interview-studio';
 import {authReturnUrl} from '@/lib/auth-return-url';
+import {useToastMessages,toastAfterRedirect} from '@/lib/toast';
 import SettingsPanel from '@/components/settings-panel';
 import MfaPanel from '@/components/mfa-panel';
 import {accountAvatar,loadProfilePhoto,readProfilePhoto} from '@/lib/profile-photo';
@@ -73,6 +74,7 @@ export default function Home(){
  const [ready,setReady]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
+ useToastMessages(error,notice);
  const [search,setSearch]=useState('');
  const [jobDescription,setJobDescription]=useState('');
  const [letterRole,setLetterRole]=useState('');
