@@ -1,5 +1,47 @@
 # ResumeBuilder — make profile pictures persist across devices
 
+## New authenticated server upload (November 2026)
+
+The website now provides `/api/profile/avatar` with GET/POST/DELETE.
+This is the **preferred** upload and reload path when a **server-only**
+`SUPABASE_SECRET_KEY` or legacy `SUPABASE_SERVICE_ROLE_KEY` is configured
+in the **correct ResumeBuilder** Vercel Production environment.
+
+- POST checks the existing signed-in user's server session, accepts only
+  a resized JPEG no bigger than 1 MB, creates a **private**
+  `profile-avatars` bucket when missing, uploads to
+  `<authenticated-user-id>/avatar.jpg`, then verifies the object can be
+  read back before returning success.
+- GET issues a short-lived signed URL for this authenticated user's own
+  image. This is what makes avatar refresh and re-login reliable.
+- DELETE removes only this authenticated user's image.
+- Every write requires a same-origin request; an unauthenticated request
+  cannot change files.
+- The server key never appears in a `NEXT_PUBLIC_` environment variable
+  or in the browser, and browser calls cannot choose a target user ID.
+
+**Setup:** In the dedicated Vercel project `resumeaibuild` →
+Settings → Environment Variables → Production, confirm:
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+from the intended Supabase project; and add **only on the server** the
+matching project's `SUPABASE_SECRET_KEY` (or legacy service-role key).
+After changing environment variables, deploy the latest `main` to
+Production again. Do not paste keys into GitHub, this chat, or a
+`NEXT_PUBLIC_` variable. The account must authenticate against this
+same project.
+
+If that server-only key is not available, the website falls back to the
+owner-scoped browser Storage flow below, which requires the SQL setup
+policies in the correct project. The new endpoint can create the bucket
+only when the correct server key works. **Without either a functioning
+server key or the bucket/RLS setup, no client-side fix can make an avatar
+persist across devices.**
+
+The prior bucket/RLS SQL remains available for projects that choose
+direct browser uploads. Do not run it on another Supabase project.
+
+
+
 **Applies only to the Supabase project configured for**
 **https://resumeaibuild-virid.vercel.app**. It does not apply to SKVASRA.
 The Supabase connector available during this fix points to another project,
